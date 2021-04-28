@@ -10,4 +10,5 @@ int procinp(char *Filename) {
 	while (!inp.eof()) {
 
 	}
+	return 0;
 }
