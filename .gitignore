@@ -1,0 +1,47 @@
+*.ii
+*.gpu
+*.ptx
+*.cubin
+*.fatbin
+
+# Build results
+x64/
+NuDeal/x64
+
+# Install files
+NuDeal/util
+
+# Documents
+NuDeal/docs
+
+# Other
+ACEGenerator
+GUI
+HDF
+Socket
+
+# User-dependent files
+*.pdb
+*.sln
+*.inp
+*.txt
+*.bin
+*.00
+*.60
+*.out
+!CMakeLists.txt
+*.m
+*.h5
+*.log
+*.suo
+*.vtk
+.vs/NuDeal/v15/
+*.user
+*.db
+*.opendb
+*.ipch
+*.rst
+NuDeal/run/
+NuDeal/ptx/
+NuDeal/sandbox/
+NuDeal/output/
