@@ -12,21 +12,27 @@
     <ClInclude Include="header\HardCodeParam.h">
       <Filter>Header</Filter>
     </ClInclude>
-    <ClInclude Include="header\ProcInp.h">
-      <Filter>Header</Filter>
-    </ClInclude>
     <ClInclude Include="header\TypeDef.h">
       <Filter>Header</Filter>
     </ClInclude>
     <ClInclude Include="header\Defines.h">
       <Filter>Header</Filter>
     </ClInclude>
+    <ClInclude Include="header\Input.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Exception.h">
+      <Filter>Header</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\ProcInp.cpp">
+    <ClCompile Include="source\Main.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="source\Main.cpp">
+    <ClCompile Include="source\Input.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\IOUtil.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
