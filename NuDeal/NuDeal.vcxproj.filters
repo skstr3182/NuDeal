@@ -18,6 +18,9 @@
     <ClInclude Include="header\TypeDef.h">
       <Filter>Header</Filter>
     </ClInclude>
+    <ClInclude Include="header\Defines.h">
+      <Filter>Header</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\ProcInp.cpp">

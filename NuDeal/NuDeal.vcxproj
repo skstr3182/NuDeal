@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="header\Defines.h" />
     <ClInclude Include="header\HardCodeParam.h" />
     <ClInclude Include="header\ProcInp.h" />
     <ClInclude Include="header\TypeDef.h" />
