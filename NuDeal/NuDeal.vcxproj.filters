@@ -20,10 +20,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\main.cpp">
+    <ClCompile Include="source\ProcInp.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="source\ProcInp.cpp">
+    <ClCompile Include="source\Main.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>

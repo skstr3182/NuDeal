@@ -16,7 +16,7 @@
     <ClInclude Include="header\TypeDef.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\main.cpp" />
+    <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\ProcInp.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
