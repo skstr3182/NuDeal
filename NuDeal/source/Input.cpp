@@ -69,8 +69,9 @@ void InputManager_t::ReadInput(string file)
 	cout << GetLine(fileStream, SC::LBRACE) << endl;
 	fileStream.clear(stringstream::goodbit); fileStream.seekg(0);
 	cout << GetLine(fileStream) << endl;
+	cout << GetLine(fileStream) << endl;
 
-
+	cout << CountCurrentLine(fileStream) << endl;
 }
 
 }

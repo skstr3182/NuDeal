@@ -64,6 +64,25 @@ bool InputManager_t::Logical(string field) const
 	Except::Abort(Code::INVALID_LOGICAL, "Line : " + to_string(line));
 }
 
+unsigned int InputManager_t::CountCurrentLine(istream& in) const
+{
+	size_t pos = in.tellg();
+	string block;
+
+	block.resize(pos);
+
+	in.clear(stringstream::goodbit); 
+	in.seekg(0, ios::beg);
+
+	unsigned int count = 0;
+
+	for (size_t i = 0; i < pos; ++i) {
+		if (in.get() == SC::LF) ++count;
+	}
+
+	return count;
+}
+
 string InputManager_t::GetLine(istream& fin, const char delimiter) const
 {
 	string oneline;
@@ -75,7 +94,7 @@ string InputManager_t::GetLine(istream& fin, const char delimiter) const
 	std::replace(oneline.begin(), oneline.end(), SC::CR, SC::BLANK);
 #endif
 	
-	auto pos = static_cast<string::size_type>(0);
+	string::size_type pos = 0;
 
 	// Treat C-style Comment
 
@@ -105,30 +124,10 @@ string InputManager_t::GetLine(istream& fin, const char delimiter) const
 
 string InputManager_t::GetScriptBlock(istream& in) const
 {
-	
 	string block = "";
-	bool stop = false;
-	auto pos = in.tellg();
+	
 
-	do {
-		auto pos = in.tellg();
-		string oneline;
-		std::getline(in, oneline);
-		block += oneline;
 
-		auto pos_LBRACE = oneline.find(SC::LBRACE);
-		auto pos_RBRACE = oneline.find(SC::RBRACE);
-		auto pos_SEMI = oneline.find(SC::SEMICOLON);
-
-		stop = pos_LBRACE != string::npos;
-		stop = stop && pos_RBRACE != string::npos;
-		stop = stop && pos_SEMI != string::npos;
-		if (stop) {
-			auto m = min(pos_LBRACE, pos_RBRACE);
-			m = min(m, pos_SEMI);
-
-		}
-	} while (!stop);
 
 
 	return static_cast<string&&>(block);

@@ -77,6 +77,7 @@ private :
 	int Integer(string field) const;
 	double Float(string field) const;
 	bool Logical(string field) const;
+	unsigned int CountCurrentLine(istream& in) const;
 	string GetLine(istream& fin, const char delimiter = SC::LF) const;
 	string GetScriptBlock(istream& in) const;
 	// Input Parser
