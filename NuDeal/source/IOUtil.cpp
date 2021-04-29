@@ -64,30 +64,11 @@ bool InputManager_t::Logical(string field) const
 	Except::Abort(Code::INVALID_LOGICAL, "Line : " + to_string(line));
 }
 
-unsigned int InputManager_t::CountCurrentLine(istream& in) const
-{
-	size_t pos = in.tellg();
-	string block;
-
-	block.resize(pos);
-
-	in.clear(stringstream::goodbit); 
-	in.seekg(0, ios::beg);
-
-	unsigned int count = 0;
-
-	for (size_t i = 0; i < pos; ++i) {
-		if (in.get() == SC::LF) ++count;
-	}
-
-	return count;
-}
-
-string InputManager_t::GetLine(istream& fin, const char delimiter) const
+string InputManager_t::GetLine(istream& in, const char delimiter) const
 {
 	string oneline;
 	
-	std::getline(fin, oneline, delimiter);
+	std::getline(in, oneline, delimiter);
 
 	std::replace(oneline.begin(), oneline.end(), SC::TAB, SC::BLANK);
 #ifdef __linux__
@@ -122,15 +103,42 @@ string InputManager_t::GetLine(istream& fin, const char delimiter) const
 	return static_cast<string&&>(oneline);
 }
 
+vector<string> InputManager_t::SplitFields(string line, const char *delimiter)
+{
+	vector<string> splitted;
+	stringstream ss(line);
+	
+	string::size_type beg, pos = 0;
+
+	while ((beg = line.find_first_not_of(delimiter, pos)) != string::npos)
+	{
+		pos = line.find_first_of(delimiter, beg + 1);
+		splitted.push_back(line.substr(beg, pos - beg));
+	}
+
+	return static_cast<vector<string>&&>(splitted);
+}
+
 string InputManager_t::GetScriptBlock(istream& in) const
 {
-	string block = "";
-	
+	string oneline;
 
+	bool lstop = false;
 
+	do {
+		
+		oneline += GetLine(in, SC::RBRACE);
+		if (oneline.empty()) break;
+		oneline.push_back(SC::RBRACE);
 
+		auto lcount = std::count(oneline.begin(), oneline.end(), SC::LBRACE);
+		auto rcount = std::count(oneline.begin(), oneline.end(), SC::RBRACE);
 
-	return static_cast<string&&>(block);
+		lstop = lcount == rcount;
+
+	} while (!lstop && !in.eof());
+
+	return static_cast<string&&>(oneline);
 }
 
 }

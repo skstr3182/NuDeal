@@ -26,7 +26,7 @@ void UnitSurf::Transform(double **invTM) {
 		c_x = trans[0][3] + trans[3][0]; c_y = trans[1][3] + trans[3][1]; c_z = trans[2][3] + trans[3][2];
 	}
 
-UnitSurf::UnitSurf(int surftype, double *_coeff, bool _inout, int cartesianPln = XY) {
+UnitSurf::UnitSurf(int surftype, double *_coeff, bool _inout, int cartesianPln) {
 		alloc = true;
 		inout = _inout;
 		double coeff[10];
@@ -86,7 +86,7 @@ UnitSurf::UnitSurf(int surftype, double *_coeff, bool _inout, int cartesianPln =
 		c = coeff[9];
 	}
 
-void UnitSurf::Create(int surftype, double *_coeff, bool _inout, int cartesianPln = XY) {
+void UnitSurf::Create(int surftype, double *_coeff, bool _inout, int cartesianPln) {
 	inout = _inout;
 	double coeff[10];
 	for (int i = 0; i < 10; i++) coeff[i] = 0.;
@@ -265,6 +265,7 @@ UnitSurf UnitSurf::operator=(const UnitSurf &asurf) {
 	bool inout;
 	inout = asurf.GetEquation(coeff);
 	Create(GENERAL, coeff, inout);
+	return *this;
 }
 
 bool UnitSurf::IsInside(double x, double y, double z) {
@@ -332,16 +333,16 @@ void UnitVol::append(const UnitSurf &asurf) {
 }
 
 void UnitVol::Relocate(int dx, int dy, int dz) {
-	for (int i = 0; i < nsurf; i++) Surfaces[i].Relocate;
+	for (int i = 0; i < nsurf; i++) Surfaces[i].Relocate(dx, dy, dz);
 }
 
 void UnitVol::Rotate(double cos, double sin, int Ax) {
-	for (int i = 0; i < nsurf; i++) Surfaces[i].Rotate;
+	for (int i = 0; i < nsurf; i++) Surfaces[i].Rotate(cos, sin, Ax);
 }
 
 bool UnitVol::IsInside(double x, double y, double z) {
 	bool inside = true;
-	for (int i = 0; i < nsurf; i++) inside = (inside&&Surfaces[i].IsInside);
+	for (int i = 0; i < nsurf; i++) inside = inside && Surfaces[i].IsInside(x, y, z);
 	return inside;
 }
 

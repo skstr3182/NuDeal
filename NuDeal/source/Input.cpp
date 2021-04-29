@@ -23,7 +23,7 @@ T InputManager_t::GetCardID(Blocks block, string line) const
 	int pos_beg = line.find_first_not_of(SC::BLANK);
 	if (pos_beg == string::npos) return static_cast<T>(INVALID);
 
-	int pos_end = line.find(BLANK, pos_beg);
+	int pos_end = line.find(SC::BLANK, pos_beg);
 	string card = line.substr(pos_beg, pos_end - pos_beg);
 
 	Uppercase(card);
@@ -42,6 +42,8 @@ stringstream InputManager_t::ExtractInput(istream& fin, string& contents) const
 	
 	contents = fileStream.str();
 
+	Uppercase(contents);
+
 	string replaced = contents;
 
 	std::replace(replaced.begin(), replaced.end(), SC::TAB, SC::BLANK);
@@ -51,6 +53,87 @@ stringstream InputManager_t::ExtractInput(istream& fin, string& contents) const
 
 	return static_cast<stringstream&&>(fileStream);
 }
+
+// BLOCK
+
+void InputManager_t::ParseGeometryBlock(istream& in)
+{
+	using Except = Exception_t;
+	using Code = Except::Code;
+	using Cards = GeometryCards;
+
+	while (!in.eof()) {
+		
+		stringstream sector(GetScriptBlock(in));
+		string block = GetLine(sector, SC::LBRACE);
+		Cards ID = GetCardID<Cards>(Blocks::GEOMETRY, block);
+
+		switch (ID)
+		{
+		case Cards::UNITVOLUME :
+			ParseUnitVolumeCard(sector); break;
+		case Cards::UNITCOMP :
+			ParseUnitCompCard(sector); break;
+		case Cards::INVALID :
+			Except::Abort(Code::INVALID_INPUT_CARD, block);
+		}
+
+	}
+}
+
+void InputManager_t::ParseMaterialBlock(istream& in)
+{
+
+}
+
+void InputManager_t::ParseOptionBlock(istream& in)
+{
+
+}
+
+// GEOMETRY CARDS
+
+void InputManager_t::ParseUnitVolumeCard(istream& in)
+{
+	using Except = Exception_t;
+	using Code = Except::Code;
+
+	while (!in.eof()) {
+			
+		stringstream sector(GetScriptBlock(in));
+		if (sector.str().empty()) break;
+		auto name = GetLine(sector, SC::LBRACE);
+		auto info = GetLine(sector, SC::RBRACE);
+		info.erase(std::remove(info.begin(), info.end(), SC::BLANK), info.end());
+
+		UnitVolume_t V;
+
+		string::size_type pos = info.find("ORIGIN");
+
+		if (pos != string::npos) {
+			auto end = info.find_first_of(SC::SEMICOLON, pos);
+			if (end == string::npos) 
+				Except::Abort(Code::SEMICOLON_MISSED, info);
+			auto substr = info.substr(pos, end - pos);
+			info.erase(pos, min(end + 1, info.size()));
+			auto v = SplitFields(substr, &SC::COLON);
+			V.origin = v.back();
+		}
+
+		auto v = SplitFields(info, SC::DAMPERSAND);
+		V.equations = v;
+		unitVolumes[name] = V;
+
+	}
+
+}
+
+void InputManager_t::ParseUnitCompCard(istream& in)
+{
+
+}
+
+// PUBLIC
 
 void InputManager_t::ReadInput(string file)
 {
@@ -65,13 +148,24 @@ void InputManager_t::ReadInput(string file)
 
 	fin.close();
 
-	cout << GetLine(fileStream, SC::LBRACE) << endl;
-	cout << GetLine(fileStream, SC::LBRACE) << endl;
-	fileStream.clear(stringstream::goodbit); fileStream.seekg(0);
-	cout << GetLine(fileStream) << endl;
-	cout << GetLine(fileStream) << endl;
+	while (!fileStream.eof()) {
+		
+		stringstream sector(GetScriptBlock(fileStream));
+		string block = GetLine(sector, SC::LBRACE);
+		Blocks ID = GetBlockID(block);
 
-	cout << CountCurrentLine(fileStream) << endl;
+		switch (ID)
+		{
+		case Blocks::GEOMETRY :
+			ParseGeometryBlock(sector); break;
+		case Blocks::MATERIAL :
+			ParseMaterialBlock(sector); break;
+		case Blocks::OPTION : 
+			ParseOptionBlock(sector); break;
+		case Blocks::INVALID :
+			Except::Abort(Code::INVALID_INPUT_BLOCK, block);
+		}
+	}
 }
 
 }

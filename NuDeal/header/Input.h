@@ -20,6 +20,7 @@ private :
 		static constexpr char LF = '\n';
 		static constexpr char LBRACE = '{';
 		static constexpr char RBRACE = '}';
+		static constexpr char COLON = ':';
 		static constexpr char SEMICOLON = ';';
 		static constexpr char COMMENT[] = "//";
 		static constexpr char DAMPERSAND[] = "&&";
@@ -31,13 +32,14 @@ public :
 	
 private :
 
-	static constexpr int num_blocks = 2;
+	static constexpr int num_blocks = 5;
 	static constexpr int num_cards = 30;
 
 	const string BlockNames[num_blocks] =
 	{
 		"GEOMETRY",
-		"MACROXS"
+		"MATERIAL",
+		"OPTION"
 	};
 	const string CardNames[num_blocks][num_cards] = 
 	{
@@ -47,7 +49,8 @@ private :
 
 	enum class Blocks {
 		GEOMETRY,
-		MACROXS,
+		MATERIAL,
+		OPTION,
 		INVALID = -1
 	};
 
@@ -67,8 +70,8 @@ private :
 private :
 
 	string contents;
-	unsigned int line = 0;
-	static const int INVALID = -1;
+	size_t line = 0;
+	static constexpr int INVALID = -1;
 
 	// IO Utility
 	/// Parser
@@ -77,17 +80,47 @@ private :
 	int Integer(string field) const;
 	double Float(string field) const;
 	bool Logical(string field) const;
-	unsigned int CountCurrentLine(istream& in) const;
+	
 	string GetLine(istream& fin, const char delimiter = SC::LF) const;
+	vector<string> SplitFields(string line, const char *delimiter);
 	string GetScriptBlock(istream& in) const;
-	// Input Parser
+	/// Input Parser
 	Blocks GetBlockID(string oneline) const;
 	template <typename T> T GetCardID(Blocks block, string oneline) const;
 	stringstream ExtractInput(istream& fin, string& contents) const;
+	/// Block Parser
+	void ParseGeometryBlock(istream& in);
+	void ParseMaterialBlock(istream& in);
+	void ParseOptionBlock(istream& in);
+	/// Geometry Card Parser
+	void ParseUnitVolumeCard(istream& in);
+	void ParseUnitCompCard(istream& in);
 
 public :
 
 	void ReadInput(string file);
+
+public :
+	
+	struct UnitVolume_t
+	{
+		string origin = "(0, 0, 0)";
+		vector<string> equations;
+	};
+
+	struct UnitComp_t
+	{
+		string origin = "(0, 0, 0)";
+		string background;
+		vector<string> unitvols;
+		vector<string> displace;
+		vector<string> rotate;
+	};
+
+private :
+
+	map<string, UnitVolume_t> unitVolumes;
+	map<string, UnitComp_t> unitComps;
 
 };
 
