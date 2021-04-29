@@ -62,37 +62,38 @@ void InputManager_t::ConfigureTree(stringstream& in, Tree_t& Tree, size_t offset
 	using Except = Exception_t;
 	using Code = Except::Code;
 
+	static auto ONE = static_cast<std::streampos>(1);
+
 	do {
 
 		auto prefix = GetLine(in, SC::LBRACE); 
 		if (Trim(prefix).empty()) continue;
-		in.seekg(in.tellg() - static_cast<std::streampos>(1));
+		in.seekg(in.tellg() - ONE);
 		auto body = GetScriptBlock(in);
 		if (Trim(body).empty()) continue;
 
 		prefix = Trim(prefix, string(1, SC::BLANK));
 
-		auto lcount = std::count(body.begin(), body.end(), SC::LBRACE);
-		auto rcount = std::count(body.begin(), body.end(), SC::RBRACE);
+		auto count = std::count(body.begin(), body.end(), SC::LBRACE);
 
-		if (lcount != rcount)
-			Except::Abort(Code::MISMATCHED_BRACES, body);
+		if (count != std::count(body.begin(), body.end(), SC::RBRACE))
+			Except::Abort(Code::MISMATCHED_BRAKETS, body);
 
 		body.erase(0, body.find_first_of(SC::LBRACE) + 1);
 		body.erase(body.find_last_of(SC::RBRACE));
-		--lcount; --rcount;
+		--count;
 
 		auto& T = Tree[prefix];
 
-		offset += std::count(prefix.begin(), prefix.begin() + prefix.find_first_not_of(SC::LF), 
-			SC::LF);
+		offset += std::count(prefix.begin(), 
+			prefix.begin() + prefix.find_first_not_of(SC::LF), SC::LF);
 
 		T.line_begin = offset;
 
 		offset += std::count(prefix.begin() + prefix.find_last_not_of(SC::LF) + 1, 
 			prefix.end(), SC::LF);
 
-		if (lcount > 0) 
+		if (count > 0) 
 			ConfigureTree(stringstream(body), T.children, offset);
 		else 
 			T.contents = body;
@@ -216,9 +217,15 @@ void InputManager_t::ParseUnitCompCard(InputTree_t& Tree)
 			U.displace.push_back(vector<string>());
 			u.erase(u.begin());
 			for (const auto& k : u) {
-				auto pos = k.find("ROTATE");
-				if (pos != string::npos) U.displace.back().push_back(k.substr(pos));
-				else U.displace.back().push_back(k);
+				auto lpos = k.find(SC::LPAREN) + 1;
+				auto rpos = k.find(SC::RPAREN);
+				if ((lpos == string::npos) != (rpos == string::npos))
+					Except::Abort(Code::MISMATCHED_BRAKETS, k, object.GetLineInfo());
+				
+				if (lpos == string::npos && rpos == string::npos)
+					U.displace.back().push_back(k);
+				else
+					U.displace.back().push_back(k.substr(lpos, rpos - lpos));
 			}
 		}
 

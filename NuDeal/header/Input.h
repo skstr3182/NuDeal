@@ -25,6 +25,8 @@ private :
 		static constexpr char COMMENT[] = "//";
 		static constexpr char DAMPERSAND[] = "&&";
 		static constexpr char RDBRACKET[] = ">>";
+		static constexpr char LPAREN = '(';
+		static constexpr char RPAREN = ')';
 	};
 
 	struct InputTree_t
