@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 enum Transform {
 	RELOC,
 	ROTAT,
@@ -6,68 +7,91 @@ enum Transform {
 	SHAER
 };
 
-enum RotAxis {
+enum CartAxis {
 	X,
 	Y,
 	Z
 };
 
-enum RayLine {
+enum CartPlane {
 	XY,
 	YZ,
 	XZ
 };
 
-class UnitVol {
+enum SurfType {
+	XPLN,
+	YPLN,
+	ZPLN,
+	PLN,
+	CIRCLE,
+	ELLIPSE,
+	SPHERE,
+	ELLIPSOID,
+	GENERAL
+};
+
+class UnitSurf {
 private:
+	bool alloc;
+	// The realm defined with a surface would be,
+	// If (inout),  ((c_xs*x+c_x)*x + (c_ys*y+c_y)*y + (c_zs*z+c_z)*z - c < 0
+	// If (!inout),  ((c_xs*x+c_x)*x + (c_ys*y+c_y)*y + (c_zs*z+c_z)*z - c > 0
+	bool isCurve, inout;
 	double c_xs, c_ys, c_zs;
 	double c_xy, c_yz, c_xz;
 	double c_x, c_y, c_z, c;
-	double TransM[4][4], invTM[4][4];
 
-	UnitVol() {
-		for (int i = 0; i < 4; i++) {
-			for (int j = 0; j < 4; j++) {
-				TransM[i][j] = 0.; invTM[i][j] = 0.;
-			}
-			TransM[i][i] = 1.; invTM[i][i] = 1.;
-		}
-	}
-
-	void Relocate(int dx, int dy, int dz) {
-		// Update only the fourth rows
-		for (int ic = 0; ic < 4; ic++) {
-			TransM[3][ic] += dx * TransM[0][ic] + dy * TransM[1][ic] + dz * TransM[2][ic];
-			invTM[3][ic] += (-dx) * invTM[0][ic] -dy * invTM[1][ic] - dz * invTM[2][ic];
-		}
-	}
-
-	void Rotate(double cos, double sin, RotAxis Ax) {
-		int ir1, ir2;
-		switch (Ax) {
-		case X:
-			ir1 = 1; ir2 = 2;
-			break;
-		case Y:
-			ir1 = 0; ir2 = 2;
-			break;
-		case Z:
-			ir1 = 0; ir2 = 1;
-			break;
-		default:
-			break;
-		}
-		for (int ic = 0; ic < 3; ic++) {
-			TransM[ir1][ic] = cos * TransM[ir1][ic] - sin * TransM[ir2][ic];
-			TransM[ir2][ic] = sin * TransM[ir1][ic] + cos * TransM[ir2][ic];
-			invTM[ir1][ic] = cos * invTM[ir1][ic] + sin * invTM[ir2][ic];
-			invTM[ir2][ic] = (-sin) * invTM[ir1][ic] + cos * invTM[ir2][ic];
-		}
-	}
+	void Transform(double **invTM);
 public:
-	void GetEquation(int *_coeff) {
-		int coeff[10] = { c_xs,c_ys,c_zs,c_xy,c_yz,c_xz,c_x,c_y,c_z,c };
-		for (int i = 0; i < 10; i++) _coeff[i] = coeff[i];
-	}
+	UnitSurf() { alloc = false;	}
 
+	UnitSurf(int surftype, double *_coeff, bool _inout, int cartesianPln = XY);
+
+	UnitSurf(const UnitSurf &asurf) { alloc = true;	this->operator=(asurf);	}
+
+	void Create(int surftype, double *_coeff, bool _inout, int cartesianPln = XY);
+	
+	void Destroy() { alloc = false; }
+
+	bool IsAlloc() { return alloc; }
+
+	bool GetEquation(double *_coeff) const;
+
+	void Relocate(int dx, int dy, int dz);
+
+	void Rotate(double cos, double sin, int Ax);
+
+	int GetIntersection(int CartPlane, double *val, double &sol1, double &sol2);
+
+	UnitSurf operator=(const UnitSurf &asurf);
+
+	bool IsInside(double x, double y, double z);
+};
+
+class UnitVol {
+private:
+	bool alloc;
+	int nsurf;
+	UnitSurf *Surfaces;
+
+	UnitVol() {	alloc = false; }
+
+	int OneIntersection(int idx, int CartPlane, double *val, double &sol1, double &sol2);
+public:
+	void Create(int _nsurf, const UnitSurf *&_Surfaces);
+
+	void Destroy() { delete Surfaces; alloc = false; }
+
+	bool IsAlloc() { return alloc; }
+
+	void append(const UnitSurf &asurf);
+
+	void Relocate(int dx, int dy, int dz);
+
+	void Rotate(double cos, double sin, int Ax);
+
+	bool IsInside(double x, double y, double z);
+
+	int GetIntersection(int CartPlane, double *val, double **sol);
 };
