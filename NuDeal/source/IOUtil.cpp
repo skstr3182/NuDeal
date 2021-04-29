@@ -64,26 +64,73 @@ bool InputManager_t::Logical(string field) const
 	Except::Abort(Code::INVALID_LOGICAL, "Line : " + to_string(line));
 }
 
-InputManager_t::Blocks InputManager_t::GetBlockID(string line) const
+unsigned int InputManager_t::CountCurrentLine(istream& in) const
 {
-	int pos_end = line.find(BLANK, 0);
-	string block = line.substr(0, pos_end);
+	size_t pos = in.tellg();
+	string block;
 
-	Uppercase(block);
-	for (int i = 0; i < num_blocks; ++i) 
-		if (!block.compare(BlockNames[i])) 
-			return static_cast<Blocks>(i);
-	
-	return Blocks::INVALID;
+	block.resize(pos);
+
+	in.clear(stringstream::goodbit); 
+	in.seekg(0, ios::beg);
+
+	unsigned int count = 0;
+
+	for (size_t i = 0; i < pos; ++i) {
+		if (in.get() == SC::LF) ++count;
+	}
+
+	return count;
 }
 
-template <typename T>
-T InputManager_t::GetCardID(Blocks block, string line) const
+string InputManager_t::GetLine(istream& fin, const char delimiter) const
 {
-	int pos_beg = line.find_first_not_of(BLANK);
-	if (pos_beg == string::npos) return static_cast<T>(INVALID);
+	string oneline;
+	
+	std::getline(fin, oneline, delimiter);
+
+	std::replace(oneline.begin(), oneline.end(), SC::TAB, SC::BLANK);
+#ifdef __linux__
+	std::replace(oneline.begin(), oneline.end(), SC::CR, SC::BLANK);
+#endif
+	
+	string::size_type pos = 0;
+
+	// Treat C-style Comment
+
+	do {
+		pos = oneline.find(SC::COMMENT);
+		if (pos == string::npos) break;
+		auto LF = oneline.find(SC::LF, pos);
+		if (LF != string::npos) oneline.erase(pos, LF - pos);
+	} while (pos != string::npos);
+
+	// Treat Fortran-style Comment
+
+	do {
+		pos = oneline.find(SC::BANG);
+		if (pos == string::npos) break;
+		auto LF = oneline.find(SC::LF, pos);
+		if (LF != string::npos) oneline.erase(pos, LF - pos);
+	} while (pos != string::npos);
+
+	oneline.erase(std::remove(oneline.begin(), oneline.end(), SC::LF), oneline.end());
+
+	oneline = oneline.erase(oneline.find_last_not_of(SC::BLANK) + 1);
+	oneline = oneline.erase(0, oneline.find_first_not_of(SC::BLANK));
+
+	return static_cast<string&&>(oneline);
+}
+
+string InputManager_t::GetScriptBlock(istream& in) const
+{
+	string block = "";
+	
 
 
+
+
+	return static_cast<string&&>(block);
 }
 
 }
