@@ -57,7 +57,7 @@ stringstream InputManager_t::ExtractInput(istream& fin)
 	return static_cast<stringstream&&>(fileStream);
 }
 
-void InputManager_t::ConfigureTree(stringstream& in, Tree_t& Tree, size_t offset)
+void InputManager_t::MakeInputTree(stringstream& in, Tree_t& Tree, size_t offset)
 {
 	using Except = Exception_t;
 	using Code = Except::Code;
@@ -88,13 +88,13 @@ void InputManager_t::ConfigureTree(stringstream& in, Tree_t& Tree, size_t offset
 		offset += std::count(prefix.begin(), 
 			prefix.begin() + prefix.find_first_not_of(SC::LF), SC::LF);
 
-		T.line_begin = offset;
+		T.line_info = offset;
 
 		offset += std::count(prefix.begin() + prefix.find_last_not_of(SC::LF) + 1, 
 			prefix.end(), SC::LF);
 
 		if (count > 0) 
-			ConfigureTree(stringstream(body), T.children, offset);
+			MakeInputTree(stringstream(body), T.children, offset);
 		else 
 			T.contents = body;
 
@@ -114,20 +114,18 @@ void InputManager_t::ParseGeometryBlock(InputTree_t& Tree)
 
 	for (auto& T : Tree.children) {
 		
-		auto& contents = T.second;
+		auto& object = T.second;
 		string card = Trim(T.first);
 		Cards ID = GetCardID<Cards>(Blocks::GEOMETRY, card);
 
 		switch (ID)
 		{
 		case Cards::UNITVOLUME :
-			ParseUnitVolumeCard(contents); break;
+			ParseUnitVolumeCard(object); break;
 		case Cards::UNITCOMP :
-			ParseUnitCompCard(contents); break;
+			ParseUnitCompCard(object); break;
 		case Cards::INVALID :
-			stringstream iss;
-			iss << "Line : " << contents.line_begin;
-			Except::Abort(Code::INVALID_INPUT_CARD, card, iss.str());
+			Except::Abort(Code::INVALID_INPUT_CARD, card, object.GetLineInfo());
 		}
 
 	}
@@ -201,12 +199,6 @@ void InputManager_t::ParseUnitCompCard(InputTree_t& Tree)
 		auto contents = EraseSpace(object.contents);
 		v = SplitFields(contents, string(1, SC::SEMICOLON));
 
-		for (auto& k : v) k = Trim(k);
-		for (auto k = v.begin(); k != v.end(); ) {
-			if ((*k).empty()) k = v.erase(k);
-			else ++k;
-		}
-
 		UnitComp_t U;
 
 		U.background = background;
@@ -219,13 +211,12 @@ void InputManager_t::ParseUnitCompCard(InputTree_t& Tree)
 			for (const auto& k : u) {
 				auto lpos = k.find(SC::LPAREN) + 1;
 				auto rpos = k.find(SC::RPAREN);
-				if ((lpos == string::npos) != (rpos == string::npos))
-					Except::Abort(Code::MISMATCHED_BRAKETS, k, object.GetLineInfo());
-				
 				if (lpos == string::npos && rpos == string::npos)
 					U.displace.back().push_back(k);
-				else
+				else if (lpos != string::npos && rpos != string::npos)
 					U.displace.back().push_back(k.substr(lpos, rpos - lpos));
+				else
+					Except::Abort(Code::MISMATCHED_BRAKETS, object.contents, object.GetLineInfo());
 			}
 		}
 
@@ -248,7 +239,7 @@ void InputManager_t::ReadInput(string file)
 
 	fin.close();
 
-	ConfigureTree(fileStream, TreeHead);
+	MakeInputTree(fileStream, TreeHead);
 
 	for (auto& T : TreeHead) {
 		auto& contents = T.second;

@@ -31,10 +31,10 @@ private :
 
 	struct InputTree_t
 	{
-		size_t line_begin = 0;
+		size_t line_info = 0;
 		string contents = "";
 		map<string, InputTree_t> children;
-		string GetLineInfo() { return "Line : " + to_string(line_begin); }
+		string GetLineInfo() { return "Line : " + to_string(line_info); }
 	};
 
 	using Tree_t = map<string, InputTree_t>;
@@ -105,7 +105,7 @@ private :
 	Blocks GetBlockID(string oneline) const;
 	template <typename T> T GetCardID(Blocks block, string oneline) const;
 	stringstream ExtractInput(istream& fin);
-	void ConfigureTree(stringstream& in, Tree_t& Tree, size_t offset = 1);
+	void MakeInputTree(stringstream& in, Tree_t& Tree, size_t offset = 1);
 	/// Block Parser
 	void ParseGeometryBlock(InputTree_t& Tree);
 	void ParseMaterialBlock(InputTree_t& Tree);
@@ -122,13 +122,13 @@ public :
 	
 	struct UnitVolume_t
 	{
-		string origin = "(0, 0, 0)";
+		string origin = "0, 0, 0";
 		vector<string> equations;
 	};
 
 	struct UnitComp_t
 	{
-		string origin = "(0, 0, 0)";
+		string origin = "0, 0, 0";
 		string background;
 		vector<string> unitvols;
 		vector<vector<string>> displace;
