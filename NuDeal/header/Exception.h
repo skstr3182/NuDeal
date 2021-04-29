@@ -14,6 +14,12 @@ public :
 		INVALID_INTEGER,
 		INVALID_FLOATING_POINT,
 		INVALID_LOGICAL,
+		INVALID_INPUT_BLOCK,
+		INVALID_INPUT_CARD,
+		INVALID_ORIGIN_DATA,
+		BACKGROUND_MISSED,
+		SEMICOLON_MISSED,
+		MISMATCHED_BRAKETS,
 		UNSPECIFIED_ERROR,
 		COUNTS,
 	};
@@ -23,8 +29,30 @@ public :
 		"Invalid integer expression!",
 		"Invalid floating point expression!",
 		"Invalid logical exrpession!",
+		"Invalid input block!",
+		"Invalid input card!",
+		"Invalid origin!",
+		"Missed background of geometry",
+		"Semicolon missed!",
+		"Mismatched braces!",
 		"Unspecified error!"
 	};
+
+	static size_t CountCurrentLine(istream& in)
+	{
+		size_t pos = in.tellg();
+		
+		in.clear(stringstream::goodbit);
+		in.seekg(0, ios::beg);
+
+		size_t count = 0;
+
+		for (size_t i = 0; i < pos; ++i) {
+			if (in.get() == '\n') ++count;
+		}
+
+		return count;
+	}
 
 	static void Abort(string message)
 	{

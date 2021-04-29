@@ -20,10 +20,24 @@ private :
 		static constexpr char LF = '\n';
 		static constexpr char LBRACE = '{';
 		static constexpr char RBRACE = '}';
+		static constexpr char COLON = ':';
 		static constexpr char SEMICOLON = ';';
 		static constexpr char COMMENT[] = "//";
 		static constexpr char DAMPERSAND[] = "&&";
+		static constexpr char RDBRACKET[] = ">>";
+		static constexpr char LPAREN = '(';
+		static constexpr char RPAREN = ')';
 	};
+
+	struct InputTree_t
+	{
+		size_t line_begin = 0;
+		string contents = "";
+		map<string, InputTree_t> children;
+		string GetLineInfo() { return "Line : " + to_string(line_begin); }
+	};
+
+	using Tree_t = map<string, InputTree_t>;
 
 public :
 
@@ -31,23 +45,25 @@ public :
 	
 private :
 
-	static constexpr int num_blocks = 2;
+	static constexpr int num_blocks = 5;
 	static constexpr int num_cards = 30;
 
 	const string BlockNames[num_blocks] =
 	{
 		"GEOMETRY",
-		"MACROXS"
+		"MATERIAL",
+		"OPTION"
 	};
 	const string CardNames[num_blocks][num_cards] = 
 	{
-		{ "UNITVOLUME", "UNITCOMP", "DISAPLCE" },
+		{ "UNITVOLUME", "UNITCOMP", "DISPLACE" },
 		{ "NG", "FORMAT" }
 	};
 
 	enum class Blocks {
 		GEOMETRY,
-		MACROXS,
+		MATERIAL,
+		OPTION,
 		INVALID = -1
 	};
 
@@ -65,10 +81,11 @@ private :
 	};
 
 private :
-
+	
 	string contents;
-	unsigned int line = 0;
-	static const int INVALID = -1;
+	size_t line = 0;
+	static constexpr int INVALID = -1;
+	Tree_t TreeHead;
 
 	// IO Utility
 	/// Parser
@@ -77,17 +94,50 @@ private :
 	int Integer(string field) const;
 	double Float(string field) const;
 	bool Logical(string field) const;
-	unsigned int CountCurrentLine(istream& in) const;
+	static string Trim(const string& field, const string& delimiter = "\n ");
+	static size_t LineCount(const string& line);
+	static string EraseSpace(const string& line, const string& delimiter = "\n ");
 	string GetLine(istream& fin, const char delimiter = SC::LF) const;
+	void DeleteComments(string& line) const;
+	vector<string> SplitFields(string line, const string& delimiter);
 	string GetScriptBlock(istream& in) const;
-	// Input Parser
+	/// Input Parser
 	Blocks GetBlockID(string oneline) const;
 	template <typename T> T GetCardID(Blocks block, string oneline) const;
-	stringstream ExtractInput(istream& fin, string& contents) const;
+	stringstream ExtractInput(istream& fin);
+	void ConfigureTree(stringstream& in, Tree_t& Tree, size_t offset = 1);
+	/// Block Parser
+	void ParseGeometryBlock(InputTree_t& Tree);
+	void ParseMaterialBlock(InputTree_t& Tree);
+	void ParseOptionBlock(InputTree_t& Tree);
+	/// Geometry Card Parser
+	void ParseUnitVolumeCard(InputTree_t& Tree);
+	void ParseUnitCompCard(InputTree_t& Tree);
 
 public :
 
 	void ReadInput(string file);
+
+public :
+	
+	struct UnitVolume_t
+	{
+		string origin = "(0, 0, 0)";
+		vector<string> equations;
+	};
+
+	struct UnitComp_t
+	{
+		string origin = "(0, 0, 0)";
+		string background;
+		vector<string> unitvols;
+		vector<vector<string>> displace;
+	};
+
+private :
+
+	map<string, UnitVolume_t> unitVolumes;
+	map<string, UnitComp_t> unitComps;
 
 };
 

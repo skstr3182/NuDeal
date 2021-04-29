@@ -64,73 +64,107 @@ bool InputManager_t::Logical(string field) const
 	Except::Abort(Code::INVALID_LOGICAL, "Line : " + to_string(line));
 }
 
-unsigned int InputManager_t::CountCurrentLine(istream& in) const
+string InputManager_t::Trim(const string& field, const string& delimiter)
 {
-	size_t pos = in.tellg();
-	string block;
+	string s = field;
+	auto pos = s.find_first_not_of(delimiter);
+	s.erase(0, pos);
+	pos = s.find_last_not_of(delimiter) + 1;
+	s.erase(pos);
 
-	block.resize(pos);
-
-	in.clear(stringstream::goodbit); 
-	in.seekg(0, ios::beg);
-
-	unsigned int count = 0;
-
-	for (size_t i = 0; i < pos; ++i) {
-		if (in.get() == SC::LF) ++count;
-	}
-
-	return count;
+	return static_cast<string&&>(s);
 }
 
-string InputManager_t::GetLine(istream& fin, const char delimiter) const
+size_t InputManager_t::LineCount(const string& line)
+{
+	return static_cast<size_t>(std::count(line.begin(), line.end(), SC::LF));
+}
+
+string InputManager_t::EraseSpace(const string& line, const string& delimiter)
+{
+	string s = line;
+	for (const auto& i : delimiter)
+		s.erase(std::remove(s.begin(), s.end(), i), s.end());
+	return static_cast<string&&>(s);
+}
+
+string InputManager_t::GetLine(istream& in, const char delimiter) const
 {
 	string oneline;
 	
-	std::getline(fin, oneline, delimiter);
+	std::getline(in, oneline, delimiter);
 
 	std::replace(oneline.begin(), oneline.end(), SC::TAB, SC::BLANK);
-#ifdef __linux__
 	std::replace(oneline.begin(), oneline.end(), SC::CR, SC::BLANK);
-#endif
-	
-	string::size_type pos = 0;
 
-	// Treat C-style Comment
-
-	do {
-		pos = oneline.find(SC::COMMENT);
-		if (pos == string::npos) break;
-		auto LF = oneline.find(SC::LF, pos);
-		if (LF != string::npos) oneline.erase(pos, LF - pos);
-	} while (pos != string::npos);
-
-	// Treat Fortran-style Comment
-
-	do {
-		pos = oneline.find(SC::BANG);
-		if (pos == string::npos) break;
-		auto LF = oneline.find(SC::LF, pos);
-		if (LF != string::npos) oneline.erase(pos, LF - pos);
-	} while (pos != string::npos);
-
-	oneline.erase(std::remove(oneline.begin(), oneline.end(), SC::LF), oneline.end());
-
-	oneline = oneline.erase(oneline.find_last_not_of(SC::BLANK) + 1);
-	oneline = oneline.erase(0, oneline.find_first_not_of(SC::BLANK));
+	DeleteComments(oneline);
 
 	return static_cast<string&&>(oneline);
 }
 
+void InputManager_t::DeleteComments(string& line) const
+{
+	
+	string::size_type pos = 0;
+
+	// C-style Comment
+
+	do {
+		pos = line.find(SC::COMMENT);
+		if (pos == string::npos) break;
+		auto LF = line.find(SC::LF, pos);
+		line.erase(pos, LF - pos);
+	} while (pos != string::npos);
+
+	// Fortran-style Comment
+
+	do {
+		pos = line.find(SC::BANG);
+		if (pos == string::npos) break;
+		auto LF = line.find(SC::LF, pos);
+		line.erase(pos, LF - pos);
+	} while (pos != string::npos);
+
+}
+
+vector<string> InputManager_t::SplitFields(string line, const string& delimiter)
+{
+	vector<string> splitted;
+	stringstream ss(line);
+	
+	string::size_type beg, pos = 0;
+
+	while ((beg = line.find_first_not_of(delimiter, pos)) != string::npos)
+	{
+		pos = line.find_first_of(delimiter, beg + 1);
+		splitted.push_back(line.substr(beg, pos - beg));
+	}
+
+	return static_cast<vector<string>&&>(splitted);
+}
+
 string InputManager_t::GetScriptBlock(istream& in) const
 {
-	string block = "";
-	
+	string oneline;
 
+	bool lstop = false;
 
+	do {
+		
+		oneline += GetLine(in, SC::RBRACE);
+		auto lcount = std::count(oneline.begin(), oneline.end(), SC::LBRACE);
 
+		if (lcount == 0) break;
 
-	return static_cast<string&&>(block);
+		oneline.push_back(SC::RBRACE);
+
+		auto rcount = std::count(oneline.begin(), oneline.end(), SC::RBRACE);
+
+		lstop = lcount == rcount;
+
+	} while (!lstop && !in.eof());
+
+	return static_cast<string&&>(oneline);
 }
 
 }
