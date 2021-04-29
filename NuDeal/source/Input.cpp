@@ -34,7 +34,7 @@ T InputManager_t::GetCardID(Blocks block, string line) const
 	return static_cast<T>(INVALID);
 }
 
-stringstream InputManager_t::ExtractInput(istream& fin, string& contents) const
+stringstream InputManager_t::ExtractInput(istream& fin)
 {
 	stringstream fileStream;
 
@@ -42,95 +42,188 @@ stringstream InputManager_t::ExtractInput(istream& fin, string& contents) const
 	
 	contents = fileStream.str();
 
+	std::replace(contents.begin(), contents.end(), SC::TAB, SC::BLANK);
+#ifdef __linux__
+	std::replace(contents.begin(), contents.end(), SC::CR, SC::BLANK);
+#endif
+
+	contents.erase(contents.find_last_not_of(SC::BLANK), contents.size());
+
 	Uppercase(contents);
 
-	string replaced = contents;
-
-	std::replace(replaced.begin(), replaced.end(), SC::TAB, SC::BLANK);
-	
 	fileStream.str("");
-	fileStream.str(replaced);
+	fileStream.str(contents);
 
 	return static_cast<stringstream&&>(fileStream);
 }
 
+void InputManager_t::ConfigureTree(stringstream& in, Tree_t& Tree, size_t offset)
+{
+	using Except = Exception_t;
+	using Code = Except::Code;
+
+	do {
+
+		auto prefix = GetLine(in, SC::LBRACE); 
+		if (Trim(prefix).empty()) continue;
+		in.seekg(in.tellg() - static_cast<std::streampos>(1));
+		auto body = GetScriptBlock(in);
+		if (Trim(body).empty()) continue;
+
+		prefix = Trim(prefix, string(1, SC::BLANK));
+
+		auto lcount = std::count(body.begin(), body.end(), SC::LBRACE);
+		auto rcount = std::count(body.begin(), body.end(), SC::RBRACE);
+
+		if (lcount != rcount)
+			Except::Abort(Code::MISMATCHED_BRACES, body);
+
+		body.erase(0, body.find_first_of(SC::LBRACE) + 1);
+		body.erase(body.find_last_of(SC::RBRACE));
+		--lcount; --rcount;
+
+		auto& T = Tree[prefix];
+
+		offset += std::count(prefix.begin(), prefix.begin() + prefix.find_first_not_of(SC::LF), 
+			SC::LF);
+
+		T.line_begin = offset;
+
+		offset += std::count(prefix.begin() + prefix.find_last_not_of(SC::LF) + 1, 
+			prefix.end(), SC::LF);
+
+		if (lcount > 0) 
+			ConfigureTree(stringstream(body), T.children, offset);
+		else 
+			T.contents = body;
+
+		offset += LineCount(body);
+
+	} while (!in.eof());
+
+}
+
 // BLOCK
 
-void InputManager_t::ParseGeometryBlock(istream& in)
+void InputManager_t::ParseGeometryBlock(InputTree_t& Tree)
 {
 	using Except = Exception_t;
 	using Code = Except::Code;
 	using Cards = GeometryCards;
 
-	while (!in.eof()) {
+	for (auto& T : Tree.children) {
 		
-		stringstream sector(GetScriptBlock(in));
-		string block = GetLine(sector, SC::LBRACE);
-		Cards ID = GetCardID<Cards>(Blocks::GEOMETRY, block);
+		auto& contents = T.second;
+		string card = Trim(T.first);
+		Cards ID = GetCardID<Cards>(Blocks::GEOMETRY, card);
 
 		switch (ID)
 		{
 		case Cards::UNITVOLUME :
-			ParseUnitVolumeCard(sector); break;
+			ParseUnitVolumeCard(contents); break;
 		case Cards::UNITCOMP :
-			ParseUnitCompCard(sector); break;
+			ParseUnitCompCard(contents); break;
 		case Cards::INVALID :
-			Except::Abort(Code::INVALID_INPUT_CARD, block);
+			stringstream iss;
+			iss << "Line : " << contents.line_begin;
+			Except::Abort(Code::INVALID_INPUT_CARD, card, iss.str());
 		}
 
 	}
+
 }
 
-void InputManager_t::ParseMaterialBlock(istream& in)
+void InputManager_t::ParseMaterialBlock(InputTree_t& Tree)
 {
 
 }
 
-void InputManager_t::ParseOptionBlock(istream& in)
+void InputManager_t::ParseOptionBlock(InputTree_t& Tree)
 {
 
 }
 
 // GEOMETRY CARDS
 
-void InputManager_t::ParseUnitVolumeCard(istream& in)
+void InputManager_t::ParseUnitVolumeCard(InputTree_t& Tree)
 {
 	using Except = Exception_t;
 	using Code = Except::Code;
 
-	while (!in.eof()) {
-			
-		stringstream sector(GetScriptBlock(in));
-		if (sector.str().empty()) break;
-		auto name = GetLine(sector, SC::LBRACE);
-		auto info = GetLine(sector, SC::RBRACE);
-		info.erase(std::remove(info.begin(), info.end(), SC::BLANK), info.end());
+	string ORIGIN = "ORIGIN";
 
-		UnitVolume_t V;
+	for (auto& T : Tree.children) {
+		auto name = Trim(T.first);
+		auto& object = T.second;
+		auto contents = EraseSpace(object.contents);
+		auto v = SplitFields(contents, string(1, SC::SEMICOLON));
+		
+		UnitVolume_t U;
 
-		string::size_type pos = info.find("ORIGIN");
+		for (auto i = v.begin(); i != v.end(); ) {
+			auto& s = *i;
+			if (s.find(ORIGIN) != string::npos) {
+				auto delimiter = string(1, s[ORIGIN.size()]);
+				auto u = SplitFields(s, delimiter);
 
-		if (pos != string::npos) {
-			auto end = info.find_first_of(SC::SEMICOLON, pos);
-			if (end == string::npos) 
-				Except::Abort(Code::SEMICOLON_MISSED, info);
-			auto substr = info.substr(pos, end - pos);
-			info.erase(pos, min(end + 1, info.size()));
-			auto v = SplitFields(substr, &SC::COLON);
-			V.origin = v.back();
+				if (u.size() != 2) 
+					Except::Abort(Code::INVALID_ORIGIN_DATA, object.contents, object.GetLineInfo());
+				U.origin = u.back();
+
+				i = v.erase(i);
+			}
+			else ++i;
 		}
 
-		auto v = SplitFields(info, SC::DAMPERSAND);
-		V.equations = v;
-		unitVolumes[name] = V;
+		v = SplitFields(v.front(), SC::DAMPERSAND);
 
+		U.equations = v;
+
+		unitVolumes[name] = U;
 	}
 
 }
 
-void InputManager_t::ParseUnitCompCard(istream& in)
+void InputManager_t::ParseUnitCompCard(InputTree_t& Tree)
 {
+	using Except = Exception_t;
+	using Code = Except::Code;
 
+	for (auto& T : Tree.children) {
+		auto& object = T.second;
+		auto prefix = EraseSpace(T.first);
+		auto v = SplitFields(prefix, string(1, SC::COLON));
+		if (v.size() != 2) 
+			Except::Abort(Code::BACKGROUND_MISSED, object.contents, object.GetLineInfo());
+		auto name = v.front();
+		auto background = v.back();
+		auto contents = EraseSpace(object.contents);
+		v = SplitFields(contents, string(1, SC::SEMICOLON));
+
+		for (auto& k : v) k = Trim(k);
+		for (auto k = v.begin(); k != v.end(); ) {
+			if ((*k).empty()) k = v.erase(k);
+			else ++k;
+		}
+
+		UnitComp_t U;
+
+		U.background = background;
+
+		for (const auto& s : v) {
+			auto u = SplitFields(s, SC::RDBRACKET);
+			U.unitvols.push_back(u.front());
+			U.displace.push_back(vector<string>());
+			u.erase(u.begin());
+			for (const auto& k : u) {
+				auto pos = k.find("ROTATE");
+				if (pos != string::npos) U.displace.back().push_back(k.substr(pos));
+				else U.displace.back().push_back(k);
+			}
+		}
+
+		unitComps[name] = U;
+	}
 }
 
 // PUBLIC
@@ -144,28 +237,30 @@ void InputManager_t::ReadInput(string file)
 	
 	if (fin.fail()) Except::Abort(Code::FILE_NOT_FOUND, file);
 
-	stringstream fileStream = ExtractInput(fin, contents);
+	stringstream fileStream = ExtractInput(fin);
 
 	fin.close();
 
-	while (!fileStream.eof()) {
-		
-		stringstream sector(GetScriptBlock(fileStream));
-		string block = GetLine(sector, SC::LBRACE);
-		Blocks ID = GetBlockID(block);
+	ConfigureTree(fileStream, TreeHead);
 
+	for (auto& T : TreeHead) {
+		auto& contents = T.second;
+		string block = Trim(T.first);
+		Blocks ID = GetBlockID(block);
 		switch (ID)
 		{
 		case Blocks::GEOMETRY :
-			ParseGeometryBlock(sector); break;
+			ParseGeometryBlock(contents); break;
 		case Blocks::MATERIAL :
-			ParseMaterialBlock(sector); break;
-		case Blocks::OPTION : 
-			ParseOptionBlock(sector); break;
+			ParseMaterialBlock(contents); break;
+		case Blocks::OPTION :
+			ParseOptionBlock(contents); break;
 		case Blocks::INVALID :
-			Except::Abort(Code::INVALID_INPUT_BLOCK, block);
+			Except::Abort(Code::INVALID_INPUT_BLOCK, block, contents.GetLineInfo());
 		}
 	}
+
+
 }
 
 }

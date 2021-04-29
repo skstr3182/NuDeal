@@ -16,7 +16,10 @@ public :
 		INVALID_LOGICAL,
 		INVALID_INPUT_BLOCK,
 		INVALID_INPUT_CARD,
+		INVALID_ORIGIN_DATA,
+		BACKGROUND_MISSED,
 		SEMICOLON_MISSED,
+		MISMATCHED_BRACES,
 		UNSPECIFIED_ERROR,
 		COUNTS,
 	};
@@ -28,7 +31,10 @@ public :
 		"Invalid logical exrpession!",
 		"Invalid input block!",
 		"Invalid input card!",
+		"Invalid origin!",
+		"Missed background of geometry",
 		"Semicolon missed!",
+		"Mismatched braces!",
 		"Unspecified error!"
 	};
 

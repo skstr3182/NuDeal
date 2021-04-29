@@ -24,7 +24,18 @@ private :
 		static constexpr char SEMICOLON = ';';
 		static constexpr char COMMENT[] = "//";
 		static constexpr char DAMPERSAND[] = "&&";
+		static constexpr char RDBRACKET[] = ">>";
 	};
+
+	struct InputTree_t
+	{
+		size_t line_begin = 0;
+		string contents = "";
+		map<string, InputTree_t> children;
+		string GetLineInfo() { return "Line : " + to_string(line_begin); }
+	};
+
+	using Tree_t = map<string, InputTree_t>;
 
 public :
 
@@ -68,10 +79,11 @@ private :
 	};
 
 private :
-
+	
 	string contents;
 	size_t line = 0;
 	static constexpr int INVALID = -1;
+	Tree_t TreeHead;
 
 	// IO Utility
 	/// Parser
@@ -80,21 +92,25 @@ private :
 	int Integer(string field) const;
 	double Float(string field) const;
 	bool Logical(string field) const;
-	
+	static string Trim(const string& field, const string& delimiter = "\n ");
+	static size_t LineCount(const string& line);
+	static string EraseSpace(const string& line, const string& delimiter = "\n ");
 	string GetLine(istream& fin, const char delimiter = SC::LF) const;
-	vector<string> SplitFields(string line, const char *delimiter);
+	void DeleteComments(string& line) const;
+	vector<string> SplitFields(string line, const string& delimiter);
 	string GetScriptBlock(istream& in) const;
 	/// Input Parser
 	Blocks GetBlockID(string oneline) const;
 	template <typename T> T GetCardID(Blocks block, string oneline) const;
-	stringstream ExtractInput(istream& fin, string& contents) const;
+	stringstream ExtractInput(istream& fin);
+	void ConfigureTree(stringstream& in, Tree_t& Tree, size_t offset = 1);
 	/// Block Parser
-	void ParseGeometryBlock(istream& in);
-	void ParseMaterialBlock(istream& in);
-	void ParseOptionBlock(istream& in);
+	void ParseGeometryBlock(InputTree_t& Tree);
+	void ParseMaterialBlock(InputTree_t& Tree);
+	void ParseOptionBlock(InputTree_t& Tree);
 	/// Geometry Card Parser
-	void ParseUnitVolumeCard(istream& in);
-	void ParseUnitCompCard(istream& in);
+	void ParseUnitVolumeCard(InputTree_t& Tree);
+	void ParseUnitCompCard(InputTree_t& Tree);
 
 public :
 
@@ -113,8 +129,7 @@ public :
 		string origin = "(0, 0, 0)";
 		string background;
 		vector<string> unitvols;
-		vector<string> displace;
-		vector<string> rotate;
+		vector<vector<string>> displace;
 	};
 
 private :
