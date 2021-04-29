@@ -18,6 +18,7 @@
     <ClInclude Include="header\TypeDef.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\TypeDef.cpp" />
     <ClCompile Include="source\IOUtil.cpp" />
     <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\Input.cpp" />
