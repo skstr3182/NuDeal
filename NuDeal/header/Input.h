@@ -41,7 +41,7 @@ private :
 	};
 	const string CardNames[num_blocks][num_cards] = 
 	{
-		{ "UNITVOLUME", "UNITCOMP", "DISAPLCE" },
+		{ "UNITVOLUME", "UNITCOMP", "DISPLACE" },
 		{ "NG", "FORMAT" }
 	};
 
