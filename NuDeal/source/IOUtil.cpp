@@ -88,21 +88,80 @@ string InputManager_t::EraseSpace(const string& line, const string& delimiter)
 	return static_cast<string&&>(s);
 }
 
-string InputManager_t::GetLine(istream& in, const char delimiter) const
+string InputManager_t::GetLine(stringstream& in, const char delimiter)
 {
-	string oneline;
-	
-	std::getline(in, oneline, delimiter);
+	string s;
 
-	std::replace(oneline.begin(), oneline.end(), SC::TAB, SC::BLANK);
-	std::replace(oneline.begin(), oneline.end(), SC::CR, SC::BLANK);
+	std::getline(in, s, delimiter);
+
+	std::replace(s.begin(), s.end(), SC::TAB, SC::BLANK);
+	std::replace(s.begin(), s.end(), SC::CR, SC::BLANK);
+
+	return static_cast<string&&>(s);
+}
+
+string InputManager_t::GetLine(stringstream& in, const string& delimiter)
+{
+	auto p = in.tellg();
+	vector<streampos> pos;
+
+	for (const auto& i : delimiter) {
+		string s;
+		std::getline(in, s, i);
+		pos.push_back(in.tellg());
+		in.seekg(p);
+	}
+
+	size_t index = std::min_element(pos.begin(), pos.end()) - pos.begin();	
+	char d = delimiter[index];
+	
+	string s;
+	std::getline(in, s, d);
+
+	std::replace(s.begin(), s.end(), SC::TAB, SC::BLANK);
+	std::replace(s.begin(), s.end(), SC::CR, SC::BLANK);
+
+	return static_cast<string&&>(s);
+}
+
+string InputManager_t::GetContentsBlock(stringstream& in)
+{
+	using Except = Exception_t;
+	using Code = Except::Code;
+
+	static size_t line = 0;
+	string oneline;
+
+	while (!in.eof()) {
+		auto pos = in.tellg();
+		auto s = GetLine(in, SC::LF); ++line;
+		auto trim = Trim(s, string(1, SC::BLANK));
+		if (trim.empty()) continue;
+		oneline += trim + (in.eof() ? "" : string(1, SC::LF));
+
+		if (Trim(oneline)[0] == SC::HASHTAG) {
+			if (trim.back() == '\\') continue;
+		}
+		else {
+			auto lcount = std::count(oneline.begin(), oneline.end(), SC::LBRACE);
+			auto rcount = std::count(oneline.begin(), oneline.end(), SC::RBRACE);
+			if (in.eof() && (lcount != rcount || lcount == 0))
+				Except::Abort(Code::MISMATCHED_BRAKETS, oneline);
+			if (lcount == 0 || lcount != rcount) continue;
+			streampos r = s.find_last_of(SC::RBRACE) + 1;
+			in.seekg(pos + r);
+			oneline.erase(oneline.find_last_of(SC::RBRACE) + 1);
+		}
+
+		break;
+	}
 
 	DeleteComments(oneline);
 
 	return static_cast<string&&>(oneline);
 }
 
-void InputManager_t::DeleteComments(string& line) const
+void InputManager_t::DeleteComments(string& line)
 {
 	
 	string::size_type pos = 0;
@@ -143,8 +202,9 @@ vector<string> InputManager_t::SplitFields(string line, const string& delimiter)
 	return static_cast<vector<string>&&>(splitted);
 }
 
-string InputManager_t::GetScriptBlock(istream& in) const
+string InputManager_t::GetScriptBlock(stringstream& in) const
 {
+	const char delimiter[] = {';', '}'};
 	string oneline;
 
 	bool lstop = false;

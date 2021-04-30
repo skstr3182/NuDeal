@@ -40,73 +40,115 @@ stringstream InputManager_t::ExtractInput(istream& fin)
 
 	fileStream << fin.rdbuf();
 	
-	contents = fileStream.str();
+	string contents = fileStream.str();
 
 	std::replace(contents.begin(), contents.end(), SC::TAB, SC::BLANK);
-#ifdef __linux__
 	std::replace(contents.begin(), contents.end(), SC::CR, SC::BLANK);
-#endif
-
-	contents.erase(contents.find_last_not_of(SC::BLANK), contents.size());
-
-	Uppercase(contents);
 
 	fileStream.str("");
 	fileStream.str(contents);
 
+	line_contents = SplitFields(contents, string(1, SC::LF));
+
 	return static_cast<stringstream&&>(fileStream);
 }
 
-void InputManager_t::MakeInputTree(stringstream& in, Tree_t& Tree, size_t offset)
+void InputManager_t::Tree_t::MakeInputTree(const vector<string>& in,
+	vector<string>::const_iterator iter)
 {
 	using Except = Exception_t;
 	using Code = Except::Code;
 
-	static auto ONE = static_cast<std::streampos>(1);
+	string contents;
+
+	while (iter != in.end()) {
+		string oneline = Trim(*iter);
+		contents += oneline;
+		size_t line_info = iter - in.begin();
+		
+		if (contents[0] == SC::HASHTAG) {
+			while (contents.back() == '\\' && iter != in.end()) contents += Trim(*(iter++));
+			if (contents.back() == '\\') Except::Abort("");
+			auto pos = contents.find_first_of(SC::BLANK);
+			auto directive = contents.substr(0, pos);
+			if (directive == "#define") {
+				auto p = contents.find_last_of(SC::RPAREN, pos) + pos;
+				auto name = contents.substr(pos, p);
+				auto macro = contents.substr(p + 1);
+				this->define[name] = macro;
+			}
+		}
+		else {
+			auto lcount = std::count(contents.begin(), contents.end(), SC::LBRACE);
+			auto rcount = std::count(contents.begin(), contents.end(), SC::RBRACE);
+			while (lcount != rcount && iter != in.end()) {
+				contents += Trim(*(iter++));
+
+			}
+		}
+
+
+
+	}
+}
+
+void InputManager_t::Tree_t::MakeInputTree(stringstream& in, size_t offset)
+{
+	using Except = Exception_t;
+	using Code = Except::Code;
 
 	do {
+		auto contents = GetContentsBlock(in);
+		
+		if (Trim(contents).empty()) continue;
 
-		auto prefix = GetLine(in, SC::LBRACE); 
-		if (Trim(prefix).empty()) continue;
-		in.seekg(in.tellg() - ONE);
-		auto body = GetScriptBlock(in);
-		if (Trim(body).empty()) continue;
+		if (contents[0] == SC::HASHTAG) {
+			auto pos = contents.find_first_of(SC::BLANK);
+			auto directive = contents.substr(0, pos);
+			if (directive == "#define") {
+				auto name = contents.substr(0, pos);
+				auto macro = contents.substr(pos + 1);
+				this->define[name] = macro;
+			}
 
-		prefix = Trim(prefix, string(1, SC::BLANK));
+			offset += LineCount(contents);
+		}
+		else {
+			auto next = contents;
+			auto pos = contents.find_first_of(SC::LBRACE);
+			auto name = contents.substr(0, pos);
+			next.erase(0, pos);
+			auto& T = this->children[name];
+			T.parent = this;
 
-		auto count = std::count(body.begin(), body.end(), SC::LBRACE);
+			offset += std::count(name.begin(), name.begin() + name.find_first_not_of(SC::LF), SC::LF);;
+			T.line_info = offset;
+			offset += std::count(name.begin() + name.find_last_not_of(SC::LF), name.end(), SC::LF);
+			
+			next.erase(next.find_first_of(SC::LBRACE), 1);
+			next.erase(next.find_last_of(SC::RBRACE), 1);
+			
+			pos = next.find_first_not_of(SC::LF);
+			offset += std::count(next.begin(), next.begin() + next.find_first_not_of(SC::LF), SC::LF);
+			next.erase(0, pos);
 
-		if (count != std::count(body.begin(), body.end(), SC::RBRACE))
-			Except::Abort(Code::MISMATCHED_BRAKETS, body);
+			auto count = std::count(next.begin(), next.end(), SC::LBRACE);
+			
+			if (count == 0)
+				T.contents = next;
+			else
+				T.MakeInputTree(stringstream(next), offset);
 
-		body.erase(0, body.find_first_of(SC::LBRACE) + 1);
-		body.erase(body.find_last_of(SC::RBRACE));
-		--count;
+			offset += LineCount(next);
+		}
 
-		auto& T = Tree[prefix];
-
-		offset += std::count(prefix.begin(), 
-			prefix.begin() + prefix.find_first_not_of(SC::LF), SC::LF);
-
-		T.line_info = offset;
-
-		offset += std::count(prefix.begin() + prefix.find_last_not_of(SC::LF) + 1, 
-			prefix.end(), SC::LF);
-
-		if (count > 0) 
-			MakeInputTree(stringstream(body), T.children, offset);
-		else 
-			T.contents = body;
-
-		offset += LineCount(body);
 
 	} while (!in.eof());
-
 }
 
 // BLOCK
 
-void InputManager_t::ParseGeometryBlock(InputTree_t& Tree)
+void InputManager_t::ParseGeometryBlock(Tree_t& Tree)
 {
 	using Except = Exception_t;
 	using Code = Except::Code;
@@ -132,19 +174,19 @@ void InputManager_t::ParseGeometryBlock(InputTree_t& Tree)
 
 }
 
-void InputManager_t::ParseMaterialBlock(InputTree_t& Tree)
+void InputManager_t::ParseMaterialBlock(Tree_t& Tree)
 {
 
 }
 
-void InputManager_t::ParseOptionBlock(InputTree_t& Tree)
+void InputManager_t::ParseOptionBlock(Tree_t& Tree)
 {
 
 }
 
 // GEOMETRY CARDS
 
-void InputManager_t::ParseUnitVolumeCard(InputTree_t& Tree)
+void InputManager_t::ParseUnitVolumeCard(Tree_t& Tree)
 {
 	using Except = Exception_t;
 	using Code = Except::Code;
@@ -183,7 +225,7 @@ void InputManager_t::ParseUnitVolumeCard(InputTree_t& Tree)
 
 }
 
-void InputManager_t::ParseUnitCompCard(InputTree_t& Tree)
+void InputManager_t::ParseUnitCompCard(Tree_t& Tree)
 {
 	using Except = Exception_t;
 	using Code = Except::Code;
@@ -239,9 +281,9 @@ void InputManager_t::ReadInput(string file)
 
 	fin.close();
 
-	MakeInputTree(fileStream, TreeHead);
+	TreeHead.MakeInputTree(fileStream);
 
-	for (auto& T : TreeHead) {
+	for (auto& T : TreeHead.children) {
 		auto& contents = T.second;
 		string block = Trim(T.first);
 		Blocks ID = GetBlockID(block);

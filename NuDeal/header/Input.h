@@ -27,21 +27,27 @@ private :
 		static constexpr char RDBRACKET[] = ">>";
 		static constexpr char LPAREN = '(';
 		static constexpr char RPAREN = ')';
+		static constexpr char HASHTAG = '#';
 	};
 
-	struct InputTree_t
+
+	struct Tree_t
 	{
 		size_t line_info = 0;
 		string contents = "";
-		map<string, InputTree_t> children;
+		map<string, string> define;
+		map<string, Tree_t> children;
+		const Tree_t *parent = NULL;
 		string GetLineInfo() { return "Line : " + to_string(line_info); }
+		void MakeInputTree(stringstream& in, size_t offset = 1);
+		void MakeInputTree(const vector<string>& in, vector<string>::const_iterator iter);
 	};
-
-	using Tree_t = map<string, InputTree_t>;
 
 public :
 
 	using SC = SpecialCharacters;
+	using HashTree_t = map<string, Tree_t>;
+
 	
 private :
 
@@ -82,8 +88,8 @@ private :
 
 private :
 	
-	string contents;
 	size_t line = 0;
+	vector<string> line_contents;
 	static constexpr int INVALID = -1;
 	Tree_t TreeHead;
 
@@ -97,22 +103,23 @@ private :
 	static string Trim(const string& field, const string& delimiter = "\n ");
 	static size_t LineCount(const string& line);
 	static string EraseSpace(const string& line, const string& delimiter = "\n ");
-	string GetLine(istream& fin, const char delimiter = SC::LF) const;
-	void DeleteComments(string& line) const;
-	vector<string> SplitFields(string line, const string& delimiter);
-	string GetScriptBlock(istream& in) const;
+	static string GetLine(stringstream& in, const char delimiter = SC::LF);
+	static string GetLine(stringstream& in, const string& delimiter = "\n");
+	static string GetContentsBlock(stringstream& fin);
+	static void DeleteComments(string& line);
+	static vector<string> SplitFields(string line, const string& delimiter);
+	string GetScriptBlock(stringstream& in) const;
 	/// Input Parser
 	Blocks GetBlockID(string oneline) const;
 	template <typename T> T GetCardID(Blocks block, string oneline) const;
 	stringstream ExtractInput(istream& fin);
-	void MakeInputTree(stringstream& in, Tree_t& Tree, size_t offset = 1);
 	/// Block Parser
-	void ParseGeometryBlock(InputTree_t& Tree);
-	void ParseMaterialBlock(InputTree_t& Tree);
-	void ParseOptionBlock(InputTree_t& Tree);
+	void ParseGeometryBlock(Tree_t& Tree);
+	void ParseMaterialBlock(Tree_t& Tree);
+	void ParseOptionBlock(Tree_t& Tree);
 	/// Geometry Card Parser
-	void ParseUnitVolumeCard(InputTree_t& Tree);
-	void ParseUnitCompCard(InputTree_t& Tree);
+	void ParseUnitVolumeCard(Tree_t& Tree);
+	void ParseUnitCompCard(Tree_t& Tree);
 
 public :
 
