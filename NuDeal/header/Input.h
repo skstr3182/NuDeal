@@ -8,28 +8,8 @@ using namespace std;
 
 class InputManager_t
 {
-private :
 
-	struct SpecialCharacters
-	{
-		static constexpr char BLANK = ' ';
-		static constexpr char BANG = '!';
-		static constexpr char BRACKET = '>';
-		static constexpr char TAB = '\t';
-		static constexpr char CR = '\r';
-		static constexpr char LF = '\n';
-		static constexpr char LBRACE = '{';
-		static constexpr char RBRACE = '}';
-		static constexpr char COLON = ':';
-		static constexpr char SEMICOLON = ';';
-		static constexpr char COMMENT[] = "//";
-		static constexpr char DAMPERSAND[] = "&&";
-		static constexpr char RDBRACKET[] = ">>";
-		static constexpr char LPAREN = '(';
-		static constexpr char RPAREN = ')';
-		static constexpr char HASHTAG = '#';
-	};
-
+public :
 
 	struct Tree_t
 	{
@@ -39,16 +19,10 @@ private :
 		map<string, Tree_t> children;
 		const Tree_t *parent = NULL;
 		string GetLineInfo() { return "Line : " + to_string(line_info); }
-		void MakeInputTree(stringstream& in, size_t offset = 1);
-		void MakeInputTree(const vector<string>& in, vector<string>::const_iterator iter);
+		void ProcessMacro(stringstream& in);
+		void Make(stringstream& in, size_t offset = 0);
 	};
 
-public :
-
-	using SC = SpecialCharacters;
-	using HashTree_t = map<string, Tree_t>;
-
-	
 private :
 
 	static constexpr int num_blocks = 5;
@@ -88,31 +62,17 @@ private :
 
 private :
 	
-	size_t line = 0;
-	vector<string> line_contents;
+	string file, contents;
 	static constexpr int INVALID = -1;
 	Tree_t TreeHead;
 
-	// IO Utility
-	/// Parser
-	void Uppercase(string& line) const;
-	int Repeat(string& field) const;
-	int Integer(string field) const;
-	double Float(string field) const;
-	bool Logical(string field) const;
-	static string Trim(const string& field, const string& delimiter = "\n ");
-	static size_t LineCount(const string& line);
-	static string EraseSpace(const string& line, const string& delimiter = "\n ");
-	static string GetLine(stringstream& in, const char delimiter = SC::LF);
-	static string GetLine(stringstream& in, const string& delimiter = "\n");
-	static string GetContentsBlock(stringstream& fin);
-	static void DeleteComments(string& line);
-	static vector<string> SplitFields(string line, const string& delimiter);
-	string GetScriptBlock(stringstream& in) const;
+private :
+
 	/// Input Parser
 	Blocks GetBlockID(string oneline) const;
 	template <typename T> T GetCardID(Blocks block, string oneline) const;
 	stringstream ExtractInput(istream& fin);
+	void InspectSyntax(stringstream& file);
 	/// Block Parser
 	void ParseGeometryBlock(Tree_t& Tree);
 	void ParseMaterialBlock(Tree_t& Tree);
