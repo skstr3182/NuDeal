@@ -1,93 +1,21 @@
 #pragma once
 #include "TypeDef.h"
 
-void UnitSurf::Transform(double **invTM) {
-		double coeffs[10] = { c_xs, c_ys, c_zs, c_xy, c_yz, c_xz, c_x, c_y, c_z, c };
-		const int map[4][4] = { {0, 3, 5, 6}, {3, 1, 4, 7}, {5, 7, 2, 8}, {6, 7, 8, 9} };
-		double trans[4][4];
-		for (int i = 0; i < 4; i++) {
-			for (int j = 0; j < 4; j++) {
-				trans[i][j] = 0.;
-			}
-		}
-		for (int i = 0; i < 4; i++) {
-			for (int j = 0; j < 4; j++) {
-				double coeff = coeffs[map[i][j]];
-				// i-th row and j-th col in invTM multiply
-				for (int k = 0; k < 4; k++) {
-					for (int l = 0; l < 4; l++) {
-						trans[k][l] += coeff * invTM[i][k] * invTM[l][j];
-					}
-				}
-			}
-		}
-		c_xs = trans[0][0]; c_ys = trans[1][1]; c_zs = trans[2][2]; c = trans[3][3];
-		c_xy = trans[0][1] + trans[1][0]; c_yz = trans[1][2] + trans[2][1]; c_xy = trans[0][2] + trans[2][0];
-		c_x = trans[0][3] + trans[3][0]; c_y = trans[1][3] + trans[3][1]; c_z = trans[2][3] + trans[3][2];
-	}
+void UnitSurf::Transform(double invTM[4][4]) {
+	double coeffs[10] = { c_xs, c_ys, c_zs, c_xy, c_yz, c_xz, c_x, c_y, c_z, c };
+	double coeffs1[10];
+	CalCoeffs(coeffs, invTM, coeffs1);
+	c_xs = coeffs1[0]; c_ys = coeffs1[1]; c_zs = coeffs1[2];
+	c_xy = coeffs1[3]; c_yz = coeffs1[4]; c_xz = coeffs1[5];
+	c_x = coeffs1[6]; c_y = coeffs1[7]; c_z = coeffs1[8]; c = coeffs1[9];
+}
 
-UnitSurf::UnitSurf(int surftype, double *_coeff, bool _inout, int cartesianPln = XY) {
-		alloc = true;
-		inout = _inout;
-		double coeff[10];
-		for (int i = 0; i < 10; i++) coeff[i] = 0.;
-		switch (surftype) {
-		case XPLN:
-			coeff[5] = _coeff[0];
-			coeff[9] = -_coeff[1];
-			break;
-		case YPLN:
-			coeff[6] = _coeff[0];
-			coeff[9] = -_coeff[1];
-			break;
-		case ZPLN:
-			coeff[7] = _coeff[0];
-			coeff[9] = -_coeff[1];
-			break;
-		case PLN:
-			coeff[5] = _coeff[0];
-			coeff[6] = _coeff[1];
-			coeff[7] = _coeff[2];
-			coeff[9] = -_coeff[3];
-			break;
-		case CIRCLE:
-			switch (cartesianPln) {
-			case XY:
-				coeff[0] = 1.; coeff[1] = 1.;
-				coeff[6] = -2. * _coeff[0]; coeff[7] = -2.*_coeff[1];
-				coeff[9] = _coeff[0] * _coeff[0] + _coeff[1] * _coeff[1] - coeff[2] * coeff[2];
-				break;
-			case YZ:
-				coeff[1] = 1.; coeff[2] = 1.;
-				coeff[7] = -2. * _coeff[0]; coeff[8] = -2.*_coeff[1];
-				coeff[9] = _coeff[0] * _coeff[0] + _coeff[1] * _coeff[1] - coeff[2] * coeff[2];
-				break;
-			case XZ:
-				coeff[0] = 1.; coeff[2] = 1.;
-				coeff[6] = -2. * _coeff[0]; coeff[8] = -2.*_coeff[1];
-				coeff[9] = _coeff[0] * _coeff[0] + _coeff[1] * _coeff[1] - coeff[2] * coeff[2];
-				break;
-			}
-			break;
-		default: // GENERAL
-			for (int i = 0; i < 10; i++) coeff[i] = _coeff[i];
-			break;
-		}
+UnitSurf::UnitSurf(int surftype, double *_coeff, int cartesianPln) {
+	this->Create(surftype, _coeff, cartesianPln);
+}
 
-		isCurve = false;
-		for (int i = 0; i < 5; i++) {
-			if (coeff[i] > 1.e-10) isCurve = true;
-			if (coeff[i] < -1.e-10) isCurve = true;
-		}
-
-		c_xs = coeff[0]; c_xy = coeff[3]; c_x = coeff[6];
-		c_ys = coeff[1]; c_yz = coeff[4]; c_y = coeff[7];
-		c_zs = coeff[2]; c_xz = coeff[5]; c_z = coeff[8];
-		c = coeff[9];
-	}
-
-void UnitSurf::Create(int surftype, double *_coeff, bool _inout, int cartesianPln = XY) {
-	inout = _inout;
+void UnitSurf::Create(int surftype, double *_coeff, int cartesianPln) {
+	alloc = true;
 	double coeff[10];
 	for (int i = 0; i < 10; i++) coeff[i] = 0.;
 	switch (surftype) {
@@ -134,7 +62,7 @@ void UnitSurf::Create(int surftype, double *_coeff, bool _inout, int cartesianPl
 	}
 
 	isCurve = false;
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < 6; i++) {
 		if (coeff[i] > 1.e-10) isCurve = true;
 		if (coeff[i] < -1.e-10) isCurve = true;
 	}
@@ -148,36 +76,27 @@ void UnitSurf::Create(int surftype, double *_coeff, bool _inout, int cartesianPl
 bool UnitSurf::GetEquation(double *_coeff) const {
 	double coeff[10] = { c_xs,c_ys,c_zs,c_xy,c_yz,c_xz,c_x,c_y,c_z,c };
 	for (int i = 0; i < 10; i++) _coeff[i] = coeff[i];
-	return inout;
+	return isCurve;
 }
 
 void UnitSurf::Relocate(int dx, int dy, int dz) {
-	double **invTM = new double*[4];
-	for (int i = 0; i < 4; i++) {
-		invTM[i] = new double[4];
-		for (int j = 0; j < 4; j++) {
-			invTM[i][j] = 0.;
-		}
-		invTM[i][i] = 1.;
-	}
+	double invTM[4][4] = { { 0.0, }, };
+	invTM[0][0] = 1.0;
+	invTM[1][1] = 1.0;
+	invTM[2][2] = 1.0;
+	invTM[3][3] = 1.0;
 	// Update only the fourth rows
 	invTM[0][3] = -dx; invTM[1][3] = -dy; invTM[2][3] = -dz;
 	Transform(invTM);
-	for (int i = 0; i < 4; i++) {
-		delete invTM[i];
-	}
-	delete invTM;
 }
 
 void UnitSurf::Rotate(double cos, double sin, int Ax) {
-	double **invTM = new double*[4];
-	for (int i = 0; i < 4; i++) {
-		invTM[i] = new double[4];
-		for (int j = 0; j < 4; j++) {
-			invTM[i][j] = 0.;
-		}
-		invTM[i][i] = 1.;
-	}
+	double invTM[4][4] = { { 0.0, }, };
+	invTM[0][0] = 1.0;
+	invTM[1][1] = 1.0;
+	invTM[2][2] = 1.0;
+	invTM[3][3] = 1.0;
+
 	int ir1, ir2;
 	switch (Ax) {
 	case X:
@@ -195,10 +114,6 @@ void UnitSurf::Rotate(double cos, double sin, int Ax) {
 	invTM[ir1][ir1] = cos; invTM[ir2][ir2] = cos;
 	invTM[ir1][ir2] = sin; invTM[ir2][ir1] = -sin;
 	Transform(invTM);
-	for (int i = 0; i < 4; i++) {
-		delete invTM[i];
-	}
-	delete invTM;
 }
 
 int UnitSurf::GetIntersection(int CartPlane, double *val, double &sol1, double &sol2) {
@@ -262,15 +177,110 @@ int UnitSurf::GetIntersection(int CartPlane, double *val, double &sol1, double &
 
 UnitSurf UnitSurf::operator=(const UnitSurf &asurf) {
 	double coeff[10];
-	bool inout;
-	inout = asurf.GetEquation(coeff);
-	Create(GENERAL, coeff, inout);
+	asurf.GetEquation(coeff);
+	Create(GENERAL, coeff);
+	return *this;
 }
 
 bool UnitSurf::IsInside(double x, double y, double z) {
 	double det = (c_xs*x + c_xy * y + c_xz * z + c_x)*x + (c_ys*y + c_yz * z + c_y)*y + (c_zs*z + c_z)*z + c;
 	if (det = 0) return false;
-	return ((inout) == (det > 0));
+	return (det < 0);
+}
+
+int UnitSurf::GetLocalMinMax(int cartax, double sol[6][3]) {
+	// Based on Lagrange multiplier method
+	// G(x) = x & F(x,y,z) = 0;
+	// grad(F)=lambda*grad(G)
+
+	// Notice
+	// - May not be proper for cones
+	// - If a corner point is not defined yet a curve line, an exact point would be
+	//  defined later by the curve between this surface and {X = a|Y = a|Z = a}.
+
+	// return three-digit value (XYZ)
+	// 0 : none for along the axis
+	// 1 : left only, 2 : right only, 3 : both sides
+
+	int code = 0;
+
+	if (isCurve) {
+		double gradG[3][4] = {
+			{2.0*c_xs, c_xy, c_xz, c_x},
+			{c_xy, 2.0*c_ys, c_yz, c_y},
+			{c_xz, c_yz, 2.0*c_zs, c_z} 
+		};
+		double coeff0[10] = { c_xs, c_ys, c_zs, c_xy, c_yz, c_xz, c_x, c_y, c_z, c };
+		double coeff1[10];
+		for (int i = 0; i < 3; i++) {
+			// (i = 0) z = c22[0][0]*x+c22[0][1] & y = c22[1][0]*x+c22[1][1]
+			// (i = 1) x = c22[0][0]*y+c22[0][1] & z = c22[1][0]*y+c22[1][1]
+			// (i = 2) y = c22[0][0]*z+c22[0][1] & x = c22[1][0]*z+c22[1][1]
+			// (i = 0) (j,i1,i2) = (0, y, z), (1, z, y)
+			// (i = 1)           = (0, z, x), (1, x, z)
+			// (i = 2)           = (0, x, y), (1, y, x)
+			double c22[2][2];
+			int map[2] = { (i + 1) % 3,(i + 2) % 3 };
+
+			bool iscontd = false;
+			for (int j = 0; j < 2; j++) {
+				// remove i1's term
+				int i1 = map[j], i2 = map[(j+1)%2];
+				double c0, c1, c2;
+				c0 = gradG[i1][i] * gradG[i2][i1] - gradG[i2][i] * gradG[i1][i1]; // i's term
+				c1 = gradG[i1][i2] * gradG[i2][i1] - gradG[i2][i2] * gradG[i1][i1]; //i2's term
+				c2 = gradG[i1][3] * gradG[i2][i1] - gradG[i2][3] * gradG[i1][i1]; // constant term
+				if (abs(c1) < 1.e-10) iscontd = true; // *** The min or max points cannot be determined.
+				c22[j][0] = c0 / c1; c22[j][1] = c2 / c1;
+			}
+			if (iscontd) continue;
+
+			double xyzc[4][4] = { {0} };
+			xyzc[i][i] = 1.;
+			xyzc[map[0]][i] = c22[1][0]; xyzc[map[0]][3] = c22[1][1];
+			xyzc[map[1]][i] = c22[0][0]; xyzc[map[1]][3] = c22[0][1];
+			std::fill(xyzc[3], xyzc[3] + 4, 1.0);
+			CalCoeffs(coeff0, xyzc, coeff1);
+
+			double bc[2] = { coeff1[i + 6], coeff1[9] };
+			if (abs(coeff1[i]) < 1.e-10) {
+				double soli = -bc[1] / bc[0];
+				double soli1 = c22[1][0] * soli + c22[1][1], soli2 = c22[0][0] * soli + c22[0][1];
+				double invlam = gradG[i][i] * soli + gradG[i][map[0]] * soli1 + gradG[i][map[1]] * soli2;
+				if (abs(invlam) < 1.e-10) {
+					code += 3*pow(10,2-i);
+					sol[i * 2][i] = sol[i * 2 + 1][i] = soli;
+					sol[i * 2][map[0]] = sol[i * 2 + 1][map[0]] = soli1;
+					sol[i * 2][map[1]] = sol[i * 2 + 1][map[1]] = soli2;
+				}
+				else if (invlam > 0) {
+					code += 2 * pow(10, 2 - i);
+					sol[i * 2 + 1][i] = soli;
+					sol[i * 2 + 1][map[0]] = soli1;
+					sol[i * 2 + 1][map[1]] = soli2;
+				}
+				else {
+					code += 1 * pow(10, 2 - i);;
+					sol[i * 2][i] = soli;
+					sol[i * 2][map[0]] = soli1;
+					sol[i * 2][map[1]] = soli2;
+				}
+				continue;
+			}
+			bc[0] /= coeff1[i]; bc[1] /= coeff1[i];
+			double det = bc[0] * bc[0] - 4.0*bc[1];
+			if (det > 1.e-10) {
+				code += 3 * pow(10, 2 - i);
+				double soli = 0.5*(-bc[0] - sqrt(det));
+				double soli1 = c22[1][0] * soli + c22[1][1], soli2 = c22[0][0] * soli + c22[0][1];
+				sol[i * 2][i] = soli; sol[i * 2][map[0]] = soli1; sol[i * 2][map[1]] = soli2;
+				soli = 0.5*(-bc[0] + sqrt(det));
+				soli1 = c22[1][0] * soli + c22[1][1], soli2 = c22[0][0] * soli + c22[0][1];
+				sol[i * 2 + 1][i] = soli; sol[i * 2 + 1][map[0]] = soli1; sol[i * 2 + 1][map[1]] = soli2;
+			}
+		}
+	}
+	return code;
 }
 
 int UnitVol::OneIntersection(int idx, int CartPlane, double *val, double &sol1, double &sol2) {
@@ -332,16 +342,16 @@ void UnitVol::append(const UnitSurf &asurf) {
 }
 
 void UnitVol::Relocate(int dx, int dy, int dz) {
-	for (int i = 0; i < nsurf; i++) Surfaces[i].Relocate;
+	for (int i = 0; i < nsurf; i++) Surfaces[i].Relocate(dx, dy, dz);
 }
 
 void UnitVol::Rotate(double cos, double sin, int Ax) {
-	for (int i = 0; i < nsurf; i++) Surfaces[i].Rotate;
+	for (int i = 0; i < nsurf; i++) Surfaces[i].Rotate(cos, sin, Ax);
 }
 
 bool UnitVol::IsInside(double x, double y, double z) {
 	bool inside = true;
-	for (int i = 0; i < nsurf; i++) inside = (inside&&Surfaces[i].IsInside);
+	for (int i = 0; i < nsurf; i++) inside = inside && Surfaces[i].IsInside(x, y, z);
 	return inside;
 }
 
@@ -368,4 +378,17 @@ int UnitVol::GetIntersection(int CartPlane, double *val, double **sol) {
 	delete bufs; delete ninters;
 
 	return ntotint;
+}
+
+bool UnitVol::GetBoundBox(double xlr[2], double ylr[2], double zlr[2]) {
+	int *codes = new int[nsurf];
+
+	for (int i = 0; i < nsurf; i++) {
+		// X boundaries
+
+		// Y boundaries
+
+		// Z boundaries
+
+	}
 }
