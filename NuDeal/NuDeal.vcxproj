@@ -15,11 +15,12 @@
     <ClInclude Include="header\Exception.h" />
     <ClInclude Include="header\HardCodeParam.h" />
     <ClInclude Include="header\Input.h" />
+    <ClInclude Include="header\Parser.h" />
     <ClInclude Include="header\TypeDef.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\TypeDef.cpp" />
-    <ClCompile Include="source\IOUtil.cpp" />
+    <ClCompile Include="source\Parser.cpp" />
     <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\Input.cpp" />
   </ItemGroup>

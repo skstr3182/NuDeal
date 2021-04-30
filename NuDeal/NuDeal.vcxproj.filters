@@ -7,6 +7,12 @@
     <Filter Include="Source">
       <UniqueIdentifier>{4c919c61-3736-44ab-a6e6-0b89595c22e1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header\IO">
+      <UniqueIdentifier>{f190bdfb-cb82-43a7-a0dd-64bb24341aec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\IO">
+      <UniqueIdentifier>{89589912-1a58-491b-8fe1-cf5372df7183}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header\HardCodeParam.h">
@@ -18,11 +24,14 @@
     <ClInclude Include="header\Defines.h">
       <Filter>Header</Filter>
     </ClInclude>
-    <ClInclude Include="header\Input.h">
-      <Filter>Header</Filter>
-    </ClInclude>
     <ClInclude Include="header\Exception.h">
-      <Filter>Header</Filter>
+      <Filter>Header\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Input.h">
+      <Filter>Header\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Parser.h">
+      <Filter>Header\IO</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -32,11 +41,11 @@
     <ClCompile Include="source\TypeDef.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="source\IOUtil.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="source\Input.cpp">
-      <Filter>Source</Filter>
+      <Filter>Source\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Parser.cpp">
+      <Filter>Source\IO</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
