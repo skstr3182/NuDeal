@@ -33,7 +33,7 @@ public :
 
 	using SC = SpecialCharacters;
 	using size_type = string::size_type;
-	
+
 	// String Parsing Utility
 	/// Type Conversion
 	static string Uppercase(string& line);

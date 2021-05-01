@@ -292,22 +292,25 @@ void Parse_t::IsMacroValid(const string& contents)
 void Parse_t::IsVariableCorrect(const string& contents)
 {
 	auto s = ReplaceMacro(contents);
-	s = EraseSpace(s);
+
 	size_type beg, pos = 0;
 	string line;
-
 	set<string> variables;
-
+	
 	while ((beg = s.find_first_not_of(SC::LBRACE, pos)) != string::npos) {
 		pos = s.find_first_of(SC::LBRACE, beg + 1);
 		if (pos == string::npos) continue;
-		auto sub = s.substr(beg, pos - beg);
-		if (sub.empty()) 
+		auto sub = Trim(s.substr(beg, pos - beg));
+		size_type p;
+		if ((p = sub.find_last_of(SC::RBRACE)) != string::npos)
+			sub = Trim(sub.substr(p + 1));
+		if ((p = sub.find_first_of(SC::LPAREN)) != string::npos)
+			sub = Trim(sub.substr(0, p));
+		if ((p = sub.find(SC::COLON)) != string::npos)
+			sub.erase(std::remove(sub.begin(), sub.end(), SC::BLANK), sub.end());
+		cout << sub << endl;
+		if (sub.find(SC::BLANK) != string::npos || sub.empty()) 
 			throw runtime_error("Invalid variable name!");
-		auto r = sub.find_last_of(SC::RBRACE);
-		if (r != string::npos) {
-			sub = sub.substr(r + 1);
-		}
 		if (variables.find(sub) != variables.end()) 
 			throw runtime_error("Redfeind variable!");
 		variables.insert(sub);
@@ -318,7 +321,7 @@ void Parse_t::IsVariableCorrect(const string& contents)
 		if ((pos = var.find(SC::COLON)) != string::npos) {
 			auto parent = var.substr(pos + 1);
 			if (variables.find(parent) == variables.end())
-				throw runtime_error("Undefined variable!" + parent);
+				throw runtime_error("Undefined variable! : " + parent);
 		}
 	}
 
