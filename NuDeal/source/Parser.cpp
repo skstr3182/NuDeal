@@ -7,14 +7,14 @@ namespace IO
 using Except = Exception_t;
 using Code = Except::Code;
 
-string Parser_t::Uppercase(string& line)
+string Parse_t::Uppercase(string& line)
 {
 	string l = line;
 	std::transform(l.begin(), l.end(), l.begin(), ::toupper);
 	return static_cast<string&&>(l);
 }
 
-int Parser_t::Integer(string field)
+int Parse_t::Integer(string field)
 {
 	int val;
 
@@ -30,7 +30,7 @@ int Parser_t::Integer(string field)
 	return val;
 }
 
-double Parser_t::Float(string field)
+double Parse_t::Float(string field)
 {
 	double val;
 
@@ -44,7 +44,7 @@ double Parser_t::Float(string field)
 	return val;
 }
 
-bool Parser_t::Logical(string field)
+bool Parse_t::Logical(string field)
 {
 	Uppercase(field);
 	if (!field.compare("T")) return true;
@@ -55,7 +55,7 @@ bool Parser_t::Logical(string field)
 	Except::Abort(Code::INVALID_LOGICAL, field);
 }
 
-string Parser_t::Trim(const string& field, const string& delimiter)
+string Parse_t::Trim(const string& field, const string& delimiter)
 {
 	string s = field;
 	auto pos = s.find_first_not_of(delimiter);
@@ -66,12 +66,17 @@ string Parser_t::Trim(const string& field, const string& delimiter)
 	return static_cast<string&&>(s);
 }
 
-size_t Parser_t::LineCount(const string& line)
+int Parse_t::LineCount(const string& line, size_type count)
 {
-	return static_cast<size_t>(std::count(line.begin(), line.end(), SC::LF));
+	auto beg = line.begin();
+	auto end = line.end();
+
+	if (count != string::npos) end = beg + count;
+
+	return static_cast<int>(std::count(beg, end, SC::LF));
 }
 
-string Parser_t::EraseSpace(const string& line, const string& delimiter)
+string Parse_t::EraseSpace(const string& line, const string& delimiter)
 {
 	string s = line;
 	for (const auto& i : delimiter)
@@ -79,7 +84,63 @@ string Parser_t::EraseSpace(const string& line, const string& delimiter)
 	return static_cast<string&&>(s);
 }
 
-string Parser_t::GetLine(stringstream& in, const char delimiter)
+Parse_t::size_type Parse_t::FindEndOfMacro(const string& line, size_type pos)
+{
+	if (line[pos] != SC::HASHTAG) return string::npos;
+
+	size_type backslash, LF;
+	size_type macro_end = pos;
+
+	do {
+		LF = line.find(SC::LF, macro_end);
+		backslash = line.find(SC::BACKSLASH, macro_end);
+		macro_end = LF + 1;
+	} while (backslash < LF);
+
+	return macro_end;
+}
+
+string Parse_t::ReplaceMacro(const string& line, char replace)
+{
+	string s = line;
+	size_type macro_beg, pos = 0;
+
+	while ((macro_beg = s.find_first_of(SC::HASHTAG, pos)) != string::npos) {
+		auto macro_end = FindEndOfMacro(s, macro_beg);
+		std::replace_if(s.begin() + macro_beg, s.begin() + macro_end, 
+			[] (char c) { return c != SC::LF; }, replace);
+		pos = macro_end;
+	}
+
+	return static_cast<string&&>(s);
+}
+
+vector<string> Parse_t::ExtractMacro(const string& line)
+{
+	vector<string> macro;
+
+	size_type beg = 0, pos;
+
+	pos = line.find(SC::BLANK);
+	macro.push_back(Trim(line.substr(0, pos)));
+
+	beg = pos + 1;
+
+	if ((pos = line.find(SC::RPAREN, beg)) != string::npos) {
+		macro.push_back(Trim(line.substr(beg, pos - beg)));
+		macro.push_back(Trim(line.substr(pos + 1)));
+	}
+	else {
+		pos = line.find(SC::BLANK, beg);
+		macro.push_back(Trim(line.substr(beg, pos - beg)));
+		macro.push_back(Trim(line.substr(pos + 1)));
+	}
+
+	return static_cast<vector<string>&&>(macro);
+}
+
+
+string Parse_t::GetLine(stringstream& in, const char delimiter)
 {
 	string s;
 
@@ -91,41 +152,57 @@ string Parser_t::GetLine(stringstream& in, const char delimiter)
 	return static_cast<string&&>(s);
 }
 
-string Parser_t::GetBlock(stringstream& in)
+string Parse_t::GetBlock(stringstream& in)
 {
 	string section;
+	auto file_pos = in.tellg();
 
 	while (!in.eof()) {
-		auto s = GetLine(in, SC::LF) + string(1, SC::LF);
-		if (Trim(s).empty()) {
-			section += s;
-			continue;
-		}
-		
-		NullifyMacro(s, in);
-		
+		auto s = GetLine(in, SC::RBRACE);
+		s += in.str()[in.tellg()];
 		section += s;
 
+		cout << section << endl << "123" << endl;
+
+		if (Trim(s).empty()) continue;
 		if (!IsClosed(section)) continue;
-
-		auto pos = in.tellg();
-		decltype(pos) backspace = s.size() - s.find_last_of(SC::RBRACE);
-		in.seekg(pos - backspace + 1);
-
-		cout << in.str().substr(0, in.tellg()) << endl;
 
 		break;
 	}
 
-	DeleteComments(section);
+	return static_cast<string&&>(section);
+}
+
+Parse_t::size_type Parse_t::FindEndPoint(const string& contents, size_type& pos)
+{
+	pos = contents.find_first_of(SC::LBRACE, pos);
+
+	size_type end, beg = pos;
+
+	while ((end = contents.find_first_of(SC::RBRACE, beg)) != string::npos) {
+		if (IsClosed(contents.substr(pos, end - pos + 1))) break;
+		beg = end + 1;
+	}
+	return end;
+}
+
+string Parse_t::GetBlock(const string& contents, size_type pos)
+{
+	string section;
+
+	size_type LF_beg, LF_end = pos;
+
+	while (LF_end != string::npos) {
+		
+	}
 
 	return static_cast<string&&>(section);
 }
 
-void Parser_t::DeleteComments(string& line)
+void Parse_t::ReplaceComments(string& line)
 {
 	
-	string::size_type pos;
+	size_type pos;
 
 	// C-style Comment
 
@@ -147,11 +224,11 @@ void Parser_t::DeleteComments(string& line)
 
 }
 
-vector<string> Parser_t::SplitFields(string line, const string& delimiter)
+vector<string> Parse_t::SplitFields(string line, const string& delimiter)
 {
 	vector<string> splitted;
 
-	string::size_type beg, pos = 0;
+	size_type beg, pos = 0;
 
 	while ((beg = line.find_first_not_of(delimiter, pos)) != string::npos) {
 		pos = line.find_first_of(delimiter, beg + 1);
@@ -161,107 +238,98 @@ vector<string> Parser_t::SplitFields(string line, const string& delimiter)
 	return static_cast<vector<string>&&>(splitted);
 }
 
-vector<string> Parser_t::ExtractMacro(const string& line)
+
+void Parse_t::AreBracketsMatched(const string& contents)
 {
-	vector<string> macro;
+	vector<size_type> pos;
 
-	string::size_type beg = 0, pos;
-
-	pos = line.find(SC::BLANK);
-	macro.push_back(Trim(line.substr(0, pos)));
-
-	beg = pos + 1;
-
-	if ((pos = line.find(SC::RPAREN, beg)) != string::npos) {
-		macro.push_back(Trim(line.substr(beg, pos - beg)));
-		macro.push_back(Trim(line.substr(pos + 1)));
-	}
-	else {
-		pos = line.find(SC::BLANK, beg);
-		macro.push_back(Trim(line.substr(beg, pos - beg)));
-		macro.push_back(Trim(line.substr(pos + 1)));
+	for (auto i = contents.begin(); i < contents.end(); ++i) {
+		if (*i == SC::LBRACE)
+			pos.push_back(i - contents.begin());
+		else if (*i == SC::RBRACE) {
+			if (pos.empty()) throw runtime_error("Not closed }");
+			pos.erase(pos.end() - 1);
+		}
 	}
 
-	return static_cast<vector<string>&&>(macro);
+	if (!pos.empty()) throw runtime_error("Not closed }");
+
+	pos.clear();
+
+	for (auto i = contents.begin(); i < contents.end(); ++i) {
+		if (*i == SC::LPAREN)
+			pos.push_back(i - contents.begin());
+		else if (*i == SC::RPAREN) {
+			if (pos.empty()) throw runtime_error("Not closed )");
+			pos.erase(pos.end() - 1);
+		}
+	}
+
+	if (!pos.empty()) throw runtime_error("Not closed )");
 }
 
-
-bool Parser_t::AreBracketsMatched(const string& contents)
+void Parse_t::IsMacroValid(const string& contents)
 {
-	auto beg = contents.begin(), end = contents.end();
+	const set<string> directives = { "#define" };
+	map<string, string> macro_table;
 
-	auto lcount = std::count(beg, end, SC::LBRACE);
-	auto rcount = std::count(beg, end, SC::RBRACE);
+	size_type macro_beg, pos = 0;
 
-	if (lcount != rcount) return false;
-
-	lcount = std::count(beg, end, SC::LPAREN);
-	rcount = std::count(beg, end, SC::RPAREN);
-
-	if (lcount != rcount) return false;
-
-	return true;
-}
-
-bool Parser_t::IsMacroValid(const string& contents)
-{
-	const set<string> Directive = { "#define" };
-	map<string, string> defined;
-
-	string::size_type macro_pos, pos = 0;
-
-	while ((macro_pos = contents.find(SC::HASHTAG, pos)) != string::npos) {
-		auto macro_end = macro_pos;
-		string::size_type backslash, LF;
-
-		do {
-			LF = contents.find(SC::LF, macro_end);
-			backslash = std::find(contents.begin() + macro_end,
-				contents.begin() + LF, SC::BACKSLASH) - contents.begin();
-			macro_end = LF + 1;
-		} while (backslash < LF);
-
-		auto macro = contents.substr(macro_pos, macro_end - macro_pos);
+	while ((macro_beg = contents.find(SC::HASHTAG, pos)) != string::npos) {
+		auto macro_end = FindEndOfMacro(contents, macro_beg);
+		auto macro = contents.substr(macro_beg, macro_end - macro_beg);
 		auto v = ExtractMacro(macro);
 		
-		if (Directive.find(v.front()) == Directive.end()) return false;
-		if (defined.find(v[1]) != defined.end()) return false;
-		defined[v[1]] = v[2];
-		pos = LF;
-	}
-
-	return true;
-}
-
-void Parser_t::NullifyMacro(string& s, stringstream& in)
-{
-	if (Trim(s).front() == SC::HASHTAG) {
-		while (Trim(s).back() == SC::BACKSLASH) {
-			s += GetLine(in, SC::LF) + string(1, SC::LF);
-		}
-		std::replace_if(s.begin(), s.end(), [](char c) { return c != SC::LF; }, SC::BLANK);
+		if (directives.find(v[0]) == directives.end()) 
+			throw runtime_error("Invalid directive");
+		if (macro_table.find(v[1]) != macro_table.end()) 
+			throw runtime_error("Redefined macro");
+		macro_table[v[1]] = v[2];
+		pos = macro_end;
 	}
 }
 
-bool Parser_t::IsClosed(string& s) 
+void Parse_t::IsVariableCorrect(const string& contents)
 {
-	size_t count = 0;
-	bool lopened = false;
-	auto iter = s.begin();
+	auto s = ReplaceMacro(contents);
+	s = EraseSpace(s);
+	size_type beg, pos = 0;
+	string line;
 
-	for (iter = s.begin(); iter != s.end(); ++iter) {
-		if (*iter == SC::LBRACE) {
-			++count; lopened = true;
+	set<string> variables;
+
+	while ((beg = s.find_first_not_of(SC::LBRACE, pos)) != string::npos) {
+		pos = s.find_first_of(SC::LBRACE, beg + 1);
+		if (pos == string::npos) continue;
+		auto sub = s.substr(beg, pos - beg);
+		if (sub.empty()) 
+			throw runtime_error("Invalid variable name!");
+		auto r = sub.find_last_of(SC::RBRACE);
+		if (r != string::npos) {
+			sub = sub.substr(r + 1);
 		}
-		else if (*iter == SC::RBRACE) {
-			--count;
-		}
-		if (lopened && !count) break;
+		if (variables.find(sub) != variables.end()) 
+			throw runtime_error("Redfeind variable!");
+		variables.insert(sub);
 	}
 
-	if (iter < s.end() - 1)
-		s.replace(iter + 1, s.end(), string(1, SC::BLANK));
-	return iter != s.end();
+	for (auto var : variables) {
+		size_type pos;
+		if ((pos = var.find(SC::COLON)) != string::npos) {
+			auto parent = var.substr(pos + 1);
+			if (variables.find(parent) == variables.end())
+				throw runtime_error("Undefined variable!" + parent);
+		}
+	}
+
+}
+
+bool Parse_t::IsClosed(const string& s) 
+{
+	auto lcount = std::count(s.begin(), s.end(), SC::LBRACE);
+	auto rcount = std::count(s.begin(), s.end(), SC::RBRACE);
+
+	return (lcount == rcount) && (lcount > 0);
 }
 
 

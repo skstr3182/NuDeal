@@ -11,16 +11,18 @@ class InputManager_t
 
 public :
 
-	struct Tree_t
+	struct HashTree_t
 	{
-		size_t line_info = 0;
+		using size_type = string::size_type;
+		int line_info = 0, num_lines = 0;
 		string contents = "";
-		map<string, string> define;
-		map<string, Tree_t> children;
-		const Tree_t *parent = NULL;
+		map<string, map<string, string>> macro;
+		const HashTree_t *parent = NULL;
+		map<string, HashTree_t> children;
 		string GetLineInfo() { return "Line : " + to_string(line_info); }
-		void ProcessMacro(stringstream& in);
-		void Make(stringstream& in, size_t offset = 0);
+		void ProcessMacro(const string& contents);
+		void Make(const string& file, size_type Beg = 0, size_type End = string::npos);
+		void CountLine(const string& name, const string& contents);
 	};
 
 private :
@@ -62,24 +64,27 @@ private :
 
 private :
 	
-	string file, contents;
-	static constexpr int INVALID = -1;
-	Tree_t TreeHead;
+	string file;
+	string original, modified;
+	HashTree_t HashTree;
 
 private :
 
 	/// Input Parser
 	Blocks GetBlockID(string oneline) const;
 	template <typename T> T GetCardID(Blocks block, string oneline) const;
-	stringstream ExtractInput(istream& fin);
-	void InspectSyntax(stringstream& file);
+	void ExtractInput(istream& fin);
+	void InspectSyntax(const string& contents);
 	/// Block Parser
-	void ParseGeometryBlock(Tree_t& Tree);
-	void ParseMaterialBlock(Tree_t& Tree);
-	void ParseOptionBlock(Tree_t& Tree);
+	void ParseGeometryBlock(HashTree_t& Tree);
+	void ParseMaterialBlock(HashTree_t& Tree);
+	void ParseOptionBlock(HashTree_t& Tree);
 	/// Geometry Card Parser
-	void ParseUnitVolumeCard(Tree_t& Tree);
-	void ParseUnitCompCard(Tree_t& Tree);
+	void ParseUnitVolumeCard(HashTree_t& Tree);
+	void ParseUnitCompCard(HashTree_t& Tree);
+
+	// Preprocessing
+	void Preprocess();
 
 public :
 
