@@ -1,5 +1,5 @@
 #pragma once
-#include "TypeDef.h"
+#include "UnitGeo.h"
 
 void UnitSurf::Transform(double invTM[4][4]) {
 	double coeffs[10] = { c_xs, c_ys, c_zs, c_xy, c_yz, c_xz, c_x, c_y, c_z, c };
