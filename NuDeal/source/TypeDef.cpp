@@ -14,6 +14,36 @@ UnitSurf::UnitSurf(int surftype, double *_coeff, int cartesianPln) {
 	this->Create(surftype, _coeff, cartesianPln);
 }
 
+bool UnitSurf::GetPointVar2(int axis, double var[2], double &sol) {
+	int i0 = axis, i1, i2;
+	double coeff[10] = { c_xs, c_ys, c_zs, c_xy, c_yz, c_xz, c_x, c_y, c_z, c };
+	switch (axis) {
+	case X:
+		i1 = 1; i2 = 2; break;
+	case Y:
+		i1 = 2; i2 = 0; break;
+	case Z:
+		i1 = 0; i2 = 1; break;
+	}
+	double a, b, c;
+	a = coeff[i0]; b = coeff[3 + i0] * var[i1] + coeff[3 + i2] * var[i2] + coeff[6 + i0];
+	c = coeff[i1] * var[i1] * var[i1] + coeff[i2] * var[i2] * var[i2] + coeff[3 + i1] * var[i1] * var[i2] +
+		coeff[6 + i1] * var[i1] + coeff[6 + i2] * var[i1] + coeff[9];
+	if (abs(a) < 1.e-10) {
+		if (abs(b) > 1.e-10) {
+			sol = - b / c;
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	else {
+		sol = - 0.5 * b / a;
+		return true;
+	}
+}
+
 void UnitSurf::Create(int surftype, double *_coeff, int cartesianPln) {
 	alloc = true;
 	double coeff[10];
@@ -182,13 +212,16 @@ UnitSurf UnitSurf::operator=(const UnitSurf &asurf) {
 	return *this;
 }
 
-bool UnitSurf::IsInside(double x, double y, double z) {
+bool UnitSurf::IsInside(double x, double y, double z, bool includeOn) {
 	double det = (c_xs*x + c_xy * y + c_xz * z + c_x)*x + (c_ys*y + c_yz * z + c_y)*y + (c_zs*z + c_z)*z + c;
-	if (det = 0) return false;
+	if (abs(det) < 1.e-10) {
+		if (includeOn) return true;
+		return false;
+	}
 	return (det < 0);
 }
 
-int UnitSurf::GetLocalMinMax(int cartax, double sol[6][3]) {
+int UnitSurf::GetLocalExSelf(double sol[6][3]) {
 	// Based on Lagrange multiplier method
 	// G(x) = x & F(x,y,z) = 0;
 	// grad(F)=lambda*grad(G)
@@ -248,19 +281,19 @@ int UnitSurf::GetLocalMinMax(int cartax, double sol[6][3]) {
 				double soli1 = c22[1][0] * soli + c22[1][1], soli2 = c22[0][0] * soli + c22[0][1];
 				double invlam = gradG[i][i] * soli + gradG[i][map[0]] * soli1 + gradG[i][map[1]] * soli2;
 				if (abs(invlam) < 1.e-10) {
-					code += 3*pow(10,2-i);
+					code += 3 * pow10[2 - i];
 					sol[i * 2][i] = sol[i * 2 + 1][i] = soli;
 					sol[i * 2][map[0]] = sol[i * 2 + 1][map[0]] = soli1;
 					sol[i * 2][map[1]] = sol[i * 2 + 1][map[1]] = soli2;
 				}
 				else if (invlam > 0) {
-					code += 2 * pow(10, 2 - i);
+					code += 2 * pow10[2 - i];
 					sol[i * 2 + 1][i] = soli;
 					sol[i * 2 + 1][map[0]] = soli1;
 					sol[i * 2 + 1][map[1]] = soli2;
 				}
 				else {
-					code += 1 * pow(10, 2 - i);;
+					code += 1 * pow10[2 - i];
 					sol[i * 2][i] = soli;
 					sol[i * 2][map[0]] = soli1;
 					sol[i * 2][map[1]] = soli2;
@@ -270,13 +303,64 @@ int UnitSurf::GetLocalMinMax(int cartax, double sol[6][3]) {
 			bc[0] /= coeff1[i]; bc[1] /= coeff1[i];
 			double det = bc[0] * bc[0] - 4.0*bc[1];
 			if (det > 1.e-10) {
-				code += 3 * pow(10, 2 - i);
+				code += 3 * pow10[2 - i];
 				double soli = 0.5*(-bc[0] - sqrt(det));
 				double soli1 = c22[1][0] * soli + c22[1][1], soli2 = c22[0][0] * soli + c22[0][1];
 				sol[i * 2][i] = soli; sol[i * 2][map[0]] = soli1; sol[i * 2][map[1]] = soli2;
 				soli = 0.5*(-bc[0] + sqrt(det));
 				soli1 = c22[1][0] * soli + c22[1][1], soli2 = c22[0][0] * soli + c22[0][1];
 				sol[i * 2 + 1][i] = soli; sol[i * 2 + 1][map[0]] = soli1; sol[i * 2 + 1][map[1]] = soli2;
+			}
+		}
+	}
+	return code;
+}
+
+int UnitSurf::GetLocalExPln(double CoeffPln[4], double sol[6][3]) {
+	int code = 0;
+	if (isCurve) {
+		double coeff0[10] = { c_xs, c_ys, c_zs, c_xy, c_yz, c_xz, c_x, c_y, c_z, c };
+		for (int i = 0; i < 3; i++) {
+			double xyzc[4][4] = { {0.0} };
+			for (int j = 0; j < 4; j++) xyzc[j][j] = 1.0;
+			if (abs(CoeffPln[i]) > 1.e-10) {
+				double invc = 1. / CoeffPln[i];
+				// Cancel i's term, x = ay+bz+c
+				for (int j = 0; j < 4; j++) xyzc[i][j] = -CoeffPln[j] * invc;
+				xyzc[i][i] = 0.;
+
+				double coeff1[10];
+				CalCoeffs(coeff0, xyzc, coeff1);
+				double coeff2[6] = { coeff1[(i + 1) % 3],coeff1[(i + 2) % 3],coeff1[3 + (i + 1) % 3],coeff1[6 + (i + 1) % 3],coeff1[6 + (i + 2) % 3],coeff1[9] };
+
+				// Get local extremum for an axis
+				double sol1[2][2];
+				int code1 = GetLocalExCurve((i + 1) % 3, coeff2, sol1);
+				if (code1 % 2 == 1) {
+					sol[(i + 1) % 3 * 2][(i + 1) % 3] = sol1[0][0];
+					sol[(i + 1) % 3 * 2][(i + 2) % 3] = sol1[0][1];
+					this->GetPointVar2[i, sol1[0], sol[(i + 1) % 3 * 2][i]];
+				}
+				if (code1 > 2) {
+					sol[(i + 1) % 3 + 1][(i + 1) % 3] = sol1[1][0];
+					sol[(i + 1) % 3 + 1][(i + 2) % 3] = sol1[1][1];
+					this->GetPointVar2[i, sol1[1], sol[(i + 1) % 3 * 2 + 1][i]];
+				}
+				code += pow10[(i + 1) % 3] * code1;
+				// If (i+2)%3's term was zero, get another pair
+				double sol1[2][2];
+				int code1 = GetLocalExCurve((i + 2) % 3, coeff2, sol1);
+				if (code1 % 2 == 1) {
+					sol[(i + 2) % 3 * 2][(i + 1) % 3] = sol1[0][0];
+					sol[(i + 2) % 3 * 2][(i + 2) % 3] = sol1[0][1];
+					this->GetPointVar2[i, sol1[0], sol[(i + 2) % 3 * 2][i]];
+				}
+				if (code1 > 2) {
+					sol[(i + 2) % 3 + 1][(i + 1) % 3] = sol1[1][0];
+					sol[(i + 2) % 3 + 1][(i + 2) % 3] = sol1[1][1];
+					this->GetPointVar2[i, sol1[1], sol[(i + 2) % 3 * 2 + 1][i]];
+				}
+				code += pow10[(i + 2) % 3] * code1;
 			}
 		}
 	}
@@ -349,9 +433,9 @@ void UnitVol::Rotate(double cos, double sin, int Ax) {
 	for (int i = 0; i < nsurf; i++) Surfaces[i].Rotate(cos, sin, Ax);
 }
 
-bool UnitVol::IsInside(double x, double y, double z) {
+bool UnitVol::IsInside(double x, double y, double z, bool includeOn) {
 	bool inside = true;
-	for (int i = 0; i < nsurf; i++) inside = inside && Surfaces[i].IsInside(x, y, z);
+	for (int i = 0; i < nsurf; i++) inside = inside && Surfaces[i].IsInside(x, y, z, includeOn);
 	return inside;
 }
 
@@ -380,15 +464,169 @@ int UnitVol::GetIntersection(int CartPlane, double *val, double **sol) {
 	return ntotint;
 }
 
-bool UnitVol::GetBoundBox(double xlr[2], double ylr[2], double zlr[2]) {
-	int *codes = new int[nsurf];
-
-	for (int i = 0; i < nsurf; i++) {
-		// X boundaries
-
-		// Y boundaries
-
-		// Z boundaries
-
+void UnitVol::ResidentFilter(int codes, int acode, double localEx[6][3], double corners[6][3]) {
+	for (int axi = 0; axi < 3; axi++) {
+		int globcode = codes % pow10[3 - axi] / pow10[2 - axi];
+		int code0 = acode % pow10[3 - axi] / pow10[2 - axi], code1 = 0;
+		if (code0 % 2 == 1) {
+			if (IsInside(localEx[axi * 2][0], localEx[axi * 2][1], localEx[axi * 2][2], true)) {
+				code1 += 1;
+				if (globcode % 2 != 1 || localEx[axi * 2][axi] < corners[axi * 2][axi]) {
+					std::copy(localEx[axi * 2][0], localEx[axi * 2][2], corners[axi * 2]);
+				}
+			}
+		}
+		if (code0 > 1) {
+			if (IsInside(localEx[axi * 2 + 1][0], localEx[axi * 2 + 1][1], localEx[axi * 2 + 1][2], true)) {
+				code1 += 2;
+				if (globcode < 2 || localEx[axi * 2 + 1][axi] > corners[axi * 2 + 1][axi]) {
+					std::copy(localEx[axi * 2][0], localEx[axi * 2][2], corners[axi * 2 + 1]);
+				}
+			}
+		}
 	}
+}
+
+bool UnitVol::GetBoundBox(double xlr[2], double ylr[2], double zlr[2]) {
+	double corners[6][3];
+	int codes = 0;
+
+	// Symbol for bound-by, (,)
+	// o C : Curved surface
+	// o P : Plane surface
+
+	// [1] Curved surface local extremum : (C)
+	//     1. Get local extremum
+	//     2. Extract what are inside volume
+	//     3. Revise codes and corner points
+	for (int i = 0; i < nsurf; i++) {
+		double localEx[6][3] = { {0.0} };
+		int acode = Surfaces[i].GetLocalExSelf(localEx);
+		if (acode == 0) continue;
+		ResidentFilter(codes, acode, localEx, corners);
+	}
+
+	// [2] Curve local extremum between curved surfaces and planes : (C,P)
+	//     o Same procedures as above
+	for (int i = 0; i < nsurf; i++) {
+		double localEx[6][3] = { {0.0} };
+		for (int j = 0; j < nsurf; j++) {
+			if (i == j) continue;
+			double coeffj[10];
+			bool isCurve = Surfaces[j].GetEquation(coeffj);
+			if (isCurve) continue;
+			double coeffPln[4] = { coeffj[6],coeffj[7],coeffj[8],coeffj[9] };
+			int acode = Surfaces[i].GetLocalExPln(coeffPln, localEx);
+			if (acode == 0) continue;
+			ResidentFilter(codes, acode, localEx, corners);
+		}
+	}
+
+	// [3] Curve local extremum between two curved surfaces : (C,C)
+	//     o Same procedures as above
+	//     ** Not developed yet. This will be done after C5G7 hard-code progresses.
+
+	// From [1] to [3] steps, the local extremum points are obtained.
+	// However, from [4] to [5], only the intersection points can be obtained.
+	// It is impossible to tell whether each is left or right boundaries of any axes.
+	// Explicit comparisons which is largest or smallest along all directions should be carried out.
+
+	std::queue<double[3]> Inters;
+
+	// [4] Intersection of each curved surface and two planes : (C,P,P)
+	//     1. Get a line from a pair of planes attached to each curved surface
+	//     2. Find two intersections to the curved surface
+	//     3. Follow [1]-2 and [1]-3
+	//     ** Not developed either.
+
+	// [5] Intersection of three planes : (P,P,P)
+	//     1. Get the intersection points from triple planes
+	//     2. Follow [1]-2 and [1]-3
+	for (int i = 0; i < nsurf; i++) {
+		double coeff0[10];
+		double IsCurve = Surfaces[i].GetEquation(coeff0);
+		if (IsCurve) continue;
+		double coeff0_4[4] = { coeff0[6], coeff0[7], coeff0[8], coeff0[9] };
+		for (int j = i + 1; j < nsurf; j++) {
+			double coeff1[10];
+			IsCurve = Surfaces[j].GetEquation(coeff1);
+			if (IsCurve) continue;
+			double coeff1_4[4] = { coeff1[6], coeff1[7], coeff1[8], coeff1[9] };
+			for(int k = j + 1; k < nsurf; k++) {
+				double coeff2[10];
+				IsCurve = Surfaces[k].GetEquation(coeff2);
+				if (IsCurve) continue;
+				double coeff2_4[4] = { coeff2[6], coeff2[7], coeff2[8], coeff2[9] };
+				double soltriple[3];
+				if (GetTriplePoint(coeff0_4, coeff1_4, coeff2_4, soltriple)) Inters.push(soltriple);
+			}
+		}
+	}
+
+	// Filter residents and determine bounding values
+	// The corner points from local extremum are collapsed to the queue, Inters.
+	// If a plane composed of three resident points holds all the others, return false
+	std::queue<double[3]> Residents;
+	for (int i = 0; i < 6; i++) {
+		int acode = codes % pow10[3 - i] / pow10[2 - i];
+		if (acode % 2 == 1) Residents.push(corners[i]);
+		if (acode > 1) Residents.push(corners[i]);
+	}
+	while (!Inters.empty()) {
+		double aninter[3];
+		std::copy(Inters.front(), Inters.front() + 3, aninter);
+		if (IsInside(aninter[0], aninter[1], aninter[2], true)) {
+			Residents.push(aninter);
+		}
+		Inters.pop();
+	}
+	if (Residents.empty()) return false;
+	double aninter0[3];
+	std::copy(Residents.front(), Residents.front() + 3, aninter0);
+	double boundval[6] = { aninter0[0], aninter0[0], aninter0[1], aninter0[1], aninter0[2], aninter0[2] };
+	int seq = 0;
+	double DirVec[3];
+	while (!Residents.empty()) {
+		double aninter[3];
+		std::copy(Residents.front(), Residents.front() + 3, aninter);
+		// Boundary values update
+		for (int i = 0; i < 3; i++) {
+			double vl = boundval[i * 2], vr = boundval[i * 2 + 1], vn = aninter[0];
+			boundval[i * 2] = (vl > vn) ? vn : vl;
+			boundval[i * 2 + 1] = (vr < vn) ? vn : vr;
+		}
+		// Boundedness check
+		double DirVec1[3] = { aninter[0] - aninter0[0], aninter[1] - aninter0[1], aninter[2] - aninter0[2] };
+		double det = DirVec1[0] * DirVec1[0] + DirVec1[1] * DirVec1[1] + DirVec1[2] * DirVec1[2];
+		if (det < 1.e-10) {
+			switch (seq) {
+			case 0:
+				std::copy(DirVec1, DirVec1 + 3, DirVec);
+				seq = 1;
+				break;
+			case 1:
+				DirVec1[0] = DirVec[1] * DirVec1[2] - DirVec[2] * DirVec1[1];
+				DirVec1[1] = DirVec[3] * DirVec1[0] - DirVec[0] * DirVec1[3];
+				DirVec1[2] = DirVec[0] * DirVec1[1] - DirVec[1] * DirVec1[0];
+				det = DirVec1[0] * DirVec1[0] + DirVec1[1] * DirVec1[1] + DirVec1[2] * DirVec1[2];
+				if (det > 1.e-10) {
+					std::copy(DirVec1, DirVec1 + 3, DirVec);
+					seq = 2;
+				}
+				break;
+			case 2:
+				det = DirVec[0] * DirVec1[0] + DirVec[1] * DirVec1[1] + DirVec[2] * DirVec1[2];
+				if (abs(det) > 1.e-10) seq = 3;
+				break;
+			case 3:
+				break;
+			}
+		}
+		Residents.pop();
+	}
+	if (seq < 3) return false;
+	xlr[0] = boundval[0]; xlr[1] = boundval[1];
+	ylr[0] = boundval[2]; ylr[1] = boundval[3];
+	zlr[0] = boundval[4]; zlr[1] = boundval[5];
+	return true;
 }
