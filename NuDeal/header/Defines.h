@@ -85,3 +85,29 @@ namespace filesys = std::experimental::filesystem;
 
 #include "hdf5.h"
 #include "hdf5_hl.h"
+
+// Type Definitions
+
+#ifdef FP64
+	
+using real = double;
+using real2 = double2;
+using real3 = double3;
+using real4 = double4;
+
+#define make_real2 make_double2;
+#define make_real3 make_double3;
+#define make_real4 make_double4;
+
+#else
+
+using real = float;
+using real2 = float2;
+using real3 = float3;
+using real4 = float4;
+
+#define make_real2 make_float2;
+#define make_real3 make_float3;
+#define make_real4 make_float4;
+
+#endif
