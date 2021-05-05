@@ -86,14 +86,14 @@ string Util_t::EraseSpace(const string& line, const string& delimiter)
 
 Util_t::size_type Util_t::FindEndOfMacro(const string& line, size_type pos)
 {
-	if (line[pos] != SC::HASHTAG) return string::npos;
+	if (line[pos] != SC::Hash) return string::npos;
 
 	size_type backslash, LF;
 	size_type macro_end = pos;
 
 	do {
 		LF = line.find(SC::LF, macro_end);
-		backslash = line.find(SC::BACKSLASH, macro_end);
+		backslash = line.find(SC::BackSlash, macro_end);
 		macro_end = LF + 1;
 	} while (backslash < LF);
 
@@ -105,7 +105,7 @@ string Util_t::ReplaceMacro(const string& line, char replace)
 	string s = line;
 	size_type macro_beg, pos = 0;
 
-	while ((macro_beg = s.find_first_of(SC::HASHTAG, pos)) != string::npos) {
+	while ((macro_beg = s.find_first_of(SC::Hash, pos)) != string::npos) {
 		auto macro_end = FindEndOfMacro(s, macro_beg);
 		std::replace_if(s.begin() + macro_beg, s.begin() + macro_end, 
 			[] (char c) { return c != SC::LF; }, replace);
@@ -121,17 +121,17 @@ vector<string> Util_t::ExtractMacro(const string& line)
 
 	size_type beg = 0, pos;
 
-	pos = line.find(SC::BLANK);
+	pos = line.find(SC::Blank);
 	macro.push_back(Trim(line.substr(0, pos)));
 
 	beg = pos + 1;
 
-	if ((pos = line.find(SC::RPAREN, beg)) != string::npos) {
+	if ((pos = line.find(SC::RightParen, beg)) != string::npos) {
 		macro.push_back(Trim(line.substr(beg, pos - beg)));
 		macro.push_back(Trim(line.substr(pos + 1)));
 	}
 	else {
-		pos = line.find(SC::BLANK, beg);
+		pos = line.find(SC::Blank, beg);
 		macro.push_back(Trim(line.substr(beg, pos - beg)));
 		macro.push_back(Trim(line.substr(pos + 1)));
 	}
@@ -146,8 +146,8 @@ string Util_t::GetLine(stringstream& in, const char delimiter)
 
 	std::getline(in, s, delimiter);
 
-	std::replace(s.begin(), s.end(), SC::TAB, SC::BLANK);
-	std::replace(s.begin(), s.end(), SC::CR, SC::BLANK);
+	std::replace(s.begin(), s.end(), SC::Tab, SC::Blank);
+	std::replace(s.begin(), s.end(), SC::CR, SC::Blank);
 
 	return static_cast<string&&>(s);
 }
@@ -158,7 +158,7 @@ string Util_t::GetBlock(stringstream& in)
 	auto file_pos = in.tellg();
 
 	while (!in.eof()) {
-		auto s = GetLine(in, SC::RBRACE);
+		auto s = GetLine(in, SC::RightBrace);
 		s += in.str()[in.tellg()];
 		section += s;
 
@@ -175,11 +175,11 @@ string Util_t::GetBlock(stringstream& in)
 
 Util_t::size_type Util_t::FindEndPoint(const string& contents, size_type& pos)
 {
-	pos = contents.find_first_of(SC::LBRACE, pos);
+	pos = contents.find_first_of(SC::LeftBrace, pos);
 
 	size_type end, beg = pos;
 
-	while ((end = contents.find_first_of(SC::RBRACE, beg)) != string::npos) {
+	while ((end = contents.find_first_of(SC::RightBrace, beg)) != string::npos) {
 		if (IsClosed(contents.substr(pos, end - pos + 1))) break;
 		beg = end + 1;
 	}
@@ -201,25 +201,15 @@ string Util_t::GetBlock(const string& contents, size_type pos)
 
 void Util_t::ReplaceComments(string& line)
 {
-	
+	static const string c_comment = string(2, SC::Slash);
+
 	size_type pos;
 
-	// C-style Comment
-
 	do {
-		pos = line.find(SC::COMMENT);
+		pos = line.find(c_comment);
 		if (pos == string::npos) break;
 		auto LF = line.find(SC::LF, pos);
-		line.replace(pos, LF - pos, string(1, SC::BLANK));
-	} while (pos != string::npos);
-
-	// Fortran-style Comment
-
-	do {
-		pos = line.find(SC::BANG);
-		if (pos == string::npos) break;
-		auto LF = line.find(SC::LF, pos);
-		line.replace(pos, LF - pos, string(1, SC::BLANK));
+		line.replace(pos, LF - pos, string(1, SC::Blank));
 	} while (pos != string::npos);
 
 }
@@ -244,9 +234,9 @@ void Util_t::AreBracketsMatched(const string& contents)
 	vector<size_type> pos;
 
 	for (auto i = contents.begin(); i < contents.end(); ++i) {
-		if (*i == SC::LBRACE)
+		if (*i == SC::LeftBrace)
 			pos.push_back(i - contents.begin());
-		else if (*i == SC::RBRACE) {
+		else if (*i == SC::RightBrace) {
 			if (pos.empty()) throw runtime_error("Not closed }");
 			pos.erase(pos.end() - 1);
 		}
@@ -257,9 +247,9 @@ void Util_t::AreBracketsMatched(const string& contents)
 	pos.clear();
 
 	for (auto i = contents.begin(); i < contents.end(); ++i) {
-		if (*i == SC::LPAREN)
+		if (*i == SC::LeftParen)
 			pos.push_back(i - contents.begin());
-		else if (*i == SC::RPAREN) {
+		else if (*i == SC::RightParen) {
 			if (pos.empty()) throw runtime_error("Not closed )");
 			pos.erase(pos.end() - 1);
 		}
@@ -275,7 +265,7 @@ void Util_t::IsMacroValid(const string& contents)
 
 	size_type macro_beg, pos = 0;
 
-	while ((macro_beg = contents.find(SC::HASHTAG, pos)) != string::npos) {
+	while ((macro_beg = contents.find(SC::Hash, pos)) != string::npos) {
 		auto macro_end = FindEndOfMacro(contents, macro_beg);
 		auto macro = contents.substr(macro_beg, macro_end - macro_beg);
 		auto v = ExtractMacro(macro);
@@ -297,19 +287,19 @@ void Util_t::IsVariableCorrect(const string& contents)
 	string line;
 	set<string> variables;
 	
-	while ((beg = s.find_first_not_of(SC::LBRACE, pos)) != string::npos) {
-		pos = s.find_first_of(SC::LBRACE, beg + 1);
+	while ((beg = s.find_first_not_of(SC::LeftBrace, pos)) != string::npos) {
+		pos = s.find_first_of(SC::LeftBrace, beg + 1);
 		if (pos == string::npos) continue;
 		auto sub = Trim(s.substr(beg, pos - beg));
 		size_type p;
-		if ((p = sub.find_last_of(SC::RBRACE)) != string::npos)
+		if ((p = sub.find_last_of(SC::RightBrace)) != string::npos)
 			sub = Trim(sub.substr(p + 1));
-		if ((p = sub.find_first_of(SC::LPAREN)) != string::npos)
+		if ((p = sub.find_first_of(SC::LeftParen)) != string::npos)
 			sub = Trim(sub.substr(0, p));
-		if ((p = sub.find(SC::COLON)) != string::npos)
-			sub.erase(std::remove(sub.begin(), sub.end(), SC::BLANK), sub.end());
+		if ((p = sub.find(SC::Colon)) != string::npos)
+			sub.erase(std::remove(sub.begin(), sub.end(), SC::Blank), sub.end());
 		cout << sub << endl;
-		if (sub.find(SC::BLANK) != string::npos || sub.empty()) 
+		if (sub.find(SC::Blank) != string::npos || sub.empty()) 
 			throw runtime_error("Invalid variable name!");
 		if (variables.find(sub) != variables.end()) 
 			throw runtime_error("Redfeind variable!");
@@ -318,7 +308,7 @@ void Util_t::IsVariableCorrect(const string& contents)
 
 	for (auto var : variables) {
 		size_type pos;
-		if ((pos = var.find(SC::COLON)) != string::npos) {
+		if ((pos = var.find(SC::Colon)) != string::npos) {
 			auto parent = var.substr(pos + 1);
 			if (variables.find(parent) == variables.end())
 				throw runtime_error("Undefined variable! : " + parent);
@@ -329,8 +319,8 @@ void Util_t::IsVariableCorrect(const string& contents)
 
 bool Util_t::IsClosed(const string& s) 
 {
-	auto lcount = std::count(s.begin(), s.end(), SC::LBRACE);
-	auto rcount = std::count(s.begin(), s.end(), SC::RBRACE);
+	auto lcount = std::count(s.begin(), s.end(), SC::LeftBrace);
+	auto rcount = std::count(s.begin(), s.end(), SC::RightBrace);
 
 	return (lcount == rcount) && (lcount > 0);
 }

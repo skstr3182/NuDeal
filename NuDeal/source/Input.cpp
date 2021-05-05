@@ -7,17 +7,17 @@
 namespace IO
 {
 
-using Parse = Util_t;
-using SC = Parse::SC;
+using Util = Util_t;
+using SC = Util::SC;
 
 void InputManager_t::HashTree_t::ProcessMacro(const string& contents)
 {
 	string::size_type macro_beg, pos = 0;
 
-	while ((macro_beg = contents.find(SC::HASHTAG, pos)) != string::npos) {
-		auto macro_end = Parse::FindEndOfMacro(contents, macro_beg);
+	while ((macro_beg = contents.find(SC::Hash, pos)) != string::npos) {
+		auto macro_end = Util::FindEndOfMacro(contents, macro_beg);
 		auto macro = contents.substr(macro_beg, macro_end - macro_beg);
-		auto v = Parse::ExtractMacro(macro);
+		auto v = Util::ExtractMacro(macro);
 		this->macro[v[0]][v[1]] = v[2];
 	}
 }
@@ -27,18 +27,18 @@ void InputManager_t::HashTree_t::Make(const string& file,
 {
 	string::size_type beg = Beg, end;
 
-	while ((end = Parse::FindEndPoint(file, beg)) < End) {
+	while ((end = Util::FindEndPoint(file, beg)) < End) {
 		auto name = file.substr(Beg, beg - Beg);
 
-		beg = file.find_first_not_of(SC::LBRACE, beg);
+		beg = file.find_first_not_of(SC::LeftBrace, beg);
 		auto contents = file.substr(beg, end - beg);
 
-		HashTree_t Tnew, &T = this->children[Parse::Trim(name)];
+		HashTree_t Tnew, &T = this->children[Util::Trim(name)];
 		Tnew.parent = this;
 		Tnew.CountLine(name, contents);
 		T = std::move(Tnew);
 
-		if (Parse::IsClosed(contents)) 
+		if (Util::IsClosed(contents)) 
 			T.Make(file, beg, end);
 		else 
 			T.contents = contents;
@@ -49,18 +49,18 @@ void InputManager_t::HashTree_t::Make(const string& file,
 
 void InputManager_t::HashTree_t::CountLine(const string& name, const string& contents)
 {
-	num_lines = Parse::LineCount(name) + Parse::LineCount(contents);
-	line_info = Parse::LineCount(name, name.find_first_not_of(SC::LF)) + 1;
+	num_lines = Util::LineCount(name) + Util::LineCount(contents);
+	line_info = Util::LineCount(name, name.find_first_not_of(SC::LF)) + 1;
 	line_info += parent->line_info;
 	for (const auto& t : parent->children) line_info += t.second.num_lines;
 }
 
 InputManager_t::Blocks InputManager_t::GetBlockID(string line) const
 {
-	int pos_end = line.find(SC::BLANK, 0);
+	int pos_end = line.find(SC::Blank, 0);
 	string block = line.substr(0, pos_end);
 
-	block = Parse::Uppercase(block);
+	block = Util::Uppercase(block);
 	for (int i = 0; i < BlockNames.size(); ++i)
 		if (!block.compare(BlockNames[i]))
 			return static_cast<Blocks>(i);
@@ -72,13 +72,13 @@ T InputManager_t::GetCardID(Blocks block, string line) const
 {
 	static constexpr T INVALID = static_cast<T>(-1);
 
-	int pos_beg = line.find_first_not_of(SC::BLANK);
+	int pos_beg = line.find_first_not_of(SC::Blank);
 	if (pos_beg == string::npos) return INVALID;
 
-	int pos_end = line.find(SC::BLANK, pos_beg);
+	int pos_end = line.find(SC::Blank, pos_beg);
 	string card = line.substr(pos_beg, pos_end - pos_beg);
 
-	card = Parse::Uppercase(card);
+	card = Util::Uppercase(card);
 	int b = static_cast<int>(block);
 	for (int i = 0; i < CardNames[b].size(); ++i) 
 		if (!card.compare(CardNames[b][i])) 
@@ -94,8 +94,8 @@ void InputManager_t::ExtractInput(istream& fin)
 	
 	original = strstream.str();
 
-	std::replace(original.begin(), original.end(), SC::TAB, SC::BLANK);
-	std::replace(original.begin(), original.end(), SC::CR, SC::BLANK);
+	std::replace(original.begin(), original.end(), SC::Tab, SC::Blank);
+	std::replace(original.begin(), original.end(), SC::CR, SC::Blank);
 }
 
 void InputManager_t::InspectSyntax(const string& contents)
@@ -105,7 +105,7 @@ void InputManager_t::InspectSyntax(const string& contents)
 
 	// Check parenthesis, braces and brackets.
 	try {
-		Parse::AreBracketsMatched(contents);
+		Util::AreBracketsMatched(contents);
 	}
 	catch (const exception& e) {
 		Except::Abort(Code::MISMATCHED_BRAKETS, e.what());
@@ -113,7 +113,7 @@ void InputManager_t::InspectSyntax(const string& contents)
 
 	// Check macro definition
 	try {
-		Parse::IsMacroValid(contents);
+		Util::IsMacroValid(contents);
 	}
 	catch (const exception& e) {
 		Except::Abort(Code::INVALID_MACRO, e.what());
@@ -121,7 +121,7 @@ void InputManager_t::InspectSyntax(const string& contents)
 
 	// Check variables : block, card and unit geometry
 	try {
-		Parse::IsVariableCorrect(contents);
+		Util::IsVariableCorrect(contents);
 	}
 	catch (const exception& e) {
 		Except::Abort(Code::INVALID_VARIABLE, e.what());
@@ -139,7 +139,7 @@ void InputManager_t::ParseGeometryBlock(HashTree_t& Tree)
 	for (auto& T : Tree.children) {
 		
 		auto& object = T.second;
-		string card = Parse::Trim(T.first);
+		string card = Util::Trim(T.first);
 		Cards ID = GetCardID<Cards>(Blocks::GEOMETRY, card);
 
 		switch (ID)
@@ -176,10 +176,10 @@ void InputManager_t::ParseUnitVolumeCard(HashTree_t& Tree)
 	string ORIGIN = "ORIGIN";
 
 	for (auto& T : Tree.children) {
-		auto name = Parse::Trim(T.first);
+		auto name = Util::Trim(T.first);
 		auto& object = T.second;
-		auto contents = Parse::EraseSpace(object.contents);
-		auto v = Parse::SplitFields(contents, string(1, SC::SEMICOLON));
+		auto contents = Util::EraseSpace(object.contents);
+		auto v = Util::SplitFields(contents, string(1, SC::SemiColon));
 		
 		UnitVolume_t U;
 
@@ -187,7 +187,7 @@ void InputManager_t::ParseUnitVolumeCard(HashTree_t& Tree)
 			auto& s = *i;
 			if (s.find(ORIGIN) != string::npos) {
 				auto delimiter = string(1, s[ORIGIN.size()]);
-				auto u = Parse::SplitFields(s, delimiter);
+				auto u = Util::SplitFields(s, delimiter);
 
 				if (u.size() != 2) 
 					Except::Abort(Code::INVALID_ORIGIN_DATA, object.contents, object.GetLineInfo());
@@ -198,7 +198,7 @@ void InputManager_t::ParseUnitVolumeCard(HashTree_t& Tree)
 			else ++i;
 		}
 
-		v = Parse::SplitFields(v.front(), SC::DAMPERSAND);
+		v = Util::SplitFields(v.front(), string(1, SC::SemiColon));
 
 		U.equations = v;
 
@@ -214,27 +214,27 @@ void InputManager_t::ParseUnitCompCard(HashTree_t& Tree)
 
 	for (auto& T : Tree.children) {
 		auto& object = T.second;
-		auto prefix = Parse::EraseSpace(T.first);
-		auto v = Parse::SplitFields(prefix, string(1, SC::COLON));
+		auto prefix = Util::EraseSpace(T.first);
+		auto v = Util::SplitFields(prefix, string(1, SC::Colon));
 		if (v.size() != 2) 
 			Except::Abort(Code::BACKGROUND_MISSED, object.contents, object.GetLineInfo());
 		auto name = v.front();
 		auto background = v.back();
-		auto contents = Parse::EraseSpace(object.contents);
-		v = Parse::SplitFields(contents, string(1, SC::SEMICOLON));
+		auto contents = Util::EraseSpace(object.contents);
+		v = Util::SplitFields(contents, string(1, SC::SemiColon));
 
 		UnitComp_t U;
 
 		U.background = background;
 
 		for (const auto& s : v) {
-			auto u = Parse::SplitFields(s, SC::RDBRACKET);
+			auto u = Util::SplitFields(s, string(2, SC::RightAngle));
 			U.unitvols.push_back(u.front());
 			U.displace.push_back(vector<string>());
 			u.erase(u.begin());
 			for (const auto& k : u) {
-				auto lpos = k.find(SC::LPAREN) + 1;
-				auto rpos = k.find(SC::RPAREN);
+				auto lpos = k.find(SC::LeftParen) + 1;
+				auto rpos = k.find(SC::RightParen);
 				if (lpos == string::npos && rpos == string::npos)
 					U.displace.back().push_back(k);
 				else if (lpos != string::npos && rpos != string::npos)
@@ -252,13 +252,13 @@ void InputManager_t::Preprocess()
 {
 	InspectSyntax(original);
 
-	modified = Parse::ReplaceMacro(original);
+	modified = Util::ReplaceMacro(original);
 
-	Parse::ReplaceComments(modified);
+	Util::ReplaceComments(modified);
 
 	HashTree.ProcessMacro(modified);
 
-	modified = Parse::EraseSpace(modified, string(1, SC::BLANK));
+	modified = Util::EraseSpace(modified, string(1, SC::Blank));
 
 	HashTree.Make(modified);
 }
@@ -267,8 +267,6 @@ void InputManager_t::ReadInput(string file)
 {
 	using Except = Exception_t;
 	using Code = Except::Code;
-
-	Lexer = new Lexer_t;
 
 	ifstream fin(file);
 	
@@ -280,11 +278,24 @@ void InputManager_t::ReadInput(string file)
 
 	fin.close();
 
+	//Lexer = new Lexer_t;
+
+	//Lexer->Lex(original);
+
+	Lexer_t lex(original.c_str());
+
+	for (auto token = lex.Next();
+		!token.IsOneOf(Token_t::Type::END, Token_t::Type::INVALID);
+		token = lex.Next())
+	{
+		cout << token.GetLexeme() << endl;
+	}
+
 	Preprocess();
 	
 	for (auto& T : HashTree.children) {
 		auto& contents = T.second;
-		string block = Parse::Trim(T.first);
+		string block = Util::Trim(T.first);
 		Blocks ID = GetBlockID(block);
 		switch (ID)
 		{

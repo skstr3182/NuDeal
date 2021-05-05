@@ -19,23 +19,32 @@ class Parser_t;
 // Special Characters
 struct SpecialCharacters
 {
-	static constexpr char BLANK = ' ';
-	static constexpr char BANG = '!';
-	static constexpr char BRACKET = '>';
-	static constexpr char TAB = '\t';
+	static constexpr char LeftParen = '(';
+	static constexpr char RightParen = ')';
+	static constexpr char LeftBracket = '[';
+	static constexpr char RightBracket = ']';
+	static constexpr char LeftBrace = '{';
+	static constexpr char RightBrace = '}';
+	static constexpr char LeftAngle = '<';
+	static constexpr char RightAngle = '>';
+	static constexpr char Equal = '=';
+	static constexpr char Plus = '+';
+	static constexpr char Minus = '-';
+	static constexpr char Asterisk = '*';
+	static constexpr char Slash = '/';
+	static constexpr char Caret = '^';
+	static constexpr char Hash = '#';
+	static constexpr char Dot = '.';
+	static constexpr char Comma = ',';
+	static constexpr char SemiColon = ';';
+	static constexpr char Colon = ':';
+	static constexpr char SingleQuote = '\'';
+	static constexpr char DoubleQuote = '\"';
+	static constexpr char BackSlash = '\\';
+	static constexpr char Blank = ' ';
+	static constexpr char Tab = '\t';
 	static constexpr char CR = '\r';
 	static constexpr char LF = '\n';
-	static constexpr char LBRACE = '{';
-	static constexpr char RBRACE = '}';
-	static constexpr char COLON = ':';
-	static constexpr char SEMICOLON = ';';
-	static constexpr char COMMENT[] = "//";
-	static constexpr char DAMPERSAND[] = "&&";
-	static constexpr char RDBRACKET[] = ">>";
-	static constexpr char LPAREN = '(';
-	static constexpr char RPAREN = ')';
-	static constexpr char HASHTAG = '#';
-	static constexpr char BACKSLASH = '\\';
 };
 
 // Block

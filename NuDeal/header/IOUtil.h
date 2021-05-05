@@ -24,7 +24,7 @@ public :
 	static string EraseSpace(const string& line, const string& delimiter = "\n ");
 	/// Macro Syntax Manipulation
 	static size_type FindEndOfMacro(const string& line, size_type pos = 0);
-	static string ReplaceMacro(const string& line, char c = SC::BLANK);
+	static string ReplaceMacro(const string& line, char c = SC::Blank);
 	static vector<string> ExtractMacro(const string& line);
 	/// Read Input
 	static string GetLine(stringstream& in, const char delimiter = SC::LF);
