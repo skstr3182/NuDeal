@@ -30,7 +30,13 @@
     <ClInclude Include="header\Input.h">
       <Filter>Header\IO</Filter>
     </ClInclude>
-    <ClInclude Include="header\Parser.h">
+    <ClInclude Include="header\IODeclare.h">
+      <Filter>Header\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Lexer.h">
+      <Filter>Header\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="header\IOUtil.h">
       <Filter>Header\IO</Filter>
     </ClInclude>
   </ItemGroup>
@@ -44,7 +50,10 @@
     <ClCompile Include="source\Input.cpp">
       <Filter>Source\IO</Filter>
     </ClCompile>
-    <ClCompile Include="source\Parser.cpp">
+    <ClCompile Include="source\IOUtil.cpp">
+      <Filter>Source\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Lexer.cpp">
       <Filter>Source\IO</Filter>
     </ClCompile>
   </ItemGroup>

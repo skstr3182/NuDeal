@@ -1,5 +1,6 @@
 #pragma once
 #include "Defines.h"
+#include "IODeclare.h"
 
 namespace IO
 {
@@ -27,21 +28,6 @@ public :
 
 private :
 
-	static constexpr int num_blocks = 5;
-	static constexpr int num_cards = 30;
-
-	const string BlockNames[num_blocks] =
-	{
-		"GEOMETRY",
-		"MATERIAL",
-		"OPTION"
-	};
-	const string CardNames[num_blocks][num_cards] = 
-	{
-		{ "UNITVOLUME", "UNITCOMP", "DISPLACE" },
-		{ "NG", "FORMAT" }
-	};
-
 	enum class Blocks {
 		GEOMETRY,
 		MATERIAL,
@@ -66,6 +52,9 @@ private :
 	
 	string file;
 	string original, modified;
+
+	Lexer_t *Lexer;
+
 	HashTree_t HashTree;
 
 private :

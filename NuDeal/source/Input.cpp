@@ -1,12 +1,13 @@
 #include "Input.h"
 #include "IOUtil.h"
 #include "Exception.h"
-#include "Parser.h"
+#include "IOUtil.h"
+#include "Lexer.h"
 
 namespace IO
 {
 
-using Parse = Parse_t;
+using Parse = Util_t;
 using SC = Parse::SC;
 
 void InputManager_t::HashTree_t::ProcessMacro(const string& contents)
@@ -60,7 +61,7 @@ InputManager_t::Blocks InputManager_t::GetBlockID(string line) const
 	string block = line.substr(0, pos_end);
 
 	block = Parse::Uppercase(block);
-	for (int i = 0; i < num_blocks; ++i)
+	for (int i = 0; i < BlockNames.size(); ++i)
 		if (!block.compare(BlockNames[i]))
 			return static_cast<Blocks>(i);
 	return Blocks::INVALID;
@@ -79,7 +80,7 @@ T InputManager_t::GetCardID(Blocks block, string line) const
 
 	card = Parse::Uppercase(card);
 	int b = static_cast<int>(block);
-	for (int i = 0; i < num_cards; ++i) 
+	for (int i = 0; i < CardNames[b].size(); ++i) 
 		if (!card.compare(CardNames[b][i])) 
 			return static_cast<T>(i);
 	return INVALID;
@@ -266,6 +267,8 @@ void InputManager_t::ReadInput(string file)
 {
 	using Except = Exception_t;
 	using Code = Except::Code;
+
+	Lexer = new Lexer_t;
 
 	ifstream fin(file);
 	

@@ -1,4 +1,4 @@
-#include "Parser.h"
+#include "IOUtil.h"
 #include "Exception.h"
 
 namespace IO
@@ -7,14 +7,14 @@ namespace IO
 using Except = Exception_t;
 using Code = Except::Code;
 
-string Parse_t::Uppercase(string& line)
+string Util_t::Uppercase(string& line)
 {
 	string l = line;
 	std::transform(l.begin(), l.end(), l.begin(), ::toupper);
 	return static_cast<string&&>(l);
 }
 
-int Parse_t::Integer(string field)
+int Util_t::Integer(string field)
 {
 	int val;
 
@@ -30,7 +30,7 @@ int Parse_t::Integer(string field)
 	return val;
 }
 
-double Parse_t::Float(string field)
+double Util_t::Float(string field)
 {
 	double val;
 
@@ -44,7 +44,7 @@ double Parse_t::Float(string field)
 	return val;
 }
 
-bool Parse_t::Logical(string field)
+bool Util_t::Logical(string field)
 {
 	Uppercase(field);
 	if (!field.compare("T")) return true;
@@ -55,7 +55,7 @@ bool Parse_t::Logical(string field)
 	Except::Abort(Code::INVALID_LOGICAL, field);
 }
 
-string Parse_t::Trim(const string& field, const string& delimiter)
+string Util_t::Trim(const string& field, const string& delimiter)
 {
 	string s = field;
 	auto pos = s.find_first_not_of(delimiter);
@@ -66,7 +66,7 @@ string Parse_t::Trim(const string& field, const string& delimiter)
 	return static_cast<string&&>(s);
 }
 
-int Parse_t::LineCount(const string& line, size_type count)
+int Util_t::LineCount(const string& line, size_type count)
 {
 	auto beg = line.begin();
 	auto end = line.end();
@@ -76,7 +76,7 @@ int Parse_t::LineCount(const string& line, size_type count)
 	return static_cast<int>(std::count(beg, end, SC::LF));
 }
 
-string Parse_t::EraseSpace(const string& line, const string& delimiter)
+string Util_t::EraseSpace(const string& line, const string& delimiter)
 {
 	string s = line;
 	for (const auto& i : delimiter)
@@ -84,7 +84,7 @@ string Parse_t::EraseSpace(const string& line, const string& delimiter)
 	return static_cast<string&&>(s);
 }
 
-Parse_t::size_type Parse_t::FindEndOfMacro(const string& line, size_type pos)
+Util_t::size_type Util_t::FindEndOfMacro(const string& line, size_type pos)
 {
 	if (line[pos] != SC::HASHTAG) return string::npos;
 
@@ -100,7 +100,7 @@ Parse_t::size_type Parse_t::FindEndOfMacro(const string& line, size_type pos)
 	return macro_end;
 }
 
-string Parse_t::ReplaceMacro(const string& line, char replace)
+string Util_t::ReplaceMacro(const string& line, char replace)
 {
 	string s = line;
 	size_type macro_beg, pos = 0;
@@ -115,7 +115,7 @@ string Parse_t::ReplaceMacro(const string& line, char replace)
 	return static_cast<string&&>(s);
 }
 
-vector<string> Parse_t::ExtractMacro(const string& line)
+vector<string> Util_t::ExtractMacro(const string& line)
 {
 	vector<string> macro;
 
@@ -140,7 +140,7 @@ vector<string> Parse_t::ExtractMacro(const string& line)
 }
 
 
-string Parse_t::GetLine(stringstream& in, const char delimiter)
+string Util_t::GetLine(stringstream& in, const char delimiter)
 {
 	string s;
 
@@ -152,7 +152,7 @@ string Parse_t::GetLine(stringstream& in, const char delimiter)
 	return static_cast<string&&>(s);
 }
 
-string Parse_t::GetBlock(stringstream& in)
+string Util_t::GetBlock(stringstream& in)
 {
 	string section;
 	auto file_pos = in.tellg();
@@ -173,7 +173,7 @@ string Parse_t::GetBlock(stringstream& in)
 	return static_cast<string&&>(section);
 }
 
-Parse_t::size_type Parse_t::FindEndPoint(const string& contents, size_type& pos)
+Util_t::size_type Util_t::FindEndPoint(const string& contents, size_type& pos)
 {
 	pos = contents.find_first_of(SC::LBRACE, pos);
 
@@ -186,7 +186,7 @@ Parse_t::size_type Parse_t::FindEndPoint(const string& contents, size_type& pos)
 	return end;
 }
 
-string Parse_t::GetBlock(const string& contents, size_type pos)
+string Util_t::GetBlock(const string& contents, size_type pos)
 {
 	string section;
 
@@ -199,7 +199,7 @@ string Parse_t::GetBlock(const string& contents, size_type pos)
 	return static_cast<string&&>(section);
 }
 
-void Parse_t::ReplaceComments(string& line)
+void Util_t::ReplaceComments(string& line)
 {
 	
 	size_type pos;
@@ -224,7 +224,7 @@ void Parse_t::ReplaceComments(string& line)
 
 }
 
-vector<string> Parse_t::SplitFields(string line, const string& delimiter)
+vector<string> Util_t::SplitFields(string line, const string& delimiter)
 {
 	vector<string> splitted;
 
@@ -239,7 +239,7 @@ vector<string> Parse_t::SplitFields(string line, const string& delimiter)
 }
 
 
-void Parse_t::AreBracketsMatched(const string& contents)
+void Util_t::AreBracketsMatched(const string& contents)
 {
 	vector<size_type> pos;
 
@@ -268,7 +268,7 @@ void Parse_t::AreBracketsMatched(const string& contents)
 	if (!pos.empty()) throw runtime_error("Not closed )");
 }
 
-void Parse_t::IsMacroValid(const string& contents)
+void Util_t::IsMacroValid(const string& contents)
 {
 	const set<string> directives = { "#define" };
 	map<string, string> macro_table;
@@ -289,7 +289,7 @@ void Parse_t::IsMacroValid(const string& contents)
 	}
 }
 
-void Parse_t::IsVariableCorrect(const string& contents)
+void Util_t::IsVariableCorrect(const string& contents)
 {
 	auto s = ReplaceMacro(contents);
 
@@ -327,7 +327,7 @@ void Parse_t::IsVariableCorrect(const string& contents)
 
 }
 
-bool Parse_t::IsClosed(const string& s) 
+bool Util_t::IsClosed(const string& s) 
 {
 	auto lcount = std::count(s.begin(), s.end(), SC::LBRACE);
 	auto rcount = std::count(s.begin(), s.end(), SC::RBRACE);
