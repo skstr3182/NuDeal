@@ -117,9 +117,7 @@ void Preprocessor_t::ApplyMacro(string& contents)
 				regex re(R"(\s*)" + arg + R"(\s*)");
 				replace = regex_replace(replace, re, val);
 			}
-			auto& str = beg->str();
-			auto pos = contents.find(str);
-			contents.replace(contents.begin() + pos, contents.begin() + pos + str.size(), replace);
+			contents.replace(beg->first, beg->second, replace);
 		}
 	}
 }
