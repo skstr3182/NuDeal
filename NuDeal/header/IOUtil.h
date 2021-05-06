@@ -4,6 +4,48 @@
 
 namespace IO
 {
+// Special Characters
+struct SpecialCharacters
+{
+	static constexpr char LeftParen = '(';
+	static constexpr char RightParen = ')';
+	static constexpr char LeftBracket = '[';
+	static constexpr char RightBracket = ']';
+	static constexpr char LeftBrace = '{';
+	static constexpr char RightBrace = '}';
+	static constexpr char LeftAngle = '<';
+	static constexpr char RightAngle = '>';
+	static constexpr char Equal = '=';
+	static constexpr char Plus = '+';
+	static constexpr char Minus = '-';
+	static constexpr char Asterisk = '*';
+	static constexpr char Slash = '/';
+	static constexpr char Caret = '^';
+	static constexpr char Hash = '#';
+	static constexpr char Dot = '.';
+	static constexpr char Comma = ',';
+	static constexpr char SemiColon = ';';
+	static constexpr char Colon = ':';
+	static constexpr char BackSlash = '\\';
+	static constexpr char Blank = ' ';
+	static constexpr char Tab = '\t';
+	static constexpr char CR = '\r';
+	static constexpr char LF = '\n';
+};
+
+// Block
+const vector<string> BlockNames = {
+	"GEOMETRY",
+	"MATERIAL",
+	"OPTION"
+};
+
+// Card
+const vector<vector<string>> CardNames = {
+	{ "UNITVOLUME", "UNITCOMP", "DISPLACE" },
+	{ "NG", "FORMAT" },
+	{ "CRITERIA" }
+};
 
 class Util_t
 {
@@ -22,22 +64,14 @@ public :
 	static string Trim(const string& field, const string& delimiter = "\n ");
 	static int LineCount(const string& line, size_type count = string::npos);
 	static string EraseSpace(const string& line, const string& delimiter = "\n ");
-	/// Macro Syntax Manipulation
-	static size_type FindEndOfMacro(const string& line, size_type pos = 0);
-	static string ReplaceMacro(const string& line, char c = SC::Blank);
-	static vector<string> ExtractMacro(const string& line);
 	/// Read Input
 	static string GetLine(stringstream& in, const char delimiter = SC::LF);
 	static string GetBlock(stringstream& fin);
 	static size_type FindEndPoint(const string& contents, size_type& pos);
 	static string GetBlock(const string& contents, size_type pos);
-	static void ReplaceComments(string& line);
 	static vector<string> SplitFields(string line, const string& delimiter);
 	
 	// Check Synax Error
-	static void AreBracketsMatched(const string& contents);
-	static void IsMacroValid(const string& contents);
-	static void IsVariableCorrect(const string& contents);
 	static bool IsClosed(const string& s);
 };
 

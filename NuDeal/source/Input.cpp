@@ -10,18 +10,6 @@ namespace IO
 using Util = Util_t;
 using SC = Util::SC;
 
-void InputManager_t::HashTree_t::ProcessMacro(const string& contents)
-{
-	string::size_type macro_beg, pos = 0;
-
-	while ((macro_beg = contents.find(SC::Hash, pos)) != string::npos) {
-		auto macro_end = Util::FindEndOfMacro(contents, macro_beg);
-		auto macro = contents.substr(macro_beg, macro_end - macro_beg);
-		auto v = Util::ExtractMacro(macro);
-		this->macro[v[0]][v[1]] = v[2];
-	}
-}
-
 void InputManager_t::HashTree_t::Make(const string& file, 
 	string::size_type Beg, string::size_type End)
 {
@@ -53,6 +41,166 @@ void InputManager_t::HashTree_t::CountLine(const string& name, const string& con
 	line_info = Util::LineCount(name, name.find_first_not_of(SC::LF)) + 1;
 	line_info += parent->line_info;
 	for (const auto& t : parent->children) line_info += t.second.num_lines;
+}
+
+void InputManager_t::Preprocessor_t::DeleteComment(string& contents)
+{
+	using Except = Exception_t;
+	using Code = Except::Code;
+
+	static constexpr char open[] = "/*", close[] = "*/";
+	static constexpr char comment[] = "//";
+
+	try {
+		AreParenthesesMatched(contents, { string(open) }, { string(close) });
+	}
+	catch (...) {
+		throw runtime_error("Mismatched comments");
+	}
+
+	size_type pos = 0;
+
+	while ((pos = contents.find(comment, pos)) != string::npos) {
+		auto LF = contents.find(SC::LF, pos);
+		contents.replace(contents.begin() + pos, contents.begin() + LF, LF - pos, SC::Blank);
+		LF + 1;
+	}
+	
+	pos = 0;
+
+	while ((pos = contents.find(open, pos)) != string::npos) {
+		auto end = contents.find(close, pos);
+		std::replace_if(contents.begin() + pos, contents.begin() + end + strlen(close),
+			[] (char c) { return c != SC::LF; }, SC::Blank);
+		pos = end + strlen(close) + 1;
+	}
+}
+
+void InputManager_t::Preprocessor_t::ApplyMacro(string& contents)
+{
+	using Except = Exception_t;
+	using Code = Except::Code;
+
+	static const string macro_str = R"~([\b]*(#[A-z]{2,})\s+(\w+)(\(.*\))?\s+((?:.*\\\r?\n)*.*))~";
+	static const regex macro_re(macro_str);
+
+	/*
+	[\b]*(#[A-z]{2,}) : #define
+	\s+ : Whitespace
+	(\w+) : Name
+	(\(.*\))? : Potential Argument
+	\s+ : Whitespace
+	(?:.*\\\r?\n)*.* : Contents;
+	*/
+
+	auto beg = sregex_token_iterator(contents.begin(), contents.end(), macro_re);
+	sregex_token_iterator end;
+	vector<string> macro;
+
+	// Pull Out
+
+	for (auto iter = beg; iter != end; ++iter) {
+		auto& s = iter->str();
+		auto pos = contents.find(s);
+		std::replace_if(s.begin(), s.end(), 
+			[] (char c) { return c == SC::BackSlash || c == SC::LF; }, SC::Blank);
+		macro.push_back(s);
+		std::replace_if(contents.begin() + pos, contents.begin() + pos + s.size(),
+			[] (char c) { return c != SC::LF; }, SC::Blank);
+		
+	}
+
+	// Directive
+
+	for (const auto& i : macro) {
+		auto beg = sregex_token_iterator(i.begin(), i.end(), macro_re, 1);
+		if (beg->str() != "#define") throw runtime_error("Invalid directive");
+	}
+
+	// Check Redefinition
+
+	set<string> check_redef;
+
+	for (const auto& i : macro) {
+		auto beg = sregex_token_iterator(i.begin(), i.end(), macro_re, 2);
+		if (check_redef.find(beg->str()) != check_redef.end()) throw runtime_error("Redfeind macro");
+		check_redef.insert(beg->str());
+	}
+
+
+	// Inlining
+
+	for (const auto& i : macro) {
+		auto name = sregex_token_iterator(i.begin(), i.end(), macro_re, 2)->str();
+		auto arguments = sregex_token_iterator(i.begin(), i.end(), macro_re, 3)->str();
+		auto func = sregex_token_iterator(i.begin(), i.end(), macro_re, 4)->str();
+
+		arguments = Util::EraseSpace(arguments, " \n()");
+		auto v_args = Util::SplitFields(arguments, string(1, SC::Comma));
+		int num_args = arguments.empty() ? 0 : std::count(arguments.begin(), arguments.end(), SC::Comma) + 1;
+
+		string reg_str = name;
+		if (num_args) {
+			reg_str += R"~(\()~";
+			for (int i = 0; i < num_args; ++i) {
+				reg_str += R"(\s*(\w+)\s*)";
+				if (i < num_args - 1) reg_str += R"(,)";
+			}
+			reg_str += R"~(\))~";
+		}
+		
+		regex re(reg_str);
+		sregex_token_iterator beg, end;
+
+		while ((beg = sregex_token_iterator(contents.begin(), contents.end(), re)) != end) {
+			vector<sregex_token_iterator> begs(num_args);
+			for (int i = 0; i < num_args; ++i) 
+				begs[i] = sregex_token_iterator(contents.begin(), contents.end(), re, i + 1);
+			auto replace = func;
+			for (int i = 0; i < num_args; ++i) {
+				auto val = begs[i]->str();
+				auto arg = v_args[i];
+				regex re(R"(\s*)" + arg + R"(\s*)");
+				replace = regex_replace(replace, re, val);
+			}
+			auto& str = beg->str();
+			auto pos = contents.find(str);
+			contents.replace(contents.begin() + pos, contents.begin() + pos + str.size(), replace);
+		}
+	}
+}
+
+bool InputManager_t::Preprocessor_t::AreParenthesesMatched(const string& contents, 
+	const vector<string>& open, const vector<string>& close)
+{
+	vector<string> S;
+
+	auto iter = contents.begin();
+
+	while (iter < contents.end()) {
+		size_type advance = 1;
+		for (int s = 0; s < open.size(); ++s) {
+			auto l = open[s].size();
+			auto c = contents.substr(iter - contents.begin(), l);
+			if (c == open[s]) { S.push_back(open[s]); advance = l; break; }
+		}
+		for (int s = 0; s < close.size(); ++s) {
+			auto l = close[s].size();
+			auto c = contents.substr(iter - contents.begin(), l);
+			if (c == close[s]) {
+				if (S.empty() || S.back() != open[s]) 
+					throw runtime_error("Mismatched" + open[s] + close[s]);
+				else
+					S.pop_back();
+				advance = l;
+			}
+		}
+		iter += advance;
+	}
+
+	if (!S.empty()) throw runtime_error("Mismatched");
+
+	return true;
 }
 
 InputManager_t::Blocks InputManager_t::GetBlockID(string line) const
@@ -92,40 +240,10 @@ void InputManager_t::ExtractInput(istream& fin)
 
 	strstream << fin.rdbuf();
 	
-	original = strstream.str();
+	contents = strstream.str();
 
-	std::replace(original.begin(), original.end(), SC::Tab, SC::Blank);
-	std::replace(original.begin(), original.end(), SC::CR, SC::Blank);
-}
-
-void InputManager_t::InspectSyntax(const string& contents)
-{
-	using Except = Exception_t;
-	using Code = Except::Code;
-
-	// Check parenthesis, braces and brackets.
-	try {
-		Util::AreBracketsMatched(contents);
-	}
-	catch (const exception& e) {
-		Except::Abort(Code::MISMATCHED_BRAKETS, e.what());
-	}
-
-	// Check macro definition
-	try {
-		Util::IsMacroValid(contents);
-	}
-	catch (const exception& e) {
-		Except::Abort(Code::INVALID_MACRO, e.what());
-	}
-
-	// Check variables : block, card and unit geometry
-	try {
-		Util::IsVariableCorrect(contents);
-	}
-	catch (const exception& e) {
-		Except::Abort(Code::INVALID_VARIABLE, e.what());
-	}
+	std::replace(contents.begin(), contents.end(), SC::Tab, SC::Blank);
+	std::replace(contents.begin(), contents.end(), SC::CR, SC::Blank);
 }
 
 // BLOCK
@@ -250,17 +368,36 @@ void InputManager_t::ParseUnitCompCard(HashTree_t& Tree)
 
 void InputManager_t::Preprocess()
 {
-	InspectSyntax(original);
+	using Preprocessor = Preprocessor_t;
+	using Except = Exception_t;
+	using Code = Except::Code;
 
-	modified = Util::ReplaceMacro(original);
+	try {
+		Preprocessor::DeleteComment(contents);
+	}
+	catch (exception& e) {
+		Except::Abort(Code::MISMATCHED_BRAKETS, e.what());
+	}
 
-	Util::ReplaceComments(modified);
+	try {
+		Preprocessor::ApplyMacro(contents);
+	}
+	catch (exception& e) {
+		Except::Abort(Code::INVALID_MACRO, e.what());
+	}
 
-	HashTree.ProcessMacro(modified);
+	try {
+		Preprocessor::AreParenthesesMatched(contents, {"{", "[", "("}, {"}", "]", ")"} );
+	}
+	catch (exception& e) {
+		Except::Abort(Code::MISMATCHED_BRAKETS, e.what());
+	}
 
-	modified = Util::EraseSpace(modified, string(1, SC::Blank));
+	Lexer = new Lexer_t;
 
-	HashTree.Make(modified);
+	Lexer->Lex(contents);
+
+	HashTree.Make(contents);
 }
 
 void InputManager_t::ReadInput(string file)
@@ -277,19 +414,6 @@ void InputManager_t::ReadInput(string file)
 	ExtractInput(fin);
 
 	fin.close();
-
-	//Lexer = new Lexer_t;
-
-	//Lexer->Lex(original);
-
-	Lexer_t lex(original.c_str());
-
-	for (auto token = lex.Next();
-		!token.IsOneOf(Token_t::Type::END, Token_t::Type::INVALID);
-		token = lex.Next())
-	{
-		cout << token.GetLexeme() << endl;
-	}
 
 	Preprocess();
 	

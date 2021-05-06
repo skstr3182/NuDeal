@@ -1,12 +1,68 @@
 #include "Lexer.h"
+#include "IOUtil.h"
+#include "Exception.h"
 
 namespace IO
 {
 
-bool Lexer_t::IsSpace(char c) noexcept
+const map<char, Token_t::Type> Token_t::special_table =
 {
-	static const regex re(R"([\s\t\r\n])");
-	return regex_match(&c, &c + 1, re);
+	{SC::LeftParen,			Type::LeftParen		 },
+	{SC::RightParen,		Type::RightParen	 },
+	{SC::LeftBracket,		Type::LeftBracket	 },
+	{SC::RightBracket,	Type::RightBracket },
+	{SC::LeftBrace,			Type::LeftBrace		 },
+	{SC::RightBrace,		Type::RightBrace	 },
+	{SC::LeftAngle,			Type::LeftAngle		 },
+	{SC::RightAngle,		Type::RightAngle	 },
+	{SC::Equal,					Type::Equal				 },
+	{SC::Plus,					Type::Plus				 },
+	{SC::Minus,					Type::Minus				 },
+	{SC::Asterisk,			Type::Asterisk		 },
+	{SC::Slash,					Type::Slash				 },
+	{SC::Caret,					Type::Caret				 },
+	{SC::Dot,						Type::Dot					 },
+	{SC::Comma,					Type::Comma				 },
+	{SC::Colon,					Type::Colon				 },
+	{SC::SemiColon,			Type::SemiColon		 }
+};
+
+regex const Lexer_t::number = regex(R"([0-9])");
+regex const Lexer_t::word = regex(R"([a-zA-Z])");
+regex const Lexer_t::special = regex(R"([\(\)\{\}\[\]\<\>\=\+\-\*\^\/\,\:\;])");
+
+void Lexer_t::Lex(const string& contents)
+{
+	using Except = Exception_t;
+	using Code = Except::Code;
+
+	this->contents = contents;
+	m_pos = this->contents.begin();
+
+	for (auto next = Next(); m_pos < this->contents.end();  next = Next()) {
+		if (next.Is(Token_t::Type::INVALID)) Except::Abort(Code::INVALID_VARIABLE, string(1, *m_pos));
+		tokens.push_back(std::move(next));
+	}
+}
+
+Token_t Lexer_t::Next() noexcept
+{
+	while (isspace(Peek())) Get();
+
+	using Type = Token_t::Type;
+
+	smatch m;
+
+	if (m_pos == contents.end())
+		return Token_t(Token_t::Type::END, m_pos, 1);
+	else if (regex_match(m_pos, m_pos + 1, word)) 
+		return Identifier();
+	else if (regex_match(m_pos, m_pos + 1, number)) 
+		return Number();
+	else if (regex_match(m_pos, m_pos + 1, m, special))
+		return Atom(GetEscapeName(*m_pos));
+	else
+		return Token_t(Token_t::Type::INVALID, m_pos, 1);
 }
 
 bool Lexer_t::IsDigit(char c) noexcept
@@ -21,94 +77,27 @@ bool Lexer_t::IsIdentifierChar(char c) noexcept
 	return regex_match(&c, &c + 1, re);
 }
 
-Token_t Lexer_t::Next() noexcept
-{
-	while (IsSpace(Peek())) Get();
-
-	static const regex word(R"([a-zA-Z])");
-	static const regex number(R"([0-9])");
-	static const regex special(R"~([\(\)\[\]\{\}\<\>\=\+\-\*\^\/\#\.\,\:\;\|])~");
-	static const regex end(R"(\0)");
-
-	using Type = Token_t::Type;
-	
-
-	cmatch m;
-
-	if (regex_match(m_beg, m_beg + 1, end))
-		return Token_t(Token_t::Type::END, m_beg, 1);
-	else if (Peek() == SC::Hash) 
-		return Macro();
-	else if (Peek() == SC::Slash)
-		return SlashOrComment();
-	else if (regex_match(m_beg, m_beg + 1, word)) 
-		return Identifier();
-	else if (regex_match(m_beg, m_beg + 1, number)) 
-		return Number();
-	else if (regex_match(m_beg, m_beg + 1, m, special))
-		return Atom(Token_t::Type::LEFTPAREN);
-	else
-		return Token_t(Token_t::Type::INVALID, m_beg, 1);
-}
-
 Token_t Lexer_t::Identifier() noexcept
 {
-	const auto *beg = m_beg;
+	const auto beg = m_pos;
 	Get();
 	while (IsIdentifierChar(Peek())) Get();
-	return Token_t(Token_t::Type::IDENTIFIER, beg, m_beg);
+	return Token_t(Token_t::Type::Identifier, beg, m_pos);
 }
 
 Token_t Lexer_t::Number() noexcept
 {
-	const auto *beg = m_beg;
+	const auto beg = m_pos;
 	Get();
 	while (IsDigit(Peek())) Get();
-	return Token_t(Token_t::Type::NUMBER, beg, m_beg);
-}
-
-Token_t Lexer_t::SlashOrComment() noexcept
-{
-	const auto *beg = m_beg;
-	Get();
-	if (Peek() == SC::Slash) {
-		Get();
-		beg = m_beg;
-		while (Peek() != NULL) {
-			if (Get() == SC::LF) 
-				return Token_t(Token_t::Type::COMMENT, beg, std::distance(beg, m_beg) - 1);
-		}
-		return Token_t(Token_t::Type::INVALID, m_beg, 1);
-	}
-	else {
-		return Token_t(Token_t::Type::SLASH, beg, 1);
-	}
-}
-
-Token_t Lexer_t::Macro() noexcept
-{
-	const auto *beg = m_beg;
-	auto linecount = 1;
-	while (linecount) {
-		Get();
-		if (Peek() == SC::LF) --linecount;
-		else if (Peek() == SC::BackSlash) ++linecount;
-	}
-	return Token_t(Token_t::Type::HASH, beg, std::distance(beg, m_beg));
+	return Token_t(Token_t::Type::Number, beg, m_pos);
 }
 
 Token_t::Type Lexer_t::GetEscapeName(char c) noexcept
 {
 	using T = Token_t::Type;
-	static const map<char, T> table = 
-	{
-		{SC::LeftParen, T::LEFTPAREN},
-		{SC::RightParen, T::RIGHTPAREN},
-		
-	};
-
-	auto iter = table.find(c);
-	return iter == table.end() ? T::INVALID : iter->second;
+	auto iter = Token_t::special_table.find(c);
+	return iter == Token_t::special_table.end() ? T::INVALID : iter->second;
 }
 
 }

@@ -18,6 +18,7 @@
 #include <cfloat>
 #include <cassert>
 #include <thread>
+#include <regex>
 
 /// C++17 Required
 
