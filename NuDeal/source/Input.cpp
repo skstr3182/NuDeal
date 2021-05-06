@@ -236,13 +236,6 @@ void InputManager_t::Preprocess()
 		Except::Abort(Code::INVALID_MACRO, e.what());
 	}
 
-	try {
-		Preprocessor::CheckBalance(contents, { "{", "[", "(" }, { "}", "]", ")" });
-	}
-	catch (exception& e) {
-		Except::Abort(Code::MISMATCHED_BRAKETS, e.what());
-	}
-
 
 	//Lexer = new Lexer_t;
 
