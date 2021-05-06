@@ -10,7 +10,11 @@ using namespace std;
 // Input.h
 class InputManager_t;
 
+// Preprocessor.h
+class Preprocessor_t;
+
 // Lexer.h
+class Token_t;
 class Lexer_t;
 
 // Parser.h

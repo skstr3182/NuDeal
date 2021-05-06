@@ -12,6 +12,8 @@ class InputManager_t
 
 public :
 
+	using SC = SpecialCharacters;
+
 	struct HashTree_t
 	{
 		using size_type = string::size_type;
@@ -23,15 +25,6 @@ public :
 		string GetLineInfo() { return "Line : " + to_string(line_info); }
 		void Make(const string& file, size_type Beg = 0, size_type End = string::npos);
 		void CountLine(const string& name, const string& contents);
-	};
-
-	struct Preprocessor_t
-	{
-		using size_type = string::size_type;
-		static void DeleteComment(string& contents);
-		static void ApplyMacro(string& contents);
-		static bool AreParenthesesMatched(const string& contents, 
-			const vector<string>& open, const vector<string>& close);
 	};
 
 private :

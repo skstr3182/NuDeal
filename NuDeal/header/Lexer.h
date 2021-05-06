@@ -46,27 +46,23 @@ private :
 public :
 
 	using SC = SpecialCharacters;
-	using iterator = string::iterator;
-	using citerator = string::const_iterator;
+	using iterator = string::const_iterator;
 
 	Token_t() {}
 	Token_t(Type kind) noexcept : m_type{kind} {}
-	Token_t(Type kind, citerator beg, size_t len) noexcept
+	Token_t(Type kind, iterator beg, size_t len) noexcept
 		: m_type{kind}, m_lexeme(&(*beg), len) {}
-	Token_t(Type kind, citerator beg, citerator end) noexcept
+	Token_t(Type kind, iterator beg, iterator end) noexcept
 		: m_type{kind}, m_lexeme(&(*beg), std::distance(beg, end)) {}
-	Type GetType() const noexcept { return m_type; }
-	void SetType(Type kind) noexcept { m_type = kind; }
+	Type Kind() const noexcept { return m_type; }
 	bool Is(Type kind) const noexcept { return m_type == kind; }
 	bool IsNot(Type kind) const noexcept { return m_type != kind; }
 	bool IsOneOf(Type k1, Type k2) const noexcept { return Is(k1) || Is(k2); }
 	template <typename... Ts>
 	bool IsOneOf(Type k1, Type k2, Ts... ks) const noexcept
 	{ return Is(k1) || IsOneOf(k2, ks...); }
-	string_view GetLexeme() const noexcept { return m_lexeme; }
-	void SetLexeme(string_view lexeme) noexcept 
-	{	m_lexeme = lexeme; }
-
+	string_view Lexeme() const noexcept { return m_lexeme; }
+	void Lexeme(const string_view& s) noexcept { m_lexeme = s; }
 };
 
 class Lexer_t
@@ -83,6 +79,8 @@ public :
 	void Lex(const string& contents);
 
 private :
+	
+	using TokenType = Token_t::Type;
 
 	static const regex number, word, special;
 
@@ -99,7 +97,7 @@ private :
 
 public :
 
-	const auto& GetTokens() { return tokens; }
+	const auto& Tokens() { return tokens; }
 
 	static bool IsDigit(char c) noexcept;
 	static bool IsIdentifierChar(char c) noexcept;

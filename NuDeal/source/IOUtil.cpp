@@ -96,27 +96,6 @@ string Util_t::GetLine(stringstream& in, const char delimiter)
 	return static_cast<string&&>(s);
 }
 
-string Util_t::GetBlock(stringstream& in)
-{
-	string section;
-	auto file_pos = in.tellg();
-
-	while (!in.eof()) {
-		auto s = GetLine(in, SC::RightBrace);
-		s += in.str()[in.tellg()];
-		section += s;
-
-		cout << section << endl << "123" << endl;
-
-		if (Trim(s).empty()) continue;
-		if (!IsClosed(section)) continue;
-
-		break;
-	}
-
-	return static_cast<string&&>(section);
-}
-
 Util_t::size_type Util_t::FindEndPoint(const string& contents, size_type& pos)
 {
 	pos = contents.find_first_of(SC::LeftBrace, pos);
@@ -128,19 +107,6 @@ Util_t::size_type Util_t::FindEndPoint(const string& contents, size_type& pos)
 		beg = end + 1;
 	}
 	return end;
-}
-
-string Util_t::GetBlock(const string& contents, size_type pos)
-{
-	string section;
-
-	size_type LF_beg, LF_end = pos;
-
-	while (LF_end != string::npos) {
-		
-	}
-
-	return static_cast<string&&>(section);
 }
 
 vector<string> Util_t::SplitFields(string line, const string& delimiter)

@@ -31,16 +31,16 @@ regex const Lexer_t::number = regex(R"([0-9])");
 regex const Lexer_t::word = regex(R"([a-zA-Z])");
 regex const Lexer_t::special = regex(R"([\(\)\{\}\[\]\<\>\=\+\-\*\^\/\,\:\;])");
 
-void Lexer_t::Lex(const string& contents)
+void Lexer_t::Lex(const string& input)
 {
 	using Except = Exception_t;
 	using Code = Except::Code;
 
-	this->contents = contents;
+	contents = input;
 	m_pos = this->contents.begin();
 
-	for (auto next = Next(); m_pos < this->contents.end();  next = Next()) {
-		if (next.Is(Token_t::Type::INVALID)) Except::Abort(Code::INVALID_VARIABLE, string(1, *m_pos));
+	for (auto next = Next(); m_pos < contents.end();  next = Next()) {
+		if (next.Is(TokenType::INVALID)) Except::Abort(Code::INVALID_VARIABLE, string(1, *m_pos));
 		tokens.push_back(std::move(next));
 	}
 }
@@ -49,20 +49,16 @@ Token_t Lexer_t::Next() noexcept
 {
 	while (isspace(Peek())) Get();
 
-	using Type = Token_t::Type;
-
-	smatch m;
-
 	if (m_pos == contents.end())
-		return Token_t(Token_t::Type::END, m_pos, 1);
+		return Token_t(TokenType::END);
 	else if (regex_match(m_pos, m_pos + 1, word)) 
 		return Identifier();
 	else if (regex_match(m_pos, m_pos + 1, number)) 
 		return Number();
-	else if (regex_match(m_pos, m_pos + 1, m, special))
+	else if (regex_match(m_pos, m_pos + 1, special))
 		return Atom(GetEscapeName(*m_pos));
 	else
-		return Token_t(Token_t::Type::INVALID, m_pos, 1);
+		return Token_t(TokenType::INVALID, m_pos, 1);
 }
 
 bool Lexer_t::IsDigit(char c) noexcept
@@ -82,22 +78,32 @@ Token_t Lexer_t::Identifier() noexcept
 	const auto beg = m_pos;
 	Get();
 	while (IsIdentifierChar(Peek())) Get();
-	return Token_t(Token_t::Type::Identifier, beg, m_pos);
+	return Token_t(TokenType::Identifier, beg, m_pos);
 }
 
 Token_t Lexer_t::Number() noexcept
 {
+	static const regex re(R"((\d)|(\.)|[Ee]|[+-])");
 	const auto beg = m_pos;
-	Get();
-	while (IsDigit(Peek())) Get();
-	return Token_t(Token_t::Type::Number, beg, m_pos);
+
+	int dot = 0, exponent = 0;;
+
+	Get(); 
+	while (regex_match(m_pos, m_pos + 1, re)) {
+		if (Peek() == SC::Dot) ++dot;
+		if (toupper(Peek()) == 'E') ++exponent;
+
+		if (dot > 1) break;
+		if (exponent > 1) break;
+		Get();
+	}
+	return Token_t(TokenType::Number, beg, m_pos);
 }
 
 Token_t::Type Lexer_t::GetEscapeName(char c) noexcept
 {
-	using T = Token_t::Type;
 	auto iter = Token_t::special_table.find(c);
-	return iter == Token_t::special_table.end() ? T::INVALID : iter->second;
+	return iter == Token_t::special_table.end() ? TokenType::INVALID : iter->second;
 }
 
 }
