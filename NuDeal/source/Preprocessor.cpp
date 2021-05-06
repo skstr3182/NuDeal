@@ -51,9 +51,8 @@ void Preprocessor_t::RemoveBlankInParenthesis(string& contents)
 
 	while ((beg = contents.find_first_of(SC::LeftParen, pos)) != string::npos) {
 		auto end = contents.find_first_of(SC::RightParen, beg);
-		auto iter = std::remove(contents.begin() + beg, contents.begin() + end, SC::Blank);
-		iter = contents.erase(iter, contents.begin() + end);
-		pos = iter - contents.begin();
+		pos = contents.erase(std::remove(contents.begin() + beg, contents.begin() + end, SC::Blank),
+			contents.begin() + end) - contents.begin();
 	}
 
 }
