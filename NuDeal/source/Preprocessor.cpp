@@ -56,7 +56,6 @@ void Preprocessor_t::RemoveBlankInParenthesis(string& contents)
 		pos = iter - contents.begin();
 	}
 
-	cout << contents << endl;
 }
 
 void Preprocessor_t::ApplyMacro(string& contents)
