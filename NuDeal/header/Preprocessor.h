@@ -21,6 +21,7 @@ private :
 public :
 	
 	static void DeleteComment(string& contents);
+	static void RemoveBlankInParenthesis(string& contents);
 	static void ApplyMacro(string& contents);
 	static void CheckBalance(const string& contents,
 		const vector<string>& open, const vector<string>& close);

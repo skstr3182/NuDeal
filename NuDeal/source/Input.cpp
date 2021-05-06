@@ -221,6 +221,15 @@ void InputManager_t::Preprocess()
 	}
 
 	try {
+		Preprocessor::CheckBalance(contents, {"{", "[", "("}, {"}", "]", ")"} );
+	}
+	catch (exception& e) {
+		Except::Abort(Code::MISMATCHED_BRAKETS, e.what());
+	}
+
+	Preprocessor::RemoveBlankInParenthesis(contents);
+
+	try {
 		Preprocessor::ApplyMacro(contents);
 	}
 	catch (exception& e) {
@@ -228,11 +237,12 @@ void InputManager_t::Preprocess()
 	}
 
 	try {
-		Preprocessor::CheckBalance(contents, {"{", "[", "("}, {"}", "]", ")"} );
+		Preprocessor::CheckBalance(contents, { "{", "[", "(" }, { "}", "]", ")" });
 	}
 	catch (exception& e) {
 		Except::Abort(Code::MISMATCHED_BRAKETS, e.what());
 	}
+
 
 	//Lexer = new Lexer_t;
 

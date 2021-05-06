@@ -45,6 +45,20 @@ void Preprocessor_t::DeleteComment(string& contents)
 	}
 }
 
+void Preprocessor_t::RemoveBlankInParenthesis(string& contents)
+{
+	size_type pos = 0, beg;
+
+	while ((beg = contents.find_first_of(SC::LeftParen, pos)) != string::npos) {
+		auto end = contents.find_first_of(SC::RightParen, beg);
+		auto iter = std::remove(contents.begin() + beg, contents.begin() + end, SC::Blank);
+		iter = contents.erase(iter, contents.begin() + end);
+		pos = iter - contents.begin();
+	}
+
+	cout << contents << endl;
+}
+
 void Preprocessor_t::ApplyMacro(string& contents)
 {
 	auto beg = sregex_token_iterator(contents.begin(), contents.end(), macro_re);
