@@ -91,7 +91,7 @@ void Preprocessor_t::ApplyMacro(string& contents)
 
 		arguments = Util::EraseSpace(arguments, {SC::Blank, SC::LF, SC::LeftParen, SC::RightParen} );
 		auto v_args = Util::SplitFields(arguments, {SC::Comma});
-		int num_args = arguments.empty() ? 0 : std::count(arguments.begin(), arguments.end(), SC::Comma) + 1;
+		int num_args = v_args.size();
 
 		string reg_str = name;
 		if (num_args) {
@@ -114,7 +114,7 @@ void Preprocessor_t::ApplyMacro(string& contents)
 			for (int i = 0; i < num_args; ++i) {
 				auto val = begs[i]->str();
 				auto arg = v_args[i];
-				regex re(R"(\s*)" + arg + R"(\s*)");
+				regex re(R"(\b)" + arg + R"(\b)");
 				replace = regex_replace(replace, re, val);
 			}
 			contents.replace(beg->first, beg->second, replace);
