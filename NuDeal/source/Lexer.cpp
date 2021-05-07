@@ -38,17 +38,9 @@ void Lexer_t::Lex(const string& input)
 	contents = input;
 	m_pos = this->contents.begin();
 
-	for (auto next = Next(); m_pos < contents.end();  next = Next()) {
+	for (auto next = Next(); m_pos < contents.end(); next = Next()) {
 		if (next.Is(TokenType::INVALID)) Except::Abort(Code::INVALID_VARIABLE, string(1, *m_pos));
 		tokens.push_back(std::move(next));
-	}
-
-	regex re(R"(.*;)");
-	auto t = sregex_token_iterator(contents.begin(), contents.end(), re);
-	sregex_token_iterator end;
-
-	for (; t != end; ++t) {
-		cout << string(t->first, t->second) << endl;
 	}
 }
 

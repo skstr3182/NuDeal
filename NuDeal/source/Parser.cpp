@@ -14,9 +14,9 @@ void Parser_t::Parse()
 
 	iter = tokens.begin();
 
-	while (iter != tokens.end()) {
-		const auto& token = *iter++;
-		Blocks ID = Util::GetBlockID(token.Lexeme());
+	while (iter++ != tokens.end()) {
+		const auto& token = iter->Lexeme();
+		Blocks ID = Util::GetBlockID(token);
 		switch (ID)
 		{
 		case Blocks::GEOMETRY :
@@ -26,7 +26,7 @@ void Parser_t::Parse()
 		case Blocks::OPTION :
 			break;
 		case Blocks::INVALID :
-			Except::Abort(Except::Code::INVALID_INPUT_BLOCK, token.Lexeme());
+			Except::Abort(Except::Code::INVALID_INPUT_BLOCK, token);
 		}
 	}
 
@@ -36,9 +36,9 @@ void Parser_t::ScanGeometryBlock()
 {
 	using Cards = GeometryCards;
 	++iter;
-	while (iter->Lexeme() != string(1, SC::RightBrace)) {
-		const auto& token = *iter++;
-		Cards ID = Util::GetCardID<Cards>(Blocks::GEOMETRY, token.Lexeme());
+	while (iter++->Lexeme() != string(1, SC::RightBrace)) {
+		const auto& token = iter->Lexeme();
+		Cards ID = Util::GetCardID<Cards>(Blocks::GEOMETRY, token);
 		switch (ID)
 		{
 		case Cards::UNITVOLUME :
@@ -48,18 +48,17 @@ void Parser_t::ScanGeometryBlock()
 		case Cards::DISPLACE :
 			break;
 		case Cards::INVALID :
-			Except::Abort(Except::Code::INVALID_INPUT_CARD, token.Lexeme());
+			Except::Abort(Except::Code::INVALID_INPUT_CARD, token);
 		}	
 	}
-	--depth;
 }
 
 
 void Parser_t::ScanUnitVolumeCard()
 {
 	++iter;
-	while (iter->Lexeme() != string(1, SC::RightBrace)) {
-		const auto& token = *iter++;
+	while (iter++->Lexeme() != string(1, SC::RightBrace)) {
+		const auto& name = iter->Lexeme();
 		auto v = GetUnitVolume();
 	}
 }
@@ -69,8 +68,17 @@ Parser_t::UnitVolume_t Parser_t::GetUnitVolume()
 	UnitVolume_t unitvol;
 
 	++iter;
-	while (iter->Lexeme() != string(1, SC::RightBrace)) {
-		string s;
+	while (iter++->Lexeme() != string(1, SC::RightBrace)) {
+		const auto& token = iter->Lexeme();
+		if (!Util::Uppercase(token).compare("ORIGIN")) {
+			string s;
+			auto begin = iter;
+			auto end = iter;
+			for (;; ++iter) {
+
+			}
+			
+		}
 
 	}
 

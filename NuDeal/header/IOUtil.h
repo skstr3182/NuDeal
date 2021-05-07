@@ -76,7 +76,7 @@ public :
 
 	// String Parsing Utility
 	/// Type Conversion
-	static string Uppercase(string& line);
+	static string Uppercase(const string& line);
 	static int Integer(string field);
 	static double Float(string field);
 	static bool Logical(string field);
@@ -85,9 +85,9 @@ public :
 	static int LineCount(const string& line, size_type count = string::npos);
 	static string EraseSpace(const string& line, const string& delimiter = "\n ");
 	/// Read Input
-	static string GetLine(stringstream& in, const char delimiter = SC::LF);
 	static size_type FindEndPoint(const string& contents, size_type& pos);
 	static vector<string> SplitFields(string line, const string& delimiter);
+	static vector<string> SplitFields(string line, char delimiter);
 	
 	// Check Synax Error
 	static bool IsClosed(const string& s);

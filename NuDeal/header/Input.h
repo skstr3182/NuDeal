@@ -18,11 +18,12 @@ public :
 	struct HashTree_t
 	{
 		using size_type = string::size_type;
+
 		int line_info = 0, num_lines = 0;
-		string contents = "";
-		map<string, map<string, string>> macro;
+		string name, contents;
 		const HashTree_t *parent = NULL;
-		map<string, HashTree_t> children;
+		//map<string, HashTree_t> children;
+		vector<HashTree_t> children;
 		string GetLineInfo() { return "Line : " + to_string(line_info); }
 		void Make(const string& file, size_type Beg = 0, size_type End = string::npos);
 		void CountLine(const string& name, const string& contents);
@@ -63,7 +64,7 @@ public :
 	
 	struct UnitVolume_t
 	{
-		string origin = "0, 0, 0";
+		double3 origin;
 		vector<string> equations;
 	};
 

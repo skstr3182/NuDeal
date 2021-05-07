@@ -7,7 +7,7 @@ namespace IO
 using Except = Exception_t;
 using Code = Except::Code;
 
-string Util_t::Uppercase(string& line)
+string Util_t::Uppercase(const string& line)
 {
 	string l = line;
 	std::transform(l.begin(), l.end(), l.begin(), ::toupper);
@@ -84,18 +84,6 @@ string Util_t::EraseSpace(const string& line, const string& delimiter)
 	return static_cast<string&&>(s);
 }
 
-string Util_t::GetLine(stringstream& in, const char delimiter)
-{
-	string s;
-
-	std::getline(in, s, delimiter);
-
-	std::replace(s.begin(), s.end(), SC::Tab, SC::Blank);
-	std::replace(s.begin(), s.end(), SC::CR, SC::Blank);
-
-	return static_cast<string&&>(s);
-}
-
 Util_t::size_type Util_t::FindEndPoint(const string& contents, size_type& pos)
 {
 	pos = contents.find_first_of(SC::LeftBrace, pos);
@@ -110,6 +98,20 @@ Util_t::size_type Util_t::FindEndPoint(const string& contents, size_type& pos)
 }
 
 vector<string> Util_t::SplitFields(string line, const string& delimiter)
+{
+	vector<string> splitted;
+
+	size_type beg, pos = 0;
+
+	while ((beg = line.find_first_not_of(delimiter, pos)) != string::npos) {
+		pos = line.find_first_of(delimiter, beg + 1);
+		splitted.push_back(line.substr(beg, pos - beg));
+	}
+
+	return static_cast<vector<string>&&>(splitted);
+}
+
+vector<string> Util_t::SplitFields(string line, char delimiter)
 {
 	vector<string> splitted;
 
