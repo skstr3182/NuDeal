@@ -41,7 +41,7 @@ public :
 private :
 
 	Type m_type{};
-	string_view m_lexeme{};
+	string m_lexeme{};
 
 public :
 
@@ -61,16 +61,19 @@ public :
 	template <typename... Ts>
 	bool IsOneOf(Type k1, Type k2, Ts... ks) const noexcept
 	{ return Is(k1) || IsOneOf(k2, ks...); }
-	string_view Lexeme() const noexcept { return m_lexeme; }
-	void Lexeme(const string_view& s) noexcept { m_lexeme = s; }
+	const string& Lexeme() const noexcept { return m_lexeme; }
+	void Lexeme(const string& s) noexcept { m_lexeme = s; }
 };
 
 class Lexer_t
 {
+public :
+
+	using SC = SpecialCharacters;
+	using Util = Util_t;
 
 private :
 
-	using SC = SpecialCharacters;
 	string contents;
 	string::const_iterator m_pos;
 
@@ -87,6 +90,7 @@ private :
 	vector<Token_t> tokens;
 
 	Token_t Next() noexcept;
+	void March() noexcept;
 	Token_t Identifier() noexcept;
 	Token_t Number() noexcept;
 	Token_t Atom(Token_t::Type kind) noexcept { return Token_t(kind, m_pos++, 1); };
@@ -97,7 +101,7 @@ private :
 
 public :
 
-	const auto& Tokens() { return tokens; }
+	const auto& Tokens() const noexcept { return tokens; }
 
 	static bool IsDigit(char c) noexcept;
 	static bool IsIdentifierChar(char c) noexcept;

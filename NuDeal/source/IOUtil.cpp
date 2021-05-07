@@ -131,5 +131,4 @@ bool Util_t::IsClosed(const string& s)
 	return (lcount == rcount) && (lcount > 0);
 }
 
-
 }

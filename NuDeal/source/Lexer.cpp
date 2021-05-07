@@ -35,13 +35,20 @@ void Lexer_t::Lex(const string& input)
 {
 	using Except = Exception_t;
 	using Code = Except::Code;
-
 	contents = input;
 	m_pos = this->contents.begin();
 
 	for (auto next = Next(); m_pos < contents.end();  next = Next()) {
 		if (next.Is(TokenType::INVALID)) Except::Abort(Code::INVALID_VARIABLE, string(1, *m_pos));
 		tokens.push_back(std::move(next));
+	}
+
+	regex re(R"(.*;)");
+	auto t = sregex_token_iterator(contents.begin(), contents.end(), re);
+	sregex_token_iterator end;
+
+	for (; t != end; ++t) {
+		cout << string(t->first, t->second) << endl;
 	}
 }
 
@@ -61,6 +68,12 @@ Token_t Lexer_t::Next() noexcept
 		return Token_t(TokenType::INVALID, m_pos, 1);
 }
 
+void Lexer_t::March() noexcept
+{
+	static const string stop_signal = "{};";
+	while (stop_signal.find_first_of(Peek()) != string::npos) Get();
+}
+
 bool Lexer_t::IsDigit(char c) noexcept
 {
 	static const regex re(R"([0-9])");
@@ -76,8 +89,11 @@ bool Lexer_t::IsIdentifierChar(char c) noexcept
 Token_t Lexer_t::Identifier() noexcept
 {
 	const auto beg = m_pos;
+
 	Get();
 	while (IsIdentifierChar(Peek())) Get();
+	auto l = string(beg, m_pos);
+	
 	return Token_t(TokenType::Identifier, beg, m_pos);
 }
 

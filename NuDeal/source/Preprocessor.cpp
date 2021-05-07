@@ -101,33 +101,34 @@ void Preprocessor_t::ApplyMacro(string& contents)
 		auto arguments = sregex_token_iterator(i.begin(), i.end(), macro_re, 3)->str();
 		auto func = sregex_token_iterator(i.begin(), i.end(), macro_re, 4)->str();
 
-		arguments = Util::EraseSpace(arguments, {SC::Blank, SC::LF, SC::LeftParen, SC::RightParen} );
+		arguments = Util::EraseSpace(arguments, {SC::LeftParen, SC::RightParen} );
 		auto v_args = Util::SplitFields(arguments, {SC::Comma});
-		int num_args = v_args.size();
 
 		string reg_str = name;
-		if (num_args) {
+		if (!v_args.empty()) {
 			reg_str += R"~(\()~";
-			for (int i = 0; i < num_args; ++i) {
-				reg_str += R"(\s*(\w+)\s*)";
-				if (i < num_args - 1) reg_str += R"(,)";
+			for (int i = 0; i < v_args.size(); ++i) {
+				reg_str += R"((\S+))";
+				if (i < v_args.size() - 1) reg_str += R"(,)";
 			}
 			reg_str += R"~(\))~";
 		}
 
 		regex re(reg_str);
 		sregex_token_iterator beg, end;
+		vector<regex> v_re(v_args.size());
+
+		for (int i = 0; i < v_args.size(); ++i) 
+			v_re[i] = regex(R"(\b)" + v_args[i] + R"(\b)");
 
 		while ((beg = sregex_token_iterator(contents.begin(), contents.end(), re)) != end) {
-			vector<sregex_token_iterator> begs(num_args);
-			for (int i = 0; i < num_args; ++i)
+			vector<sregex_token_iterator> begs(v_args.size());
+			for (int i = 0; i < v_args.size(); ++i)
 				begs[i] = sregex_token_iterator(contents.begin(), contents.end(), re, i + 1);
 			auto replace = func;
-			for (int i = 0; i < num_args; ++i) {
+			for (int i = 0; i < v_args.size(); ++i) {
 				auto val = begs[i]->str();
-				auto arg = v_args[i];
-				regex re(R"(\b)" + arg + R"(\b)");
-				replace = regex_replace(replace, re, val);
+				replace = regex_replace(replace, v_re[i], val);
 			}
 			contents.replace(beg->first, beg->second, replace);
 		}

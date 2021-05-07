@@ -47,6 +47,26 @@ const vector<vector<string>> CardNames = {
 	{ "CRITERIA" }
 };
 
+enum class Blocks {
+	GEOMETRY,
+	MATERIAL,
+	OPTION,
+	INVALID = -1
+};
+
+enum class GeometryCards {
+	UNITVOLUME,
+	UNITCOMP,
+	DISPLACE,
+	INVALID = -1
+};
+
+enum class MacroXsCards {
+	NG,
+	FORMAT,
+	INVALID = -1
+};
+
 class Util_t
 {
 public :
@@ -66,13 +86,42 @@ public :
 	static string EraseSpace(const string& line, const string& delimiter = "\n ");
 	/// Read Input
 	static string GetLine(stringstream& in, const char delimiter = SC::LF);
-	static string GetBlock(stringstream& fin);
 	static size_type FindEndPoint(const string& contents, size_type& pos);
-	static string GetBlock(const string& contents, size_type pos);
 	static vector<string> SplitFields(string line, const string& delimiter);
 	
 	// Check Synax Error
 	static bool IsClosed(const string& s);
+
+	static Blocks GetBlockID(string line)
+	{
+		int pos_end = line.find(SC::Blank, 0);
+		string block = line.substr(0, pos_end);
+
+		block = Uppercase(block);
+		for (int i = 0; i < BlockNames.size(); ++i)
+			if (!block.compare(BlockNames[i]))
+				return static_cast<Blocks>(i);
+		return Blocks::INVALID;
+	}
+
+	template <typename T> 
+	static T GetCardID(Blocks block, string line)
+	{
+		static constexpr T INVALID = static_cast<T>(-1);
+
+		int pos_beg = line.find_first_not_of(SC::Blank);
+		if (pos_beg == string::npos) return INVALID;
+
+		int pos_end = line.find(SC::Blank, pos_beg);
+		string card = line.substr(pos_beg, pos_end - pos_beg);
+
+		card = Uppercase(card);
+		int b = static_cast<int>(block);
+		for (int i = 0; i < CardNames[b].size(); ++i)
+			if (!card.compare(CardNames[b][i]))
+				return static_cast<T>(i);
+		return INVALID;
+	}
 };
 
 

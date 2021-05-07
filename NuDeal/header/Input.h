@@ -13,6 +13,7 @@ class InputManager_t
 public :
 
 	using SC = SpecialCharacters;
+	using Util = Util_t;
 
 	struct HashTree_t
 	{
@@ -29,25 +30,7 @@ public :
 
 private :
 
-	enum class Blocks {
-		GEOMETRY,
-		MATERIAL,
-		OPTION,
-		INVALID = -1
-	};
 
-	enum class GeometryCards {
-		UNITVOLUME,
-		UNITCOMP,
-		DISPLACE,
-		INVALID = -1
-	};
-
-	enum class MacroXsCards {
-		NG,
-		FORMAT,
-		INVALID = -1
-	};
 
 private :
 	
@@ -60,9 +43,6 @@ private :
 
 private :
 
-	/// Input Parser
-	Blocks GetBlockID(string oneline) const;
-	template <typename T> T GetCardID(Blocks block, string oneline) const;
 	void ExtractInput(istream& fin);
 	/// Block Parser
 	void ParseGeometryBlock(HashTree_t& Tree);

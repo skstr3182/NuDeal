@@ -4,12 +4,10 @@
 #include "IOUtil.h"
 #include "Preprocessor.h"
 #include "Lexer.h"
+#include "Parser.h"
 
 namespace IO
 {
-
-using Util = Util_t;
-using SC = Util::SC;
 
 void InputManager_t::HashTree_t::Make(const string& file, 
 	string::size_type Beg, string::size_type End)
@@ -44,36 +42,6 @@ void InputManager_t::HashTree_t::CountLine(const string& name, const string& con
 	for (const auto& t : parent->children) line_info += t.second.num_lines;
 }
 
-InputManager_t::Blocks InputManager_t::GetBlockID(string line) const
-{
-	int pos_end = line.find(SC::Blank, 0);
-	string block = line.substr(0, pos_end);
-
-	block = Util::Uppercase(block);
-	for (int i = 0; i < BlockNames.size(); ++i)
-		if (!block.compare(BlockNames[i]))
-			return static_cast<Blocks>(i);
-	return Blocks::INVALID;
-}
-
-template <typename T>
-T InputManager_t::GetCardID(Blocks block, string line) const
-{
-	static constexpr T INVALID = static_cast<T>(-1);
-
-	int pos_beg = line.find_first_not_of(SC::Blank);
-	if (pos_beg == string::npos) return INVALID;
-
-	int pos_end = line.find(SC::Blank, pos_beg);
-	string card = line.substr(pos_beg, pos_end - pos_beg);
-
-	card = Util::Uppercase(card);
-	int b = static_cast<int>(block);
-	for (int i = 0; i < CardNames[b].size(); ++i) 
-		if (!card.compare(CardNames[b][i])) 
-			return static_cast<T>(i);
-	return INVALID;
-}
 
 void InputManager_t::ExtractInput(istream& fin)
 {
@@ -99,7 +67,7 @@ void InputManager_t::ParseGeometryBlock(HashTree_t& Tree)
 		
 		auto& object = T.second;
 		string card = Util::Trim(T.first);
-		Cards ID = GetCardID<Cards>(Blocks::GEOMETRY, card);
+		Cards ID = Util::GetCardID<Cards>(Blocks::GEOMETRY, card);
 
 		switch (ID)
 		{
@@ -236,12 +204,7 @@ void InputManager_t::Preprocess()
 		Except::Abort(Code::INVALID_MACRO, e.what());
 	}
 
-
-	//Lexer = new Lexer_t;
-
-	//Lexer->Lex(contents);
-
-	HashTree.Make(contents);
+	contents.erase(std::remove(contents.begin(), contents.end(), SC::Blank), contents.end());
 }
 
 void InputManager_t::ReadInput(string file)
@@ -265,11 +228,16 @@ void InputManager_t::ReadInput(string file)
 
 	Lexer.Lex(contents);
 
+	Parser_t Parser(&Lexer);
+
+	Parser.Parse();
+
+	HashTree.Make(contents);
 	
 	for (auto& T : HashTree.children) {
 		auto& contents = T.second;
 		string block = Util::Trim(T.first);
-		Blocks ID = GetBlockID(block);
+		Blocks ID = Util::GetBlockID(block);
 		switch (ID)
 		{
 		case Blocks::GEOMETRY :
