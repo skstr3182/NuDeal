@@ -139,7 +139,7 @@ void InputManager_t::ParseUnitCompCard(HashTree_t& Tree)
 	using Except = Exception_t;
 	using Code = Except::Code;
 
-	static const string disp = {SC::RightAngle, SC::RightAngle};
+	static const string disp = string(2, SC::RightAngle);
 
 	for (auto& T : Tree.children) {
 		auto prefix = Util::EraseSpace(T.name);
@@ -172,7 +172,7 @@ void InputManager_t::ParseUnitCompCard(HashTree_t& Tree)
 			}
 		}
 
-		unitComps[name] = U;
+		unitComps[name] = std::move(U);
 	}
 }
 

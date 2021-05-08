@@ -158,7 +158,7 @@ void Preprocessor_t::CheckBalance(const string& contents,
 					throw runtime_error("Mismatched" + open[s] + close[s]);
 				else
 					S.pop_back();
-				advance = l;
+				advance = l; break;
 			}
 		}
 		iter += advance;
