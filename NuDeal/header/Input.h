@@ -38,8 +38,6 @@ private :
 	string file;
 	string contents;
 
-	Lexer_t *Lexer;
-
 	HashTree_t HashTree;
 
 private :
@@ -65,7 +63,7 @@ public :
 	struct UnitVolume_t
 	{
 		double3 origin;
-		vector<string> equations;
+		vector<array<double, 10>> equations;
 	};
 
 	struct UnitComp_t

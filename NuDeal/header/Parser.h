@@ -1,6 +1,7 @@
 #pragma once
 #include "Defines.h"
 #include "IODeclare.h"
+#include "IOUtil.h"
 
 namespace IO
 {
@@ -8,40 +9,47 @@ namespace IO
 class Parser_t
 {
 public :
-	
+
 	using Util = Util_t;
 	using Except = Exception_t;
 	using SC = SpecialCharacters;
 
-	struct Equation_t
-	{
-		double c[10];
-	};
-
-	struct UnitVolume_t
-	{
-		double3 origin;
-		vector<Equation_t> eqs;
-	};
-
-	Parser_t(const Lexer_t *Lexer) noexcept;
-
-	void Parse();
-
 private :
 	
-	int depth = 0;
-	const vector<Token_t>& tokens;
-	vector<Token_t>::const_iterator iter;
+	static constexpr char operators[] = {
+		SC::Caret,
+		SC::Asterisk,
+		SC::Slash,
+		SC::Plus,
+		SC::Minus,
+		SC::LeftAngle,
+		SC::RightAngle
+	};
+	static constexpr int precedence[] = {
+		4, 
+		3, 
+		3, 
+		2, 
+		2, 
+		1, 
+		1
+	};
 
-	// Blocks
-	void ScanGeometryBlock();
-	void ScanMaterialBlock();
-	void ScanOptionBlock();
+	static const regex numeric;
+	static const regex variable;
+	static const regex ops;
 
-	// Cards
-	void ScanUnitVolumeCard();
-	UnitVolume_t GetUnitVolume();
+	static bool IsDigit(char c) noexcept;
+	static bool IsVariable(char c) noexcept;
+	static bool IsOperator(char c) noexcept;
+	static void TreatNumeric(string::const_iterator& pos);
+	static void TreatVariable(string::const_iterator& pos);
+
+	static vector<string> Tokenize(const string& line) noexcept;
+
+public :
+	
+	static array<double, 10> ParseEquation(const string& line);
 
 };
 

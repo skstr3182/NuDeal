@@ -20,8 +20,7 @@ void InputManager_t::HashTree_t::Make(const string& file,
 		beg = file.find_first_not_of(SC::LeftBrace, beg);
 		auto contents = file.substr(beg, end - beg);
 
-		children.emplace_back();
-		auto& T = children.back();
+		auto& T = children.emplace_back();
 		T.name = Util::Trim(name);
 		T.parent = this;
 		T.CountLine(name, contents);
@@ -48,11 +47,11 @@ void InputManager_t::HashTree_t::CountLine(const string& name, const string& con
 
 void InputManager_t::ExtractInput(istream& fin)
 {
-	stringstream strstream;
+	stringstream stream;
 
-	strstream << fin.rdbuf();
+	stream << fin.rdbuf();
 	
-	contents = strstream.str();
+	contents = stream.str();
 
 	std::replace(contents.begin(), contents.end(), SC::Tab, SC::Blank);
 	std::replace(contents.begin(), contents.end(), SC::CR, SC::Blank);
@@ -111,23 +110,24 @@ void InputManager_t::ParseUnitVolumeCard(HashTree_t& Tree)
 		
 		UnitVolume_t U;
 
-		for (const auto& s : v) {
+		for (auto& s : v) {
+			s = Util::Uppercase(s);
 			if (s.find(ORIGIN) != string::npos) {
 				auto b = s.find_first_of(SC::LeftParen);
 				auto e = s.find_last_of(SC::RightParen);
-				auto origin = Util::SplitFields(s.substr(b + 1, e - b - 1), {SC::Comma});
+				auto origin = Util::SplitFields(s.substr(b + 1, e - b - 1), SC::Comma);
 				if (origin.size() != 3) Except::Abort(Code::INVALID_ORIGIN_DATA, s);
 				U.origin.x = Util::Float(origin[0]);
 				U.origin.y = Util::Float(origin[1]);
 				U.origin.z = Util::Float(origin[2]);
 			}
 			else {
-
+				auto something = Parser_t::ParseEquation(s);
 			}
 		}
 		v = Util::SplitFields(v.front(), SC::SemiColon);
 
-		U.equations = v;
+		//U.equations = v;
 
 		unitVolumes[name] = std::move(U);
 	}

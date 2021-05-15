@@ -1,88 +1,87 @@
 #include "Parser.h"
-#include "IOUtil.h"
 #include "Exception.h"
 #include "Lexer.h"
 
 namespace IO
 {
 
-Parser_t::Parser_t(const Lexer_t *Lexer) noexcept : tokens(Lexer->Tokens()) {}
-
-void Parser_t::Parse()
+bool Parser_t::IsDigit(char c) noexcept
 {
-	this->depth = 0;
+	static const auto numeric = regex(R"([0-9])");
+	return regex_match(&c, &c + 1, numeric);
+}
 
-	iter = tokens.begin();
+bool Parser_t::IsVariable(char c) noexcept
+{
+	static const auto variable = regex(R"([xyz])");
+	return regex_match(&c, &c + 1, variable);
+}
 
-	while (iter++ != tokens.end()) {
-		const auto& token = iter->Lexeme();
-		Blocks ID = Util::GetBlockID(token);
-		switch (ID)
-		{
-		case Blocks::GEOMETRY :
-			ScanGeometryBlock(); break;
-		case Blocks::MATERIAL :
-			break;
-		case Blocks::OPTION :
-			break;
-		case Blocks::INVALID :
-			Except::Abort(Except::Code::INVALID_INPUT_BLOCK, token);
-		}
+bool Parser_t::IsOperator(char c) noexcept
+{
+	static const auto ops = regex(Parser_t::operators);
+	return regex_match(&c, &c + 1, ops);
+}
+
+void Parser_t::TreatNumeric(string::const_iterator& pos)
+{
+	int dot = 0, exponent = 0;
+	static const regex re(R"((\d)|(\.)|[Ee]|[+-])");
+
+	while (regex_match(pos, pos + 1, re)) {
+		if (*pos == SC::Dot) ++dot;
+		if (toupper(*pos) == 'E') ++exponent;
+
+		if (dot > 1 || exponent > 1) 
+			Except::Abort(Except::Code::INVALID_FLOATING_POINT);
+		++pos;
+	}
+}
+
+void Parser_t::TreatVariable(string::const_iterator& pos)
+{
+	int asterisk = 0, caret = 0;
+	static const regex re(R"((\^)|(\d)|[xyz])");
+
+	while (regex_match(pos, pos + 1, re)) {
+		if (*pos == SC::Asterisk) ++asterisk;
+		if (*pos == SC::Caret) ++ caret;
+
+		if (caret > 1 || asterisk > 1)
+			Except::Abort(Except::Code::INVALID_FLOATING_POINT);
+		++pos;
 	}
 
 }
 
-void Parser_t::ScanGeometryBlock()
+vector<string> Parser_t::Tokenize(const string& line) noexcept
 {
-	using Cards = GeometryCards;
-	++iter;
-	while (iter++->Lexeme() != string(1, SC::RightBrace)) {
-		const auto& token = iter->Lexeme();
-		Cards ID = Util::GetCardID<Cards>(Blocks::GEOMETRY, token);
-		switch (ID)
-		{
-		case Cards::UNITVOLUME :
-			ScanUnitVolumeCard(); break;
-		case Cards::UNITCOMP :
-			break;
-		case Cards::DISPLACE :
-			break;
-		case Cards::INVALID :
-			Except::Abort(Except::Code::INVALID_INPUT_CARD, token);
-		}	
+	static const auto ops = regex(R"([)" + string(Parser_t::operators) + R"(])");
+
+	auto eq = line;
+	eq = regex_replace(eq, regex(R"(y\*x)"), R"(x\*y)");
+	eq = regex_replace(eq, regex(R"(z\*y)"), R"(y\*z)");
+	eq = regex_replace(eq, regex(R"(x\*z)"), R"(z\*x)");
+
+	auto pos = eq.begin();
+	vector<string> tokens;
+
+	while (pos != eq.end()) {
+		auto beg = pos++;
+		while (!regex_match(pos, pos + 1, ops)) ++pos;
+		tokens.emplace_back(beg, pos);
 	}
+
+	return static_cast<vector<string>&&>(tokens);
 }
 
-
-void Parser_t::ScanUnitVolumeCard()
+array<double, 10> Parser_t::ParseEquation(const string& line)
 {
-	++iter;
-	while (iter++->Lexeme() != string(1, SC::RightBrace)) {
-		const auto& name = iter->Lexeme();
-		auto v = GetUnitVolume();
-	}
-}
+	
+	
+	auto tokens = Tokenize(line);
 
-Parser_t::UnitVolume_t Parser_t::GetUnitVolume()
-{
-	UnitVolume_t unitvol;
-
-	++iter;
-	while (iter++->Lexeme() != string(1, SC::RightBrace)) {
-		const auto& token = iter->Lexeme();
-		if (!Util::Uppercase(token).compare("ORIGIN")) {
-			string s;
-			auto begin = iter;
-			auto end = iter;
-			for (;; ++iter) {
-
-			}
-			
-		}
-
-	}
-
-	return static_cast<UnitVolume_t&&>(unitvol);
+	return array<double, 10>();
 }
 
 }
