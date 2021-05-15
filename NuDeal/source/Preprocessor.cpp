@@ -9,7 +9,7 @@ const string Preprocessor_t::macro_str =
 	R"((#[A-z]{2,}))"						// <#define>
 	R"(\s+)"										// whitespace
 	R"((\w+))"									// <Identifier>
-	R"((\(.*\))?)"							// <Argument>
+	R"((\([^()]+\))?)"							// <Argument>
 	R"(\s+)"										// whitespace
 	R"(((?:.*\\\s*\r?\n)*.*))";	// <Contents>
 

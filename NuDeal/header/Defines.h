@@ -9,8 +9,11 @@
 #include <cstring>
 #include <sstream>
 #include <algorithm>
+#include <stack>
+#include <queue>
 #include <vector>
 #include <array>
+#include <initializer_list>
 #include <map>
 #include <deque>
 #include <set>

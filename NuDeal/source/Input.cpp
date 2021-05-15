@@ -3,7 +3,6 @@
 #include "Exception.h"
 #include "IOUtil.h"
 #include "Preprocessor.h"
-#include "Lexer.h"
 #include "Parser.h"
 
 namespace IO
@@ -111,8 +110,7 @@ void InputManager_t::ParseUnitVolumeCard(HashTree_t& Tree)
 		UnitVolume_t U;
 
 		for (auto& s : v) {
-			s = Util::Uppercase(s);
-			if (s.find(ORIGIN) != string::npos) {
+			if (Util::Uppercase(s).find(ORIGIN) != string::npos) {
 				auto b = s.find_first_of(SC::LeftParen);
 				auto e = s.find_last_of(SC::RightParen);
 				auto origin = Util::SplitFields(s.substr(b + 1, e - b - 1), SC::Comma);
@@ -206,10 +204,6 @@ void InputManager_t::Preprocess()
 	}
 
 	contents.erase(std::remove(contents.begin(), contents.end(), SC::Blank), contents.end());
-
-	Lexer_t Lexer;
-
-	Lexer.Lex(contents);
 }
 
 void InputManager_t::ReadInput(string file)

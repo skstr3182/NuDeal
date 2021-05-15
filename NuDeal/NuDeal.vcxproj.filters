@@ -33,9 +33,6 @@
     <ClInclude Include="header\IODeclare.h">
       <Filter>Header\IO</Filter>
     </ClInclude>
-    <ClInclude Include="header\Lexer.h">
-      <Filter>Header\IO</Filter>
-    </ClInclude>
     <ClInclude Include="header\IOUtil.h">
       <Filter>Header\IO</Filter>
     </ClInclude>
@@ -57,9 +54,6 @@
       <Filter>Source\IO</Filter>
     </ClCompile>
     <ClCompile Include="source\IOUtil.cpp">
-      <Filter>Source\IO</Filter>
-    </ClCompile>
-    <ClCompile Include="source\Lexer.cpp">
       <Filter>Source\IO</Filter>
     </ClCompile>
     <ClCompile Include="source\Preprocessor.cpp">

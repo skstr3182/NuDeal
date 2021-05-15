@@ -16,14 +16,12 @@
     <ClInclude Include="header\HardCodeParam.h" />
     <ClInclude Include="header\Input.h" />
     <ClInclude Include="header\IODeclare.h" />
-    <ClInclude Include="header\Lexer.h" />
     <ClInclude Include="header\IOUtil.h" />
     <ClInclude Include="header\Parser.h" />
     <ClInclude Include="header\Preprocessor.h" />
     <ClInclude Include="header\TypeDef.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\Lexer.cpp" />
     <ClCompile Include="source\Parser.cpp" />
     <ClCompile Include="source\Preprocessor.cpp" />
     <ClCompile Include="source\TypeDef.cpp" />
