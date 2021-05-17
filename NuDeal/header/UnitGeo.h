@@ -1,5 +1,8 @@
 #pragma once
 #include "Defines.h"
+
+constexpr double eps_geo = 1.e-10;
+
 enum Transform {
 	RELOC,
 	ROTAT,
@@ -37,7 +40,7 @@ inline void CalCoeffs(double coeff0[10], double xyzc[4][4], double coeff1[10]) {
 	// xyzc : (x', y', z', 1) = g(x,y,z)
 	// Convert f(x,y,z) to f(x',y',z') when (x',y',z') = g(x,y,z)
 	double c160[4][4], c161[4][4] = { {0} };
-	c160[0][0] = coeff0[0]; c160[1][1] = coeff0[1]; c160[2][2] = coeff0[2]; c160[3][3] = 1.0;
+	c160[0][0] = coeff0[0]; c160[1][1] = coeff0[1]; c160[2][2] = coeff0[2]; c160[3][3] = coeff0[9];
 	c160[0][1] = coeff0[3]; c160[0][3] = coeff0[6];
 	c160[1][2] = coeff0[4]; c160[1][3] = coeff0[7];
 	c160[0][2] = coeff0[5]; c160[2][3] = coeff0[8];	
@@ -69,17 +72,17 @@ inline int GetLocalExCurve(int axis, double coeff[6], double sol[2][2]) {
 		{coeff[2], 2.0*coeff[1], coeff[4]}
 	};
 	int i0 = axis, i1 = (axis + 1) % 2;
-	if (abs(gradG[i1][i1]) < 1.e-10) return 0;
+	if (abs(gradG[i1][i1]) < eps_geo) return 0;
 	double c1 = -gradG[i1][i0] / gradG[i1][i1], c0 = -gradG[i1][2] / gradG[i1][i1];
 	double a, b, c;
 	a = coeff[i0] + coeff[2] * c1 + coeff[i1] * c1 * c1; // [i0][i0] + [i0][i1] + [i1][i1]
 	b = coeff[2 + i0] + coeff[2] * c0 + 2.0 * coeff[i1] * c0 * c1 + coeff[2 + i1] * c1; // [i0] + [i0][i1] + [i1]*[i1] + [i1]
 	c = coeff[i1] * c0 * c0 + coeff[2 + i1] * c0 + coeff[5]; // [i1][i1] + [i1] + constant
-	if (abs(a) < 1.e-10) return 0;
+	if (abs(a) < eps_geo) return 0;
 	else {
 		b /= a; c /= a;
 		double det = b * b - 4.0 * c;
-		if (abs(det) < 1.e-10) {
+		if (abs(det) < eps_geo) {
 			double soli0 = -b * 0.5;
 			double soli1 = c1 * soli0 + c0;
 			sol[0][i0] = sol[1][i0] = soli0; sol[0][i1] = sol[1][i1] = soli1;
@@ -108,21 +111,21 @@ inline bool GetTriplePoint(double coeff0[4], double coeff1[4], double coeff2[4],
 	A[1][0] = coeff2[2] * coeff1[0] - coeff1[2] * coeff2[0];
 	A[1][1] = coeff2[2] * coeff1[1] - coeff1[2] * coeff2[1];
 	double det = A[0][0] * A[1][1] - A[1][0] * A[0][1];
-	if (abs(det) < 1.e-10) return false;
+	if (abs(det) < eps_geo) return false;
 	double a = coeff2[2] * coeff0[3] - coeff0[2] * coeff2[3];
 	double b = coeff2[2] * coeff1[3] - coeff1[2] * coeff2[3];
 	a /= det; b /= det;
 	sol[0] = A[1][1] * a - A[0][1] * b;
 	sol[1] = A[0][0] * b - A[1][0] * a;
-	if (abs(coeff0[2]) > 1.e-10) {
+	if (abs(coeff0[2]) > eps_geo) {
 		sol[2] = -(coeff0[0] * sol[0] + coeff0[1] * sol[1] + coeff0[3]) / coeff0[2];
 		return true;
 	}
-	if (abs(coeff1[2]) > 1.e-10) {
+	if (abs(coeff1[2]) > eps_geo) {
 		sol[2] = -(coeff1[0] * sol[0] + coeff1[1] * sol[1] + coeff1[3]) / coeff1[2];
 		return true;
 	}
-	if (abs(coeff2[2]) > 1.e-10) {
+	if (abs(coeff2[2]) > eps_geo) {
 		sol[2] = -(coeff2[0] * sol[0] + coeff2[1] * sol[1] + coeff2[3]) / coeff2[2];
 		return true;
 	}
@@ -164,7 +167,7 @@ public:
 
 	int GetIntersection(int CartPlane, double *val, double &sol1, double &sol2);
 
-	UnitSurf operator=(const UnitSurf &asurf);
+	UnitSurf& operator=(const UnitSurf &asurf);
 
 	bool IsInside(double x, double y, double z, bool includeOn = false);
 
@@ -179,15 +182,33 @@ private:
 	int nsurf;
 	UnitSurf *Surfaces;
 
-	UnitVol() {	alloc = false; }
+	bool isbounded, finalized;
+	double xlr[2], ylr[2], zlr[2];
+	double vol;
+
+	void init() { alloc = isbounded = finalized = false; nsurf = 0; }
 
 	int OneIntersection(int idx, int CartPlane, double *val, double &sol1, double &sol2);
 
-	void ResidentFilter(int codes, int acode, double localEx[6][3], double corners[6][3]);
-public:
-	void Create(int _nsurf, const UnitSurf *&_Surfaces);
+	void ResidentFilter(int &codes, int acode, double localEx[6][3], double corners[6][3]);
 
-	void Destroy() { delete Surfaces; alloc = false; }
+	bool CalBoundBox();
+	
+	double CalVolume(int nx = 300, int ny = 300, int nz = 300);
+public:
+	UnitVol() { init(); }
+
+	UnitVol(int nsurf, const UnitSurf *_Surfaces) { init(); Create(nsurf, Surfaces); }
+	
+	UnitVol(const UnitSurf &_Surface) { init(); Create(_Surface); }
+
+	~UnitVol() { Destroy(); };
+
+	void Create(int _nsurf, const UnitSurf *_Surfaces);
+
+	void Create(const UnitSurf &_Surfaces);
+
+	void Destroy() { delete[]Surfaces; alloc = isbounded = finalized = false; }
 
 	bool IsAlloc() { return alloc; }
 
@@ -199,7 +220,84 @@ public:
 
 	bool IsInside(double x, double y, double z, bool includeOn = false);
 
-	int GetIntersection(int CartPlane, double *val, double **sol);
+	int GetIntersection(int CartPlane, double *val, vector<double>& sol);
+
+	bool Finalize();
+
+	const UnitSurf* GetSurfaces() const { return Surfaces; }
+
+	int GetNsurf() const { return nsurf; }
+
+	double GetVolume() const { return vol; }
 
 	bool GetBoundBox(double xlr[2], double ylr[2], double zlr[2]);
+
+	UnitVol& operator=(const UnitVol &avol);
+};
+
+inline void DebugUnitGeo() {
+	double c_cir[3] = { 0.0, 0.0, 0.54 };
+	UnitSurf Circle(CIRCLE, c_cir, XY);
+
+	double c_zpln0[2] = { -1.0, 0.0 };
+	double c_zpln1[2] = { 1.0, 3.0 };
+	UnitSurf Zpln0(ZPLN, c_zpln0), Zpln1(ZPLN, c_zpln1);
+
+	double c_sphere[10] = { 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -9.0 };
+	UnitSurf Sphere(GENERAL, c_sphere);
+
+	UnitVol Svol(Sphere);
+	UnitVol Cylinder;
+	Cylinder.append(Circle);
+	Cylinder.append(Zpln0);
+	Cylinder.append(Zpln1);
+	Svol.Finalize();
+	Cylinder.Finalize();
+
+	bool isbounded;
+	double xs[2], ys[2], zs[2];
+	isbounded = Svol.GetBoundBox(xs, ys, zs);
+	cout << "Bound info, (" << isbounded << ")" << endl;
+	if (isbounded) cout << "X : [" << xs[0] << "," << xs[1] << "] ";
+	if (isbounded) cout << "Y : [" << ys[0] << "," << ys[1] << "] ";
+	if (isbounded) cout << "Z : [" << zs[0] << "," << zs[1] << "] " << endl;
+	if (isbounded) cout << "Vol = " << Svol.GetVolume() << "cm^3" << endl;
+
+	isbounded = Cylinder.GetBoundBox(xs, ys, zs);
+	cout << "Bound info, (" << isbounded << ")" << endl;
+	if (isbounded) cout << "X : [" << xs[0] << "," << xs[1] << "] ";
+	if (isbounded) cout << "Y : [" << ys[0] << "," << ys[1] << "] ";
+	if (isbounded) cout << "Z : [" << zs[0] << "," << zs[1] << "] " << endl;
+	if (isbounded) cout << "Vol = " << Cylinder.GetVolume() << "cm^3" << endl;
+}
+
+class UnitComp {
+private:
+	int nvol;
+	int *imat;
+	UnitVol *Volumes;
+
+	double xlr[2], ylr[2], zlr[2];
+
+	void init() { nvol = 0; }
+public:
+	UnitComp() { init(); }
+
+	UnitComp(int nvol, const UnitVol *Volumes) { Create(nvol, Volumes); }
+
+	~UnitComp() { Destroy(); }
+
+	void Rotate(double cos, double sin, int Ax);
+
+	void Relocate(double dx, double dy, double dz);
+
+	void Create(int nvol, const UnitVol *Volumes);
+
+	void Destroy() { delete[]Volumes; }
+
+	int GetNvol() const { return nvol; }
+
+	const int* GetMatIds() const { return imat; }
+
+	const UnitVol* GetVolumes() const { return Volumes; }
 };

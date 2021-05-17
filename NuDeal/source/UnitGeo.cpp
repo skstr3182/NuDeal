@@ -1,5 +1,6 @@
 #pragma once
 #include "UnitGeo.h"
+#include <omp.h>
 
 void UnitSurf::Transform(double invTM[4][4]) {
 	double coeffs[10] = { c_xs, c_ys, c_zs, c_xy, c_yz, c_xz, c_x, c_y, c_z, c };
@@ -29,8 +30,8 @@ bool UnitSurf::GetPointVar2(int axis, double var[2], double &sol) {
 	a = coeff[i0]; b = coeff[3 + i0] * var[i1] + coeff[3 + i2] * var[i2] + coeff[6 + i0];
 	c = coeff[i1] * var[i1] * var[i1] + coeff[i2] * var[i2] * var[i2] + coeff[3 + i1] * var[i1] * var[i2] +
 		coeff[6 + i1] * var[i1] + coeff[6 + i2] * var[i1] + coeff[9];
-	if (abs(a) < 1.e-10) {
-		if (abs(b) > 1.e-10) {
+	if (abs(a) < eps_geo) {
+		if (abs(b) > eps_geo) {
 			sol = - b / c;
 			return true;
 		}
@@ -50,21 +51,21 @@ void UnitSurf::Create(int surftype, double *_coeff, int cartesianPln) {
 	for (int i = 0; i < 10; i++) coeff[i] = 0.;
 	switch (surftype) {
 	case XPLN:
-		coeff[5] = _coeff[0];
-		coeff[9] = -_coeff[1];
-		break;
-	case YPLN:
 		coeff[6] = _coeff[0];
 		coeff[9] = -_coeff[1];
 		break;
-	case ZPLN:
+	case YPLN:
 		coeff[7] = _coeff[0];
 		coeff[9] = -_coeff[1];
 		break;
+	case ZPLN:
+		coeff[8] = _coeff[0];
+		coeff[9] = -_coeff[1];
+		break;
 	case PLN:
-		coeff[5] = _coeff[0];
-		coeff[6] = _coeff[1];
-		coeff[7] = _coeff[2];
+		coeff[6] = _coeff[0];
+		coeff[7] = _coeff[1];
+		coeff[8] = _coeff[2];
 		coeff[9] = -_coeff[3];
 		break;
 	case CIRCLE:
@@ -72,17 +73,17 @@ void UnitSurf::Create(int surftype, double *_coeff, int cartesianPln) {
 		case XY:
 			coeff[0] = 1.; coeff[1] = 1.;
 			coeff[6] = -2. * _coeff[0]; coeff[7] = -2.*_coeff[1];
-			coeff[9] = _coeff[0] * _coeff[0] + _coeff[1] * _coeff[1] - coeff[2] * coeff[2];
+			coeff[9] = _coeff[0] * _coeff[0] + _coeff[1] * _coeff[1] - _coeff[2] * _coeff[2];
 			break;
 		case YZ:
 			coeff[1] = 1.; coeff[2] = 1.;
 			coeff[7] = -2. * _coeff[0]; coeff[8] = -2.*_coeff[1];
-			coeff[9] = _coeff[0] * _coeff[0] + _coeff[1] * _coeff[1] - coeff[2] * coeff[2];
+			coeff[9] = _coeff[0] * _coeff[0] + _coeff[1] * _coeff[1] - _coeff[2] * _coeff[2];
 			break;
 		case XZ:
 			coeff[0] = 1.; coeff[2] = 1.;
 			coeff[6] = -2. * _coeff[0]; coeff[8] = -2.*_coeff[1];
-			coeff[9] = _coeff[0] * _coeff[0] + _coeff[1] * _coeff[1] - coeff[2] * coeff[2];
+			coeff[9] = _coeff[0] * _coeff[0] + _coeff[1] * _coeff[1] - _coeff[2] * _coeff[2];
 			break;
 		}
 		break;
@@ -93,8 +94,8 @@ void UnitSurf::Create(int surftype, double *_coeff, int cartesianPln) {
 
 	isCurve = false;
 	for (int i = 0; i < 6; i++) {
-		if (coeff[i] > 1.e-10) isCurve = true;
-		if (coeff[i] < -1.e-10) isCurve = true;
+		if (coeff[i] > eps_geo) isCurve = true;
+		if (coeff[i] < -eps_geo) isCurve = true;
 	}
 
 	c_xs = coeff[0]; c_xy = coeff[3]; c_x = coeff[6];
@@ -171,16 +172,17 @@ int UnitSurf::GetIntersection(int CartPlane, double *val, double &sol1, double &
 		default:
 			break;
 		}
+		if (abs(c2) < eps_geo) return 0;
 		double det = c1 * c1 - 4.*c2*c0;
 		if (det < 0.) {
 			return 0;
 		}
 		else {
-			double dist = sqrt(det) / c1;
-			sol1 = (-c1 / c1 - dist) * 0.5;
-			sol2 = (-c1 / c1 + dist) * 0.5;
+			double dist = sqrt(det) / c2;
+			sol1 = (-c1 / c2 - dist) * 0.5;
+			sol2 = (-c1 / c2 + dist) * 0.5;
 			if (dist < 1.e-12) {
-				return 1;
+				return 0;
 			}
 			else {
 				return 2;
@@ -190,13 +192,16 @@ int UnitSurf::GetIntersection(int CartPlane, double *val, double &sol1, double &
 	else {
 		switch (CartPlane) {
 		case XY:
-			sol1 = -(c_x*val[0] + c_y * val[1] + c);
+			if (abs(c_z) < eps_geo) break;
+			sol1 = -(c_x*val[0] + c_y * val[1] + c) / c_z;
 			break;
 		case YZ:
-			sol1 = -(c_x*val[0] + c_y * val[1] + c);
+			if (abs(c_x) < eps_geo) break;
+			sol1 = -(c_y*val[0] + c_z * val[1] + c) / c_x;
 			break;
 		case XZ:
-			sol1 = -(c_x*val[0] + c_y * val[1] + c);
+			if (abs(c_y) < eps_geo) break;
+			sol1 = -(c_x*val[0] + c_z * val[1] + c) / c_y;
 			break;
 		default:
 			break;
@@ -205,16 +210,18 @@ int UnitSurf::GetIntersection(int CartPlane, double *val, double &sol1, double &
 	}
 }
 
-UnitSurf UnitSurf::operator=(const UnitSurf &asurf) {
-	double coeff[10];
-	asurf.GetEquation(coeff);
-	Create(GENERAL, coeff);
+UnitSurf& UnitSurf::operator=(const UnitSurf &asurf) {
+	if (asurf.alloc) {
+		double coeff[10];
+		asurf.GetEquation(coeff);
+		Create(GENERAL, coeff);
+	}
 	return *this;
 }
 
 bool UnitSurf::IsInside(double x, double y, double z, bool includeOn) {
 	double det = (c_xs*x + c_xy * y + c_xz * z + c_x)*x + (c_ys*y + c_yz * z + c_y)*y + (c_zs*z + c_z)*z + c;
-	if (abs(det) < 1.e-10) {
+	if (abs(det) < eps_geo) {
 		if (includeOn) return true;
 		return false;
 	}
@@ -263,7 +270,7 @@ int UnitSurf::GetLocalExSelf(double sol[6][3]) {
 				c0 = gradG[i1][i] * gradG[i2][i1] - gradG[i2][i] * gradG[i1][i1]; // i's term
 				c1 = gradG[i1][i2] * gradG[i2][i1] - gradG[i2][i2] * gradG[i1][i1]; //i2's term
 				c2 = gradG[i1][3] * gradG[i2][i1] - gradG[i2][3] * gradG[i1][i1]; // constant term
-				if (abs(c1) < 1.e-10) iscontd = true; // *** The min or max points cannot be determined.
+				if (abs(c1) < eps_geo) iscontd = true; // *** The min or max points cannot be determined.
 				c22[j][0] = c0 / c1; c22[j][1] = c2 / c1;
 			}
 			if (iscontd) continue;
@@ -272,15 +279,15 @@ int UnitSurf::GetLocalExSelf(double sol[6][3]) {
 			xyzc[i][i] = 1.;
 			xyzc[map[0]][i] = c22[1][0]; xyzc[map[0]][3] = c22[1][1];
 			xyzc[map[1]][i] = c22[0][0]; xyzc[map[1]][3] = c22[0][1];
-			std::fill(xyzc[3], xyzc[3] + 4, 1.0);
+			xyzc[3][3] = 1.0;
 			CalCoeffs(coeff0, xyzc, coeff1);
 
 			double bc[2] = { coeff1[i + 6], coeff1[9] };
-			if (abs(coeff1[i]) < 1.e-10) {
+			if (abs(coeff1[i]) < eps_geo) {
 				double soli = -bc[1] / bc[0];
 				double soli1 = c22[1][0] * soli + c22[1][1], soli2 = c22[0][0] * soli + c22[0][1];
 				double invlam = gradG[i][i] * soli + gradG[i][map[0]] * soli1 + gradG[i][map[1]] * soli2;
-				if (abs(invlam) < 1.e-10) {
+				if (abs(invlam) < eps_geo) {
 					code += 3 * pow10[2 - i];
 					sol[i * 2][i] = sol[i * 2 + 1][i] = soli;
 					sol[i * 2][map[0]] = sol[i * 2 + 1][map[0]] = soli1;
@@ -302,7 +309,7 @@ int UnitSurf::GetLocalExSelf(double sol[6][3]) {
 			}
 			bc[0] /= coeff1[i]; bc[1] /= coeff1[i];
 			double det = bc[0] * bc[0] - 4.0*bc[1];
-			if (det > 1.e-10) {
+			if (det > eps_geo) {
 				code += 3 * pow10[2 - i];
 				double soli = 0.5*(-bc[0] - sqrt(det));
 				double soli1 = c22[1][0] * soli + c22[1][1], soli2 = c22[0][0] * soli + c22[0][1];
@@ -317,13 +324,13 @@ int UnitSurf::GetLocalExSelf(double sol[6][3]) {
 }
 
 int UnitSurf::GetLocalExPln(double CoeffPln[4], double sol[6][3]) {
-	int code = 0;
+	int code = 0, code2 = 0;
 	if (isCurve) {
 		double coeff0[10] = { c_xs, c_ys, c_zs, c_xy, c_yz, c_xz, c_x, c_y, c_z, c };
 		for (int i = 0; i < 3; i++) {
 			double xyzc[4][4] = { {0.0} };
 			for (int j = 0; j < 4; j++) xyzc[j][j] = 1.0;
-			if (abs(CoeffPln[i]) > 1.e-10) {
+			if (abs(CoeffPln[i]) > eps_geo) {
 				double invc = 1. / CoeffPln[i];
 				// Cancel i's term, x = ay+bz+c
 				for (int j = 0; j < 4; j++) xyzc[i][j] = -CoeffPln[j] * invc;
@@ -339,28 +346,42 @@ int UnitSurf::GetLocalExPln(double CoeffPln[4], double sol[6][3]) {
 				if (code1 % 2 == 1) {
 					sol[(i + 1) % 3 * 2][(i + 1) % 3] = sol1[0][0];
 					sol[(i + 1) % 3 * 2][(i + 2) % 3] = sol1[0][1];
-					this->GetPointVar2[i, sol1[0], sol[(i + 1) % 3 * 2][i]];
+					sol[(i + 1) % 3 * 2][i] = -(CoeffPln[(i + 1) % 3] * sol1[0][0] + CoeffPln[(i + 2) % 3] * sol1[0][1] + CoeffPln[3]) / CoeffPln[i];
+					//this->GetPointVar2(i, sol1[0], sol[(i + 1) % 3 * 2][i]);
 				}
 				if (code1 > 2) {
-					sol[(i + 1) % 3 + 1][(i + 1) % 3] = sol1[1][0];
-					sol[(i + 1) % 3 + 1][(i + 2) % 3] = sol1[1][1];
-					this->GetPointVar2[i, sol1[1], sol[(i + 1) % 3 * 2 + 1][i]];
+					sol[(i + 1) % 3 * 2 + 1][(i + 1) % 3] = sol1[1][0];
+					sol[(i + 1) % 3 * 2 + 1][(i + 2) % 3] = sol1[1][1];
+					sol[(i + 1) % 3 * 2 + 1][i] = -(CoeffPln[(i + 1) % 3] * sol1[1][0] + CoeffPln[(i + 2) % 3] * sol1[1][1] + CoeffPln[3]) / CoeffPln[i];
+					//this->GetPointVar2(i, sol1[1], sol[(i + 1) % 3 * 2 + 1][i]);
 				}
-				code += pow10[(i + 1) % 3] * code1;
+				code += pow10[2 - (i + 1) % 3] * code1;
+				code2 += code1;
 				// If (i+2)%3's term was zero, get another pair
-				double sol1[2][2];
-				int code1 = GetLocalExCurve((i + 2) % 3, coeff2, sol1);
+				if (abs(CoeffPln[(i + 2) % 3]) > eps_geo) continue;
+				code1 = GetLocalExCurve((i + 2) % 3, coeff2, sol1);
 				if (code1 % 2 == 1) {
 					sol[(i + 2) % 3 * 2][(i + 1) % 3] = sol1[0][0];
 					sol[(i + 2) % 3 * 2][(i + 2) % 3] = sol1[0][1];
-					this->GetPointVar2[i, sol1[0], sol[(i + 2) % 3 * 2][i]];
+					sol[(i + 2) % 3 * 2][i] = -(CoeffPln[(i + 1) % 3] * sol1[0][0] + CoeffPln[(i + 2) % 3] * sol1[0][1] + CoeffPln[3]) / CoeffPln[i];
+					//this->GetPointVar2(i, sol1[0], sol[(i + 2) % 3 * 2][i]);
 				}
 				if (code1 > 2) {
-					sol[(i + 2) % 3 + 1][(i + 1) % 3] = sol1[1][0];
-					sol[(i + 2) % 3 + 1][(i + 2) % 3] = sol1[1][1];
-					this->GetPointVar2[i, sol1[1], sol[(i + 2) % 3 * 2 + 1][i]];
+					sol[(i + 2) % 3 * 2 + 1][(i + 1) % 3] = sol1[1][0];
+					sol[(i + 2) % 3 * 2 + 1][(i + 2) % 3] = sol1[1][1];
+					sol[(i + 2) % 3 * 2 + 1][i] = -(CoeffPln[(i + 1) % 3] * sol1[1][0] + CoeffPln[(i + 2) % 3] * sol1[1][1] + CoeffPln[3]) / CoeffPln[i];
+					//this->GetPointVar2(i, sol1[1], sol[(i + 2) % 3 * 2 + 1][i]);
 				}
-				code += pow10[(i + 2) % 3] * code1;
+				code += pow10[2 - (i + 2) % 3] * code1;
+				code2 += code1;
+				if (code2 == 6) {
+					double anyx = sol[(i + 1) % 3 * 2 + 1][0];
+					double anyy = sol[(i + 1) % 3 * 2 + 1][1];
+					double anyz = sol[(i + 1) % 3 * 2 + 1][2];
+					sol[i * 2][0] = anyx; sol[i * 2][1] = anyy; sol[i * 2][2] = anyz;
+					sol[i * 2 + 1][0] = anyx; sol[i * 2 + 1][1] = anyy; sol[i * 2 + 1][2] = anyz;
+					code += pow10[2 - i] * 3;
+				}
 			}
 		}
 	}
@@ -398,39 +419,56 @@ int UnitVol::OneIntersection(int idx, int CartPlane, double *val, double &sol1, 
 			break;
 		}
 		for (int j = 0; j < nsurf; j++) {
-			if (j == i) continue;
+			if (j == idx) continue;
 			if (!Surfaces[j].IsInside(x, y, z)) {
 				ninter--;
 				sol1 = sol2;
 			}
+			break;
 		}
 	}
 
 	return ninter;
 }
 
-void UnitVol::Create(int _nsurf, const UnitSurf *&_Surfaces) {
+void UnitVol::Create(int _nsurf, const UnitSurf *_Surfaces) {
 	alloc = true;
 	nsurf = _nsurf;
 	Surfaces = new UnitSurf[nsurf];
 	for (int i = 0; i < _nsurf; i++) Surfaces[i] = _Surfaces[i];
 }
 
+void UnitVol::Create(const UnitSurf &_Surfaces) {
+	alloc = true;
+	nsurf = 1;
+	Surfaces = new UnitSurf[nsurf];
+	Surfaces[0] = _Surfaces;
+}
+
 void UnitVol::append(const UnitSurf &asurf) {
 	alloc = true;
 	nsurf += 1;
-	UnitSurf **bufsurf = &Surfaces;
+	UnitSurf *bufsurf = Surfaces;
 	Surfaces = new UnitSurf[nsurf];
-	for (int i = 0; i < nsurf - 1; i++) Surfaces[i] = *bufsurf[i];
+	for (int i = 0; i < nsurf - 1; i++) Surfaces[i] = bufsurf[i];
+	if (nsurf > 1) delete[] bufsurf;
 	Surfaces[nsurf - 1] = asurf;
 }
 
 void UnitVol::Relocate(int dx, int dy, int dz) {
 	for (int i = 0; i < nsurf; i++) Surfaces[i].Relocate(dx, dy, dz);
+	if (isbounded) {
+		xlr[0] += dx; xlr[1] += dx;
+		ylr[0] += dy; ylr[1] += dy;
+		zlr[0] += dz; zlr[1] += dz;
+	}
 }
 
 void UnitVol::Rotate(double cos, double sin, int Ax) {
 	for (int i = 0; i < nsurf; i++) Surfaces[i].Rotate(cos, sin, Ax);
+	if (finalized) {
+		Finalize();
+	}
 }
 
 bool UnitVol::IsInside(double x, double y, double z, bool includeOn) {
@@ -439,7 +477,7 @@ bool UnitVol::IsInside(double x, double y, double z, bool includeOn) {
 	return inside;
 }
 
-int UnitVol::GetIntersection(int CartPlane, double *val, double **sol) {
+int UnitVol::GetIntersection(int CartPlane, double *val, std::vector<double>& sol) {
 	double **bufs = new double*[nsurf];
 	for (int i = 0; i < nsurf; i++) bufs[i] = new double[2];
 	int *ninters = new int[nsurf];
@@ -450,21 +488,25 @@ int UnitVol::GetIntersection(int CartPlane, double *val, double **sol) {
 		ntotint += ninters[i];
 	}
 
-	*sol = new double[ntotint];
+	sol.resize(ntotint);
+
 	ntotint = 0;
 	for (int i = 0; i < nsurf; i++) {
 		for (int j = 0; j < ninters[i]; j++) {
-			*sol[ntotint] = bufs[i][j];
+			sol[ntotint] = bufs[i][j];
 			ntotint++;
 		}
-		delete bufs[i];
+		delete[] bufs[i];
 	}
-	delete bufs; delete ninters;
+	delete[] bufs; delete[] ninters;
+	
+	// Sorting the solutions
+	// * not developed yet
 
 	return ntotint;
 }
 
-void UnitVol::ResidentFilter(int codes, int acode, double localEx[6][3], double corners[6][3]) {
+void UnitVol::ResidentFilter(int &codes, int acode, double localEx[6][3], double corners[6][3]) {
 	for (int axi = 0; axi < 3; axi++) {
 		int globcode = codes % pow10[3 - axi] / pow10[2 - axi];
 		int code0 = acode % pow10[3 - axi] / pow10[2 - axi], code1 = 0;
@@ -472,7 +514,7 @@ void UnitVol::ResidentFilter(int codes, int acode, double localEx[6][3], double 
 			if (IsInside(localEx[axi * 2][0], localEx[axi * 2][1], localEx[axi * 2][2], true)) {
 				code1 += 1;
 				if (globcode % 2 != 1 || localEx[axi * 2][axi] < corners[axi * 2][axi]) {
-					std::copy(localEx[axi * 2][0], localEx[axi * 2][2], corners[axi * 2]);
+					std::copy(localEx[axi * 2], localEx[axi * 2]+3, corners[axi * 2]);
 				}
 			}
 		}
@@ -480,14 +522,18 @@ void UnitVol::ResidentFilter(int codes, int acode, double localEx[6][3], double 
 			if (IsInside(localEx[axi * 2 + 1][0], localEx[axi * 2 + 1][1], localEx[axi * 2 + 1][2], true)) {
 				code1 += 2;
 				if (globcode < 2 || localEx[axi * 2 + 1][axi] > corners[axi * 2 + 1][axi]) {
-					std::copy(localEx[axi * 2][0], localEx[axi * 2][2], corners[axi * 2 + 1]);
+					std::copy(localEx[axi * 2 + 1], localEx[axi * 2 + 1]+3, corners[axi * 2 + 1]);
 				}
 			}
 		}
+		codes += pow10[2 - axi] * (code1 - globcode);
 	}
 }
 
-bool UnitVol::GetBoundBox(double xlr[2], double ylr[2], double zlr[2]) {
+bool UnitVol::CalBoundBox() {
+	struct double3 {
+		double x, y, z;
+	};
 	double corners[6][3];
 	int codes = 0;
 
@@ -531,7 +577,7 @@ bool UnitVol::GetBoundBox(double xlr[2], double ylr[2], double zlr[2]) {
 	// It is impossible to tell whether each is left or right boundaries of any axes.
 	// Explicit comparisons which is largest or smallest along all directions should be carried out.
 
-	std::queue<double[3]> Inters;
+	queue<double3> Inters;
 
 	// [4] Intersection of each curved surface and two planes : (C,P,P)
 	//     1. Get a line from a pair of planes attached to each curved surface
@@ -558,7 +604,11 @@ bool UnitVol::GetBoundBox(double xlr[2], double ylr[2], double zlr[2]) {
 				if (IsCurve) continue;
 				double coeff2_4[4] = { coeff2[6], coeff2[7], coeff2[8], coeff2[9] };
 				double soltriple[3];
-				if (GetTriplePoint(coeff0_4, coeff1_4, coeff2_4, soltriple)) Inters.push(soltriple);
+				if (GetTriplePoint(coeff0_4, coeff1_4, coeff2_4, soltriple)) {
+					double3 sol3;
+					sol3.x = soltriple[0]; sol3.y = soltriple[1]; sol3.z = soltriple[2];
+					Inters.push(sol3);
+				}
 			}
 		}
 	}
@@ -566,57 +616,69 @@ bool UnitVol::GetBoundBox(double xlr[2], double ylr[2], double zlr[2]) {
 	// Filter residents and determine bounding values
 	// The corner points from local extremum are collapsed to the queue, Inters.
 	// If a plane composed of three resident points holds all the others, return false
-	std::queue<double[3]> Residents;
-	for (int i = 0; i < 6; i++) {
+	queue<double3> Residents;
+	for (int i = 0; i < 3; i++) {
 		int acode = codes % pow10[3 - i] / pow10[2 - i];
-		if (acode % 2 == 1) Residents.push(corners[i]);
-		if (acode > 1) Residents.push(corners[i]);
+		double3 tmp; 
+		tmp.x = corners[2 * i][0]; tmp.y = corners[2 * i][1]; tmp.z = corners[2 * i][2];
+		if (acode % 2 == 1) Residents.push(tmp);
+		tmp.x = corners[2 * i + 1][0]; tmp.y = corners[2 * i + 1][1]; tmp.z = corners[2 * i + 1][2];
+		if (acode > 1) Residents.push(tmp);
 	}
 	while (!Inters.empty()) {
-		double aninter[3];
-		std::copy(Inters.front(), Inters.front() + 3, aninter);
-		if (IsInside(aninter[0], aninter[1], aninter[2], true)) {
+		//double aninter[3];
+		//std::copy(Inters.front(), Inters.front() + 3, aninter);
+		double3 aninter;
+		aninter = Inters.front();
+		if (IsInside(aninter.x, aninter.y, aninter.z, true)) {
 			Residents.push(aninter);
 		}
 		Inters.pop();
 	}
 	if (Residents.empty()) return false;
-	double aninter0[3];
-	std::copy(Residents.front(), Residents.front() + 3, aninter0);
-	double boundval[6] = { aninter0[0], aninter0[0], aninter0[1], aninter0[1], aninter0[2], aninter0[2] };
+	//double aninter0[3];
+	//std::copy(Residents.front(), Residents.front() + 3, aninter0);
+	double3 aninter0;
+	aninter0 = Residents.front();
+
+	double boundval[6] = { aninter0.x, aninter0.x, aninter0.y, aninter0.y, aninter0.z, aninter0.z };
 	int seq = 0;
 	double DirVec[3];
 	while (!Residents.empty()) {
-		double aninter[3];
-		std::copy(Residents.front(), Residents.front() + 3, aninter);
+		//double aninter[3];
+		//std::copy(Residents.front(), Residents.front() + 3, aninter);
+		double3 aninter;
+		aninter = Residents.front();
 		// Boundary values update
+		double vn[3] = { aninter.x, aninter.y, aninter.z };
 		for (int i = 0; i < 3; i++) {
-			double vl = boundval[i * 2], vr = boundval[i * 2 + 1], vn = aninter[0];
-			boundval[i * 2] = (vl > vn) ? vn : vl;
-			boundval[i * 2 + 1] = (vr < vn) ? vn : vr;
+			double vl = boundval[i * 2], vr = boundval[i * 2 + 1];
+			boundval[i * 2] = (vl > vn[i]) ? vn[i] : vl;
+			boundval[i * 2 + 1] = (vr < vn[i]) ? vn[i] : vr;
 		}
 		// Boundedness check
-		double DirVec1[3] = { aninter[0] - aninter0[0], aninter[1] - aninter0[1], aninter[2] - aninter0[2] };
+		double DirVec1[3] = { aninter.x - aninter0.x, aninter.y - aninter0.y, aninter.z - aninter0.z };
 		double det = DirVec1[0] * DirVec1[0] + DirVec1[1] * DirVec1[1] + DirVec1[2] * DirVec1[2];
-		if (det < 1.e-10) {
+		if (det > eps_geo) {
 			switch (seq) {
 			case 0:
 				std::copy(DirVec1, DirVec1 + 3, DirVec);
 				seq = 1;
 				break;
 			case 1:
-				DirVec1[0] = DirVec[1] * DirVec1[2] - DirVec[2] * DirVec1[1];
-				DirVec1[1] = DirVec[3] * DirVec1[0] - DirVec[0] * DirVec1[3];
-				DirVec1[2] = DirVec[0] * DirVec1[1] - DirVec[1] * DirVec1[0];
+				double3 bufdir; bufdir.x = DirVec1[0]; bufdir.y = DirVec1[1]; bufdir.z = DirVec1[2];
+				DirVec1[0] = DirVec[1] * bufdir.z - DirVec[2] * bufdir.y;
+				DirVec1[1] = DirVec[2] * bufdir.x - DirVec[0] * bufdir.z;
+				DirVec1[2] = DirVec[0] * bufdir.y - DirVec[1] * bufdir.x;
 				det = DirVec1[0] * DirVec1[0] + DirVec1[1] * DirVec1[1] + DirVec1[2] * DirVec1[2];
-				if (det > 1.e-10) {
+				if (det > eps_geo) {
 					std::copy(DirVec1, DirVec1 + 3, DirVec);
 					seq = 2;
 				}
 				break;
 			case 2:
 				det = DirVec[0] * DirVec1[0] + DirVec[1] * DirVec1[1] + DirVec[2] * DirVec1[2];
-				if (abs(det) > 1.e-10) seq = 3;
+				if (abs(det) < eps_geo) seq = 3;
 				break;
 			case 3:
 				break;
@@ -629,4 +691,114 @@ bool UnitVol::GetBoundBox(double xlr[2], double ylr[2], double zlr[2]) {
 	ylr[0] = boundval[2]; ylr[1] = boundval[3];
 	zlr[0] = boundval[4]; zlr[1] = boundval[5];
 	return true;
+}
+
+double UnitVol::CalVolume(int nx, int ny, int nz) {
+	if (!isbounded) return 0.0;
+	double lx = xlr[1] - xlr[0], ly = ylr[1] - ylr[0], lz = zlr[1] - zlr[0];
+	double dx = lx / (double) nx, dy = ly / (double) ny, dz = lz / (double) nz;
+
+	double *xpts = new double[nx], *ypts = new double[ny], *zpts = new double[nz];
+
+	for (int ix = 0; ix < nx; ix++) xpts[ix] = xlr[0] + dx * 0.5 * (double)(ix * 2 + 1);
+	for (int iy = 0; iy < ny; iy++) ypts[iy] = ylr[0] + dy * 0.5 * (double)(iy * 2 + 1);
+	for (int iz = 0; iz < nz; iz++) zpts[iz] = zlr[0] + dz * 0.5 * (double)(iz * 2 + 1);
+
+	double volsumYZ = 0.;// , volsum0 = 0.;
+	#pragma omp parallel for reduction(+:volsumYZ)
+	for (int iy = 0; iy < ny; iy++) {
+		//volsum0 = 0.;
+		for (int iz = 0; iz < nz; iz++) {
+			double vals[2] = { ypts[iy],zpts[iz] };
+			vector<double> sol;
+			int ninter = GetIntersection(YZ, vals, sol);
+			double volsum1 = 0.;
+			for (int i = 1; i < ninter; i+=2) {
+				volsum1 += (sol[i] - sol[i-1]);
+			}
+			//volsumYZ += 0.5*(volsum1 + volsum0);
+			//volsum0 = volsum1;
+			volsumYZ += volsum1;
+		}
+	}
+	volsumYZ *= dy * dz;
+
+	double volsumXZ = 0.;
+	#pragma omp parallel for reduction(+:volsumXZ)
+	for (int ix = 0; ix < nx; ix++) {
+		//volsum0 = 0.;
+		for (int iz = 0; iz < nz; iz++) {
+			double vals[2] = { xpts[ix],zpts[iz] };
+			vector<double> sol;
+			int ninter = GetIntersection(XZ, vals, sol);
+			double volsum1 = 0.;
+			for (int i = 1; i < ninter; i += 2) {
+				volsum1 += (sol[i] - sol[i - 1]);
+			}
+			//volsumXZ += 0.5*(volsum1 + volsum0);
+			//volsum0 = volsum1;
+		  volsumXZ += volsum1;
+		}
+	}
+	volsumXZ *= dx * dz;
+
+	double volsumXY = 0.;
+	#pragma omp parallel for reduction(+:volsumXY)
+	for (int ix = 0; ix < nx; ix++) {
+		//volsum0 = 0.;
+		for (int iy = 0; iy < ny; iy++) {
+			double vals[2] = { xpts[ix],ypts[iy] };
+			vector<double> sol;
+			int ninter = GetIntersection(XY, vals, sol);
+			double volsum1 = 0.;
+			for (int i = 1; i < ninter; i += 2) {
+				volsum1 += (sol[i] - sol[i - 1]);
+			}
+			//volsumXY += 0.5*(volsum1 + volsum0);
+			//volsum0 = volsum1;
+			volsumXY += volsum1;
+		}
+	}
+	volsumXY *= dx * dy;
+
+	delete[]xpts; delete[]ypts; delete[]zpts;
+
+	return (volsumXY+volsumXZ+volsumYZ)/3.0;
+}
+
+UnitVol& UnitVol::operator=(const UnitVol &avol) {
+	if (avol.alloc) {
+		this->Create(avol.GetNsurf(), avol.GetSurfaces());
+	}
+	return *this;
+}
+
+bool UnitVol::Finalize() {
+	isbounded = CalBoundBox();
+	if (isbounded) {
+		vol = CalVolume();
+		finalized = true;
+	}
+	return finalized;
+}
+
+bool UnitVol::GetBoundBox(double xlr[2], double ylr[2], double zlr[2]) {
+	xlr[0] = this->xlr[0]; ylr[0] = this->ylr[0]; zlr[0] = this->zlr[0];
+	xlr[1] = this->xlr[1]; ylr[1] = this->ylr[1]; zlr[1] = this->zlr[1];
+	return isbounded;
+}
+
+void UnitComp::Create(int nvol, const UnitVol *Volumes) {
+	this->nvol = nvol;
+	this->Volumes = new UnitVol[nvol];
+	for (int i = 0; i < nvol; i++) this->Volumes[i] = Volumes[i];
+	// * Calculate Bound Box of UnitComp
+}
+
+void UnitComp::Rotate(double cos, double sin, int Ax) {
+	for (int i = 0; i < nvol; i++) Volumes[i].Rotate(cos, sin, Ax);
+}
+
+void UnitComp::Relocate(double dx, double dy, double dz) {
+	for (int i = 0; i < nvol; i++) Volumes[i].Relocate(dx, dy, dz);
 }

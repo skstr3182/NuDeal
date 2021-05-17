@@ -86,3 +86,15 @@ namespace filesys = std::experimental::filesystem;
 
 #include "hdf5.h"
 #include "hdf5_hl.h"
+
+// using std definitions
+using std::string;
+using std::cout;
+using std::cin;
+using std::endl;
+using std::queue;
+using std::list;
+using std::fstream;
+using std::ifstream;
+using std::ofstream;
+using std::vector;
