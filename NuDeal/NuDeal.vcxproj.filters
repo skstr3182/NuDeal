@@ -59,12 +59,6 @@
     <ClCompile Include="source\Main.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="source\TypeDef.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="source\IOUtil.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="source\Input.cpp">
       <Filter>Source\IO</Filter>
     </ClCompile>
@@ -85,6 +79,9 @@
     </ClCompile>
     <ClCompile Include="source\PhysicsProp.cpp">
       <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\IOUtil.cpp">
+      <Filter>Source\IO</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

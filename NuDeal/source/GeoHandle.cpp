@@ -28,6 +28,8 @@ int GeometryHandler::FindVolId(double3 pt) {
 	// Second search : Only those in which a point is
 	//  1. Call UnitVol.IsInside(x,y,z,false) for ids found at first searches
 	//  2. If 
+
+	return 0;
 }
 
 GeometryHandler::GeometryHandler(double origin[3], double L[3]) {

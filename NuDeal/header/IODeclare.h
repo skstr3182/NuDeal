@@ -4,9 +4,6 @@
 namespace IO
 {
 
-// Standard Namespace
-using namespace std;
-
 // Input.h
 class InputManager_t;
 
