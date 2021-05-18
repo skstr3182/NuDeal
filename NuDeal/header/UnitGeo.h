@@ -1,303 +1,235 @@
 #pragma once
 #include "Defines.h"
 
+namespace Geometry
+{
+
 constexpr double eps_geo = 1.e-10;
 
-enum Transform {
-	RELOC,
-	ROTAT,
-	SCALE,
-	SHAER
-};
-
-enum CartAxis {
-	X,
-	Y,
-	Z
-};
-
-enum CartPlane {
-	XY,
-	YZ,
-	XZ
-};
-
-enum SurfType {
-	XPLN,
-	YPLN,
-	ZPLN,
-	PLN,
-	CIRCLE,
-	ELLIPSE,
-	SPHERE,
-	ELLIPSOID,
-	GENERAL
-};
-
-const int pow10[4] = { 1, 10, 100, 1000 };
-
-inline void CalCoeffs(double coeff0[10], double xyzc[4][4], double coeff1[10]) {
-	// xyzc : (x', y', z', 1) = g(x,y,z)
-	// Convert f(x,y,z) to f(x',y',z') when (x',y',z') = g(x,y,z)
-	double c160[4][4], c161[4][4] = { {0} };
-	c160[0][0] = coeff0[0]; c160[1][1] = coeff0[1]; c160[2][2] = coeff0[2]; c160[3][3] = coeff0[9];
-	c160[0][1] = coeff0[3]; c160[0][3] = coeff0[6];
-	c160[1][2] = coeff0[4]; c160[1][3] = coeff0[7];
-	c160[0][2] = coeff0[5]; c160[2][3] = coeff0[8];	
-	for (int i = 0; i < 4; i++) {
-		for (int j = i; j < 4; j++) {
-			for (int ir = 0; ir < 4; ir++) {
-				for (int ic = 0; ic < 4; ic++) {
-					c161[ir][ic] += c160[i][j] * xyzc[i][ir] * xyzc[j][ic];
-				}
-			}
-		}
-	}
-	coeff1[0] = c161[0][0]; coeff1[1] = c161[1][1]; coeff1[2] = c161[2][2]; coeff1[9] = c161[3][3];
-	coeff1[3] = c161[0][1] + c161[1][0]; coeff1[6] = c161[0][3] + c161[3][0];
-	coeff1[4] = c161[0][2] + c161[2][0]; coeff1[7] = c161[1][3] + c161[3][1];
-	coeff1[5] = c161[1][2] + c161[2][1]; coeff1[8] = c161[2][3] + c161[3][2];
-}
-
-inline int GetLocalExCurve(int axis, double coeff[6], double sol[2][2]) {
-	// Based on Lagrange multiplier method
-	// G(x) = x & F(x,y) = 0;
-	// grad(F)=lambda*grad(G)
-
-	// return single digit value
-	// 0 : none for along the axis
-	// 1 : left only, 2 : right only, 3 : both sides
-	double gradG[2][3] = {
-		{2.0*coeff[0], coeff[2], coeff[3]},
-		{coeff[2], 2.0*coeff[1], coeff[4]}
-	};
-	int i0 = axis, i1 = (axis + 1) % 2;
-	if (abs(gradG[i1][i1]) < eps_geo) return 0;
-	double c1 = -gradG[i1][i0] / gradG[i1][i1], c0 = -gradG[i1][2] / gradG[i1][i1];
-	double a, b, c;
-	a = coeff[i0] + coeff[2] * c1 + coeff[i1] * c1 * c1; // [i0][i0] + [i0][i1] + [i1][i1]
-	b = coeff[2 + i0] + coeff[2] * c0 + 2.0 * coeff[i1] * c0 * c1 + coeff[2 + i1] * c1; // [i0] + [i0][i1] + [i1]*[i1] + [i1]
-	c = coeff[i1] * c0 * c0 + coeff[2 + i1] * c0 + coeff[5]; // [i1][i1] + [i1] + constant
-	if (abs(a) < eps_geo) return 0;
-	else {
-		b /= a; c /= a;
-		double det = b * b - 4.0 * c;
-		if (abs(det) < eps_geo) {
-			double soli0 = -b * 0.5;
-			double soli1 = c1 * soli0 + c0;
-			sol[0][i0] = sol[1][i0] = soli0; sol[0][i1] = sol[1][i1] = soli1;
-			double lambda = gradG[i0][i0] * soli0 + gradG[i0][i1] * soli1 + gradG[i0][2];
-			if (lambda < 0) return 1;
-			else return 2;
-		}
-		else if (det > 0) {
-			double soli0 = 0.5*(-b - sqrt(det));
-			double soli1 = c1 * soli0 + c0;
-			sol[0][i0] = soli0; sol[0][i1] = soli1;
-			soli0 = 0.5*(-b + sqrt(det));
-			soli1 = c1 * soli0 + c0;
-			sol[1][i0] = soli0; sol[1][i1] = soli1;
-			return 3;
-		}
-	}
-}
-
-inline bool GetTriplePoint(double coeff0[4], double coeff1[4], double coeff2[4], double sol[3]) {
-	// Construct (x, y)^T = A * (a, b) with combinations of {EQ1,EQ2} and {EQ1,EQ3}
-	// If A is singular, return false
-	double A[2][2];
-	A[0][0] = coeff2[2] * coeff0[0] - coeff0[2] * coeff2[0];
-	A[0][1] = coeff2[2] * coeff0[1] - coeff0[2] * coeff2[1];
-	A[1][0] = coeff2[2] * coeff1[0] - coeff1[2] * coeff2[0];
-	A[1][1] = coeff2[2] * coeff1[1] - coeff1[2] * coeff2[1];
-	double det = A[0][0] * A[1][1] - A[1][0] * A[0][1];
-	if (abs(det) < eps_geo) return false;
-	double a = coeff2[2] * coeff0[3] - coeff0[2] * coeff2[3];
-	double b = coeff2[2] * coeff1[3] - coeff1[2] * coeff2[3];
-	a /= det; b /= det;
-	sol[0] = A[1][1] * a - A[0][1] * b;
-	sol[1] = A[0][0] * b - A[1][0] * a;
-	if (abs(coeff0[2]) > eps_geo) {
-		sol[2] = -(coeff0[0] * sol[0] + coeff0[1] * sol[1] + coeff0[3]) / coeff0[2];
-		return true;
-	}
-	if (abs(coeff1[2]) > eps_geo) {
-		sol[2] = -(coeff1[0] * sol[0] + coeff1[1] * sol[1] + coeff1[3]) / coeff1[2];
-		return true;
-	}
-	if (abs(coeff2[2]) > eps_geo) {
-		sol[2] = -(coeff2[0] * sol[0] + coeff2[1] * sol[1] + coeff2[3]) / coeff2[2];
-		return true;
-	}
-	return false; // when det is not small enough
-}
-
 class UnitSurf {
+
+public :
+	
+	// Aliasing & Enumerator
+
+	using Equation_t = array<double, 10>;
+
+	enum class TransformType {
+		RELOC,
+		ROTAT,
+		SCALE,
+		SHAER
+	};
+
+	enum class CartAxis {
+		X,
+		Y,
+		Z
+	};
+
+	enum class CartPlane {
+		XY,
+		YZ,
+		XZ
+	};
+
+	enum class SurfType {
+		XPLN,
+		YPLN,
+		ZPLN,
+		PLN,
+		CIRCLE,
+		ELLIPSE,
+		SPHERE,
+		ELLIPSOID,
+		GENERAL
+	};
+
 private:
-	bool alloc;
+
 	// The realm defined with a surface would be,
 	// (c_xs*x+c_x)*x + (c_ys*y+c_y)*y + (c_zs*z+c_z)*z - c < 0
-	bool isCurve;
-	double c_xs, c_ys, c_zs;
-	double c_xy, c_yz, c_xz;
-	double c_x, c_y, c_z, c;
+	bool is_curve = false;
 
-	void Transform(double invTM[4][4]);	
+	Equation_t eq;
 
-	bool GetPointVar2(int axis, double var[2], double &sol);
+	double& c_xs = eq[0];
+	double& c_ys = eq[1];
+	double& c_zs = eq[2];
+	double& c_xy = eq[3];
+	double& c_yz = eq[4];
+	double& c_xz = eq[5];
+	double& c_x = eq[6];
+	double& c_y = eq[7];
+	double& c_z = eq[8];
+	double& c = eq[9];
+
+	static Equation_t CalCoeffs(const Equation_t& in, double xyzc[4][4]);
+	static int GetLocalExCurve(int axis, double coeff[6], double sol[2][2]);
+
 public:
 
-	UnitSurf() { alloc = false;	}
+	static bool GetTriplePoint(double coeff0[4], double coeff1[4], double coeff2[4], double sol[3]);
 
-	UnitSurf(int surftype, double *_coeff, int cartesianPln = XY);
+private:
 
-	UnitSurf(const UnitSurf &asurf) { alloc = true;	this->operator=(asurf);	}
+	void Transform(double invTM[4][4]);
+	void SetCurve();
+	bool GetPointVar2(CartAxis axis, double var[2], double &sol);
 
-	void Create(int surftype, double *_coeff, int cartesianPln = XY);
-	
-	void Destroy() { alloc = false; }
+public:
 
-	bool IsAlloc() { return alloc; }
+	//UnitSurf() { }
+	UnitSurf(const Equation_t& eq) 
+	{ Create(eq); }
+	UnitSurf(SurfType surftype, double *_coeff, CartPlane cartesianPln = CartPlane::XY)
+	{ Create(surftype, _coeff, cartesianPln); }
+	UnitSurf(const UnitSurf &rhs) 
+	{ Create(rhs);	}
 
-	bool GetEquation(double *_coeff) const;
+	void Create(SurfType surftype, double *_coeff, CartPlane cartesianPln = CartPlane::XY);
+	void Create(const Equation_t& eq) { this->eq = eq; SetCurve(); }
+	void Create(const UnitSurf& rhs) { eq = rhs.eq; is_curve = rhs.is_curve; }
 
-	void Relocate(int dx, int dy, int dz);
+	const Equation_t& GetEquation() const { return eq; }
+	bool IsCurve() { return is_curve; }
 
-	void Rotate(double cos, double sin, int Ax);
+	void Relocate(double dx, double dy, double dz);
+	void Relocate(double3 d) { Relocate(d.x, d.y, d.z); }
+	void Rotate(double cos, double sin, CartAxis Ax);
+	void Rotate(double2 c, CartAxis Ax) { Rotate(c.x, c.y, Ax); }
 
-	int GetIntersection(int CartPlane, double *val, double &sol1, double &sol2);
-
-	UnitSurf& operator=(const UnitSurf &asurf);
-
+	//int GetIntersection(CartPlane cartPlane, double *val, double2& sol);
+	int GetIntersection(CartPlane cartPlane, const array<double, 2>& val, array<double, 2>& sol);
 	bool IsInside(double x, double y, double z, bool includeOn = false);
-
 	int GetLocalExSelf(double so1[6][3]);
-
 	int GetLocalExPln(double CoeffPln[4], double sol[6][3]);
+
+	UnitSurf& operator=(const UnitSurf& rhs) { *this = UnitSurf(rhs); return *this; }
 };
 
 class UnitVol {
-private:
-	bool alloc;
-	int nsurf;
-	UnitSurf *Surfaces;
 
-	bool isbounded, finalized;
-	double xlr[2], ylr[2], zlr[2];
+public:
+	
+	using Transform = UnitSurf::TransformType;
+	using CartAxis = UnitSurf::CartAxis;
+	using CartPlane = UnitSurf::CartPlane;
+	using SurfType = UnitSurf::SurfType;
+
+private:
+
+	vector<UnitSurf> Surfaces;
+	bool isbounded = false, finalized = false;
+	double2 xlr, ylr, zlr;
 	double vol;
 
-	void init() { alloc = isbounded = finalized = false; nsurf = 0; }
-
-	int OneIntersection(int idx, int CartPlane, double *val, double &sol1, double &sol2);
-
+	int OneIntersection(int idx, CartPlane CartPlane, const array<double, 2>& val, array<double, 2>& sol);
 	void ResidentFilter(int &codes, int acode, double localEx[6][3], double corners[6][3]);
-
 	bool CalBoundBox();
-	
 	double CalVolume(int nx = 300, int ny = 300, int nz = 300);
+
 public:
-	UnitVol() { init(); }
 
-	UnitVol(int nsurf, const UnitSurf *_Surfaces) { init(); Create(nsurf, Surfaces); }
-	
-	UnitVol(const UnitSurf &_Surface) { init(); Create(_Surface); }
-
-	~UnitVol() { Destroy(); };
+	UnitVol() {}
+	UnitVol(int nsurf, const UnitSurf *_Surfaces) { Create(nsurf, _Surfaces); }
+	UnitVol(const UnitSurf &_Surface) { Create(_Surface); }
+	UnitVol(const UnitVol& rhs) { Create(rhs); }
 
 	void Create(int _nsurf, const UnitSurf *_Surfaces);
+	void Create(const vector<UnitSurf>& Surfaces);
+	void Create(const UnitSurf& _Surfaces);
+	void Create(const UnitVol& rhs);
 
-	void Create(const UnitSurf &_Surfaces);
+	bool IsAlloc() const { return !Surfaces.empty(); }
+	const auto& GetSurfaces() const { return Surfaces; }
+	void Append(const UnitSurf &asurf) { Surfaces.emplace_back(asurf); }
+	int GetNumSurfaces() const { return Surfaces.size(); }
+	double GetVolume() const { return vol; }
+	bool GetBoundBox(double2& xlr, double2& ylr, double2& zlr);
 
-	void Destroy() { delete[]Surfaces; alloc = isbounded = finalized = false; }
-
-	bool IsAlloc() { return alloc; }
-
-	void append(const UnitSurf &asurf);
-
-	void Relocate(int dx, int dy, int dz);
-
-	void Rotate(double cos, double sin, int Ax);
+	void Relocate(double dx, double dy, double dz);
+	void Relocate(double3 d) { Relocate(d.x, d.y, d.z); }
+	void Rotate(double cos, double sin, CartAxis Ax);
+	void Rotate(double2 c, CartAxis Ax) { Rotate(c.x, c.y, Ax); }
 
 	bool IsInside(double x, double y, double z, bool includeOn = false);
-
-	int GetIntersection(int CartPlane, double *val, vector<double>& sol);
-
+	int GetIntersection(CartPlane CartPlane, const array<double, 2>& val, vector<double>& sol);
 	bool Finalize();
 
-	const UnitSurf* GetSurfaces() const { return Surfaces; }
-
-	int GetNsurf() const { return nsurf; }
-
-	double GetVolume() const { return vol; }
-
-	bool GetBoundBox(double xlr[2], double ylr[2], double zlr[2]);
-
-	UnitVol& operator=(const UnitVol &avol);
+	UnitVol& operator=(const UnitVol& rhs) { *this = UnitVol(rhs); return *this; }
 };
 
 inline void DebugUnitGeo() {
+	
+	using SurfType = UnitSurf::SurfType;
+	using CartPlane = UnitSurf::CartPlane;
+
 	double c_cir[3] = { 0.0, 0.0, 0.54 };
-	UnitSurf Circle(CIRCLE, c_cir, XY);
+	UnitSurf Circle(SurfType::CIRCLE, c_cir, CartPlane::XY);
 
 	double c_zpln0[2] = { -1.0, 0.0 };
 	double c_zpln1[2] = { 1.0, 3.0 };
-	UnitSurf Zpln0(ZPLN, c_zpln0), Zpln1(ZPLN, c_zpln1);
+	UnitSurf Zpln0(SurfType::ZPLN, c_zpln0), Zpln1(SurfType::ZPLN, c_zpln1);
 
 	double c_sphere[10] = { 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -9.0 };
-	UnitSurf Sphere(GENERAL, c_sphere);
+	UnitSurf Sphere(SurfType::GENERAL, c_sphere);
 
 	UnitVol Svol(Sphere);
 	UnitVol Cylinder;
-	Cylinder.append(Circle);
-	Cylinder.append(Zpln0);
-	Cylinder.append(Zpln1);
+	Cylinder.Append(Circle);
+	Cylinder.Append(Zpln0);
+	Cylinder.Append(Zpln1);
 	Svol.Finalize();
 	Cylinder.Finalize();
 
 	bool isbounded;
-	double xs[2], ys[2], zs[2];
+	double2 xs, ys, zs;
 	isbounded = Svol.GetBoundBox(xs, ys, zs);
 	cout << "Bound info, (" << isbounded << ")" << endl;
-	if (isbounded) cout << "X : [" << xs[0] << "," << xs[1] << "] ";
-	if (isbounded) cout << "Y : [" << ys[0] << "," << ys[1] << "] ";
-	if (isbounded) cout << "Z : [" << zs[0] << "," << zs[1] << "] " << endl;
+	if (isbounded) cout << "X : [" << xs.x << "," << xs.y << "] ";
+	if (isbounded) cout << "Y : [" << ys.x << "," << ys.y << "] ";
+	if (isbounded) cout << "Z : [" << zs.x << "," << zs.y << "] " << endl;
 	if (isbounded) cout << "Vol = " << Svol.GetVolume() << "cm^3" << endl;
 
 	isbounded = Cylinder.GetBoundBox(xs, ys, zs);
 	cout << "Bound info, (" << isbounded << ")" << endl;
-	if (isbounded) cout << "X : [" << xs[0] << "," << xs[1] << "] ";
-	if (isbounded) cout << "Y : [" << ys[0] << "," << ys[1] << "] ";
-	if (isbounded) cout << "Z : [" << zs[0] << "," << zs[1] << "] " << endl;
+	if (isbounded) cout << "X : [" << xs.x << "," << xs.y << "] ";
+	if (isbounded) cout << "Y : [" << ys.x << "," << ys.y << "] ";
+	if (isbounded) cout << "Z : [" << zs.x << "," << zs.y << "] " << endl;
 	if (isbounded) cout << "Vol = " << Cylinder.GetVolume() << "cm^3" << endl;
 }
 
 class UnitComp {
-private:
-	int nvol;
-	int *imat;
-	UnitVol *Volumes;
 
-	double xlr[2], ylr[2], zlr[2];
-
-	void init() { nvol = 0; }
 public:
-	UnitComp() { init(); }
+	
+	using CartAxis = UnitSurf::CartAxis;
 
+private:
+
+	vector<int> imat;
+	vector<UnitVol> Volumes;
+	double2 xlr, ylr, zlr;
+
+public:
+	
 	UnitComp(int nvol, const UnitVol *Volumes) { Create(nvol, Volumes); }
+	UnitComp(const vector<UnitVol>& Volumes) { Create(Volumes); }
+	UnitComp(const UnitComp& rhs) { Create(rhs); }
 
-	~UnitComp() { Destroy(); }
-
-	void Rotate(double cos, double sin, int Ax);
-
+	void Rotate(double cos, double sin, CartAxis Ax);
+	void Rotate(double2 c, CartAxis Ax) { Rotate(c.x, c.y, Ax); }
 	void Relocate(double dx, double dy, double dz);
+	void Relocate(double3 d) { Relocate(d.x, d.y, d.z); }
 
 	void Create(int nvol, const UnitVol *Volumes);
+	void Create(const vector<UnitVol>& Volumes) { this->Volumes = Volumes; }
+	void Create(const UnitComp& rhs);
 
-	void Destroy() { delete[]Volumes; }
-
-	int GetNvol() const { return nvol; }
-
-	const int* GetMatIds() const { return imat; }
-
-	const UnitVol* GetVolumes() const { return Volumes; }
+	int GetNumVolumes() const { return Volumes.size(); }
+	const auto& GetMatIds() const { return imat; }
+	const auto& GetVolumes() const { return Volumes; }
 };
+
+}

@@ -379,7 +379,7 @@ array<double, 10> Parser_t::ParseEquation(const string& line)
 		{"zz", 2},
 		{"xy", 3},
 		{"yz", 4},
-		{"zx", 5},
+		{"xz", 5},
 		{"x",  6},
 		{"y",  7},
 		{"z",  8},

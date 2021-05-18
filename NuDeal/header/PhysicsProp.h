@@ -4,13 +4,13 @@
 #include "XS.h"
 #include "GeoHandle.h"
 
-class FluxDomain : public GeometryHandler {
+class FluxDomain : public Geometry::GeometryHandler {
 // for neutronics
 private:
 	double *flux;
 };
 
-class XSDomain : public GeometryHandler {
+class XSDomain : public Geometry::GeometryHandler {
 private:
 	int *idiso;
 	double *pnum, *temperature;

@@ -13,6 +13,12 @@
     <Filter Include="Source\IO">
       <UniqueIdentifier>{89589912-1a58-491b-8fe1-cf5372df7183}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header\Geometry">
+      <UniqueIdentifier>{279fec6b-858e-477a-a785-2504c6f80e81}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Geometry">
+      <UniqueIdentifier>{0dcafbcb-6037-4c91-bb6a-dd3f828ad9ee}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header\HardCodeParam.h">
@@ -30,20 +36,11 @@
     <ClInclude Include="header\IODeclare.h">
       <Filter>Header\IO</Filter>
     </ClInclude>
-    <ClInclude Include="header\IOUtil.h">
-      <Filter>Header\IO</Filter>
-    </ClInclude>
     <ClInclude Include="header\Preprocessor.h">
       <Filter>Header\IO</Filter>
     </ClInclude>
     <ClInclude Include="header\Parser.h">
       <Filter>Header\IO</Filter>
-    </ClInclude>
-    <ClInclude Include="header\UnitGeo.h">
-      <Filter>Header</Filter>
-    </ClInclude>
-    <ClInclude Include="header\GeoHandle.h">
-      <Filter>Header</Filter>
     </ClInclude>
     <ClInclude Include="header\IOUtil.h">
       <Filter>Header</Filter>
@@ -53,6 +50,12 @@
     </ClInclude>
     <ClInclude Include="header\XS.h">
       <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="header\GeoHandle.h">
+      <Filter>Header\Geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="header\UnitGeo.h">
+      <Filter>Header\Geometry</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -71,17 +74,17 @@
     <ClCompile Include="source\Parser.cpp">
       <Filter>Source\IO</Filter>
     </ClCompile>
-    <ClCompile Include="source\UnitGeo.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="source\GeoHandle.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="source\PhysicsProp.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="source\IOUtil.cpp">
       <Filter>Source\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="source\GeoHandle.cpp">
+      <Filter>Source\Geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="source\UnitGeo.cpp">
+      <Filter>Source\Geometry</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
