@@ -18,6 +18,7 @@
 #include <cfloat>
 #include <cassert>
 #include <thread>
+#include <queue>
 
 /// C++17 Required
 
