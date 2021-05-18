@@ -2,11 +2,11 @@
 #include "Defines.h"
 #include "UnitGeo.h"
 
-
 namespace Geometry {
 
 constexpr double mintau_default = 0.01;
 constexpr double maxtau_default = 0.0001;
+constexpr double eps_dis = 1.e-10;
 
 enum Dimension {
 	ThreeD,
@@ -37,7 +37,7 @@ private:
 
 	void init();
 
-	int FindVolId(double3 pt);
+	int FindVolId(double3 ptL, double3 ptR);
 public:
 	GeometryHandler() { init(); }
 

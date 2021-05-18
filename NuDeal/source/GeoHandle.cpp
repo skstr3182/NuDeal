@@ -3,36 +3,91 @@
 namespace Geometry
 {
 
+inline bool InLocalBox(int mode, double3 ptL, double3 ptR, double3 aninter) {
+	if (aninter.x > ptL.x + eps_geo && aninter.x < ptR.x - eps_geo) {
+		if (mode == OneD) return true;
+		else {
+			if (aninter.y > ptL.y + eps_geo && aninter.y < ptR.y - eps_geo) {
+				if (mode == TwoD) return true;
+				else {
+					if (aninter.z > ptL.z + eps_geo && aninter.z < ptR.z - eps_geo) {
+						return true;
+					}
+				}
+			}
+		}
+	}
+	return false;
+}
+
 void GeometryHandler::init() {
 	nvol = nnode = divlevel = 0; isfinal = false; issetord = false;
 	x0 = y0 = z0 = Lx = Ly = Lz = 0.0;
 }
 
-int GeometryHandler::FindVolId(double3 pt) {
+int GeometryHandler::FindVolId(double3 ptL, double3 ptR) {
 	int id = -1;
 	
-	// Store volumes whose bound boxes hold the point.
-	vector<int> VolInBound;
+	// Store volumes whose bound boxes cross the finite box
+	deque<int> VolInBound;
 	for (int i = 0; i < nvol; i++) {
-		if (pt.x<BdL[i].x - eps_geo || pt.x>BdR[i].x + eps_geo) continue;
-		if (!mode == OneD) {
-			if (pt.y<BdL[i].y - eps_geo || pt.y>BdR[i].y + eps_geo) continue;
+		int inboundcount = 0;
+		double OL, OR;
+		double Ll, Lr, Rl, Rr;
+		double Ldet, Rdet;
+		OL = BdL[i].x; OR = BdR[i].x;
+		Ll = OL - ptL.x; Lr = OL - ptR.x;
+		Rl = OR - ptL.x; Rr = OR - ptR.x;
+		if (Ll*Lr < 0 && Rl*Rr < 0) inboundcount++;
+		if (Lr*Rr > 0 && Ll*Rl > 0) continue;
+		if (mode != OneD) {
+			OL = BdL[i].y; OR = BdR[i].y;
+			Ll = OL - ptL.y; Lr = OL - ptR.y;
+			Rl = OR - ptL.y; Rr = OR - ptR.y;
+			if (Ll*Lr < 0 && Rl*Rr < 0) inboundcount++;
+			if (Lr*Rr > 0 && Ll*Rl > 0) continue;
 			if (mode == ThreeD) {
-				if (pt.z<BdL[i].z - eps_geo || pt.z>BdR[i].z + eps_geo) continue;
+				OL = BdL[i].z; OR = BdR[i].z;
+				Ll = OL - ptL.z; Lr = OL - ptR.z;
+				Rl = OR - ptL.z; Rr = OR - ptR.z;
+				if (Ll*Lr < 0 && Rl*Rr < 0) inboundcount++;
+				if (Lr*Rr > 0 && Ll*Rl > 0) continue;
+				if (inboundcount == 3) return id;
 			}
+			else {
+				if (inboundcount == 2) return id;
+			}
+		}
+		else {
+			if (inboundcount == 1) return id;
 		}
 		VolInBound.push_back(i);
 	}
 
-	// First search : Including those on which a point is
-	//  1. Call UniVol.IsInside(x,y,z,true)
-	//  2. Unless multiple volumes are detected, return id;
+	int nbnd = VolInBound.size();
+	for (int i = 0; i < nbnd; i++) {
+		vector<double> interpts;
+		int idvol = VolInBound.front();
+		array<double, 2> val;
 
-	// Second search : Only those in which a point is
-	//  1. Call UnitVol.IsInside(x,y,z,false) for ids found at first searches
-	//  2. If 
+		// Along x axis
+		double3 aninter;
+		aninter.y = ptL.y; aninter.z = ptL.z;
+		val[0] = ptL.y; val[1] = ptL.z;
+		int ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::YZ, val, interpts);
+		for (int j = 0; j < ninter; j++) {
+			aninter.x = interpts[j];
+			if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+		}
+		if (mode != OneD) {
 
-	return 0;
+		}
+		if (mode == ThreeD) {
+
+		}
+
+		VolInBound.pop_front();
+	}
 }
 
 GeometryHandler::GeometryHandler(double origin[3], double L[3]) {
@@ -94,7 +149,7 @@ bool GeometryHandler::Discretize(int Dim, double minlen, double maxlen) {
 			cout << "  *** Warning: Given maximal length is too small. Reset to " << lxm;
 			maxtau = lxm;
 		}
-		if (!mode == OneD && lym < maxtau) {
+		if (mode != OneD && lym < maxtau) {
 			cout << "  *** Warning: Given maximal length is too small. Reset to " << lym;
 			maxtau = lym;
 		}
@@ -106,7 +161,7 @@ bool GeometryHandler::Discretize(int Dim, double minlen, double maxlen) {
 	
 	// Define zero-level parameters
 	Nx = Lx / minlen + 1; Ny = 1; Nz = 1;
-	if (!mode == OneD) Ny = Ly / minlen;
+	if (mode != OneD) Ny = Ly / minlen;
 	if (mode == ThreeD) Nz = Nz / minlen;
 	lx0 = Lx / (double)Nx; ly0 = Ly / (double)Ny; lz0 = Lz / (double)Nz;
 
