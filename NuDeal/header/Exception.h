@@ -16,14 +16,14 @@ public :
 		INVALID_LOGICAL,
 		INVALID_INPUT_BLOCK,
 		INVALID_INPUT_CARD,
-		INVALID_ORIGIN_DATA,
+		INVALID_COORDINATE,
+		INVALID_ROTATION,
 		INVALID_MACRO,
-		INVALID_VARIABLE,
+		INVALID_EQUATION,
 		BACKGROUND_MISSED,
 		SEMICOLON_MISSED,
 		MISMATCHED_BRAKETS,
 		UNSPECIFIED_ERROR,
-		COUNTS,
 	};
 
 	static constexpr char *error_messages[] = {
@@ -33,30 +33,15 @@ public :
 		"Invalid logical exrpession!",
 		"Invalid input block!",
 		"Invalid input card!",
-		"Invalid origin!",
+		"Invalid coordinate!",
+		"Invalid rotation!",
 		"Invalid macro!",
-		"Invalid variable!",
+		"Invalid equation!",
 		"Missed background of geometry",
 		"Semicolon missed!",
 		"Mismatched braces!",
 		"Unspecified error!"
 	};
-
-	static size_t CountCurrentLine(istream& in)
-	{
-		size_t pos = in.tellg();
-		
-		in.clear(stringstream::goodbit);
-		in.seekg(0, ios::beg);
-
-		size_t count = 0;
-
-		for (size_t i = 0; i < pos; ++i) {
-			if (in.get() == '\n') ++count;
-		}
-
-		return count;
-	}
 
 	static void Abort(string message)
 	{

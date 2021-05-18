@@ -16,7 +16,10 @@
     <ClInclude Include="header\GeoHandle.h" />
     <ClInclude Include="header\HardCodeParam.h" />
     <ClInclude Include="header\Input.h" />
+    <ClInclude Include="header\IODeclare.h" />
+    <ClInclude Include="header\IOUtil.h" />
     <ClInclude Include="header\Parser.h" />
+    <ClInclude Include="header\Preprocessor.h" />
     <ClInclude Include="header\TypeDef.h" />
     <ClInclude Include="header\IOUtil.h" />
     <ClInclude Include="header\PhysicsProp.h" />
@@ -24,12 +27,13 @@
     <ClInclude Include="header\XS.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\TypeDef.cpp" />
     <ClCompile Include="source\Parser.cpp" />
+    <ClCompile Include="source\Preprocessor.cpp" />
+    <ClCompile Include="source\TypeDef.cpp" />
+    <ClCompile Include="source\IOUtil.cpp" />
     <ClCompile Include="source\GeoHandle.cpp" />
     <ClCompile Include="source\PhysicsProp.cpp" />
     <ClCompile Include="source\UnitGeo.cpp" />
-    <ClCompile Include="source\IOUtil.cpp" />
     <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\Input.cpp" />
   </ItemGroup>

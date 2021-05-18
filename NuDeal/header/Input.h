@@ -1,5 +1,6 @@
 #pragma once
 #include "Defines.h"
+#include "IODeclare.h"
 
 namespace IO
 {
@@ -11,70 +12,36 @@ class InputManager_t
 
 public :
 
+	using SC = SpecialCharacters;
+	using Util = Util_t;
+
 	struct HashTree_t
 	{
 		using size_type = string::size_type;
+
 		int line_info = 0, num_lines = 0;
-		string contents = "";
-		map<string, map<string, string>> macro;
+		string name, contents;
 		const HashTree_t *parent = NULL;
-		map<string, HashTree_t> children;
+		vector<HashTree_t> children;
 		string GetLineInfo() { return "Line : " + to_string(line_info); }
-		void ProcessMacro(const string& contents);
 		void Make(const string& file, size_type Beg = 0, size_type End = string::npos);
 		void CountLine(const string& name, const string& contents);
 	};
 
 private :
 
-	static constexpr int num_blocks = 5;
-	static constexpr int num_cards = 30;
 
-	const string BlockNames[num_blocks] =
-	{
-		"GEOMETRY",
-		"MATERIAL",
-		"OPTION"
-	};
-	const string CardNames[num_blocks][num_cards] = 
-	{
-		{ "UNITVOLUME", "UNITCOMP", "DISPLACE" },
-		{ "NG", "FORMAT" }
-	};
-
-	enum class Blocks {
-		GEOMETRY,
-		MATERIAL,
-		OPTION,
-		INVALID = -1
-	};
-
-	enum class GeometryCards {
-		UNITVOLUME,
-		UNITCOMP,
-		DISPLACE,
-		INVALID = -1
-	};
-
-	enum class MacroXsCards {
-		NG,
-		FORMAT,
-		INVALID = -1
-	};
 
 private :
 	
 	string file;
-	string original, modified;
+	string contents;
+
 	HashTree_t HashTree;
 
 private :
 
-	/// Input Parser
-	Blocks GetBlockID(string oneline) const;
-	template <typename T> T GetCardID(Blocks block, string oneline) const;
 	void ExtractInput(istream& fin);
-	void InspectSyntax(const string& contents);
 	/// Block Parser
 	void ParseGeometryBlock(HashTree_t& Tree);
 	void ParseMaterialBlock(HashTree_t& Tree);
@@ -92,18 +59,35 @@ public :
 
 public :
 	
+	using Equation_t = array<double, 10>;
+
 	struct UnitVolume_t
 	{
-		string origin = "0, 0, 0";
-		vector<string> equations;
+		double3 origin = {0.0, 0.0, 0.0};
+		vector<Equation_t> equations;
+	};
+
+	struct Displace_t
+	{
+		enum class Type { Rotation, Translation };
+		enum class Axis { X, Y, Z, INVALID = -1 };
+		Type type = Type::Translation;
+		Axis axis = Axis::INVALID;
+		array<double, 3> move = {0.0, };
+
+		bool IsRotation() const noexcept { return type == Type::Rotation; }
+		bool IsTranslation() const noexcept { return type == Type::Translation; }
+		Axis GetAxis() const noexcept { return axis; }
+		const array<double, 3>& GetTrans() const noexcept { return move; }
+		double GetRot() const noexcept { return move[static_cast<int>(axis)]; }
 	};
 
 	struct UnitComp_t
 	{
-		string origin = "0, 0, 0";
+		double3 origin = {0.0, 0.0, 0.0};
 		string background;
 		vector<string> unitvols;
-		vector<vector<string>> displace;
+		vector<vector<Displace_t>> displace;
 	};
 
 private :

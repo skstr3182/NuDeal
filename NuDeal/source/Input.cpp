@@ -1,43 +1,30 @@
 #include "Input.h"
 #include "IOUtil.h"
 #include "Exception.h"
+#include "IOUtil.h"
+#include "Preprocessor.h"
 #include "Parser.h"
 
 namespace IO
 {
-
-using Parse = Parse_t;
-using SC = Parse::SC;
-
-void InputManager_t::HashTree_t::ProcessMacro(const string& contents)
-{
-	string::size_type macro_beg, pos = 0;
-
-	while ((macro_beg = contents.find(SC::HASHTAG, pos)) != string::npos) {
-		auto macro_end = Parse::FindEndOfMacro(contents, macro_beg);
-		auto macro = contents.substr(macro_beg, macro_end - macro_beg);
-		auto v = Parse::ExtractMacro(macro);
-		this->macro[v[0]][v[1]] = v[2];
-	}
-}
 
 void InputManager_t::HashTree_t::Make(const string& file, 
 	string::size_type Beg, string::size_type End)
 {
 	string::size_type beg = Beg, end;
 
-	while ((end = Parse::FindEndPoint(file, beg)) < End) {
+	while ((end = Util::FindEndPoint(file, beg)) < End) {
 		auto name = file.substr(Beg, beg - Beg);
 
-		beg = file.find_first_not_of(SC::LBRACE, beg);
+		beg = file.find_first_not_of(SC::LeftBrace, beg);
 		auto contents = file.substr(beg, end - beg);
 
-		HashTree_t Tnew, &T = this->children[Parse::Trim(name)];
-		Tnew.parent = this;
-		Tnew.CountLine(name, contents);
-		T = std::move(Tnew);
+		auto& T = children.emplace_back();
+		T.name = Util::Trim(name);
+		T.parent = this;
+		T.CountLine(name, contents);
 
-		if (Parse::IsClosed(contents)) 
+		if (Util::IsClosed(contents)) 
 			T.Make(file, beg, end);
 		else 
 			T.contents = contents;
@@ -48,83 +35,25 @@ void InputManager_t::HashTree_t::Make(const string& file,
 
 void InputManager_t::HashTree_t::CountLine(const string& name, const string& contents)
 {
-	num_lines = Parse::LineCount(name) + Parse::LineCount(contents);
-	line_info = Parse::LineCount(name, name.find_first_not_of(SC::LF)) + 1;
+	num_lines = Util::LineCount(name) + Util::LineCount(contents);
+	line_info = Util::LineCount(name, name.find_first_not_of(SC::LF)) + 1;
 	line_info += parent->line_info;
-	for (const auto& t : parent->children) line_info += t.second.num_lines;
+	for (const auto& t : parent->children) {
+		if (&t != this) line_info += t.num_lines;
+	}
 }
 
-InputManager_t::Blocks InputManager_t::GetBlockID(string line) const
-{
-	int pos_end = line.find(SC::BLANK, 0);
-	string block = line.substr(0, pos_end);
-
-	block = Parse::Uppercase(block);
-	for (int i = 0; i < num_blocks; ++i)
-		if (!block.compare(BlockNames[i]))
-			return static_cast<Blocks>(i);
-	return Blocks::INVALID;
-}
-
-template <typename T>
-T InputManager_t::GetCardID(Blocks block, string line) const
-{
-	static constexpr T INVALID = static_cast<T>(-1);
-
-	int pos_beg = line.find_first_not_of(SC::BLANK);
-	if (pos_beg == string::npos) return INVALID;
-
-	int pos_end = line.find(SC::BLANK, pos_beg);
-	string card = line.substr(pos_beg, pos_end - pos_beg);
-
-	card = Parse::Uppercase(card);
-	int b = static_cast<int>(block);
-	for (int i = 0; i < num_cards; ++i) 
-		if (!card.compare(CardNames[b][i])) 
-			return static_cast<T>(i);
-	return INVALID;
-}
 
 void InputManager_t::ExtractInput(istream& fin)
 {
-	stringstream strstream;
+	stringstream stream;
 
-	strstream << fin.rdbuf();
+	stream << fin.rdbuf();
 	
-	original = strstream.str();
+	contents = stream.str();
 
-	std::replace(original.begin(), original.end(), SC::TAB, SC::BLANK);
-	std::replace(original.begin(), original.end(), SC::CR, SC::BLANK);
-}
-
-void InputManager_t::InspectSyntax(const string& contents)
-{
-	using Except = Exception_t;
-	using Code = Except::Code;
-
-	// Check parenthesis, braces and brackets.
-	try {
-		Parse::AreBracketsMatched(contents);
-	}
-	catch (const exception& e) {
-		Except::Abort(Code::MISMATCHED_BRAKETS, e.what());
-	}
-
-	// Check macro definition
-	try {
-		Parse::IsMacroValid(contents);
-	}
-	catch (const exception& e) {
-		Except::Abort(Code::INVALID_MACRO, e.what());
-	}
-
-	// Check variables : block, card and unit geometry
-	try {
-		Parse::IsVariableCorrect(contents);
-	}
-	catch (const exception& e) {
-		Except::Abort(Code::INVALID_VARIABLE, e.what());
-	}
+	std::replace(contents.begin(), contents.end(), SC::Tab, SC::Blank);
+	std::replace(contents.begin(), contents.end(), SC::CR, SC::Blank);
 }
 
 // BLOCK
@@ -137,18 +66,17 @@ void InputManager_t::ParseGeometryBlock(HashTree_t& Tree)
 
 	for (auto& T : Tree.children) {
 		
-		auto& object = T.second;
-		string card = Parse::Trim(T.first);
-		Cards ID = GetCardID<Cards>(Blocks::GEOMETRY, card);
+		string card = Util::Trim(T.name);
+		Cards ID = Util::GetCardID<Cards>(Blocks::GEOMETRY, card);
 
 		switch (ID)
 		{
 		case Cards::UNITVOLUME :
-			ParseUnitVolumeCard(object); break;
+			ParseUnitVolumeCard(T); break;
 		case Cards::UNITCOMP :
-			ParseUnitCompCard(object); break;
+			ParseUnitCompCard(T); break;
 		case Cards::INVALID :
-			Except::Abort(Code::INVALID_INPUT_CARD, card, object.GetLineInfo());
+			Except::Abort(Code::INVALID_INPUT_CARD, card, T.GetLineInfo());
 		}
 
 	}
@@ -172,36 +100,27 @@ void InputManager_t::ParseUnitVolumeCard(HashTree_t& Tree)
 	using Except = Exception_t;
 	using Code = Except::Code;
 
-	string ORIGIN = "ORIGIN";
+	static const string ORIGIN = "ORIGIN";
 
 	for (auto& T : Tree.children) {
-		auto name = Parse::Trim(T.first);
-		auto& object = T.second;
-		auto contents = Parse::EraseSpace(object.contents);
-		auto v = Parse::SplitFields(contents, string(1, SC::SEMICOLON));
+		auto name = Util::Trim(T.name);
+		auto contents = Util::EraseSpace(T.contents);
+		auto v = Util::SplitFields(contents, SC::SemiColon);
 		
-		UnitVolume_t U;
+		UnitVolume_t& U = unitVolumes[name];
 
-		for (auto i = v.begin(); i != v.end(); ) {
-			auto& s = *i;
-			if (s.find(ORIGIN) != string::npos) {
-				auto delimiter = string(1, s[ORIGIN.size()]);
-				auto u = Parse::SplitFields(s, delimiter);
-
-				if (u.size() != 2) 
-					Except::Abort(Code::INVALID_ORIGIN_DATA, object.contents, object.GetLineInfo());
-				U.origin = u.back();
-
-				i = v.erase(i);
+		for (auto& s : v) {
+			if (Util::Uppercase(s).find(ORIGIN) != string::npos) {
+				auto b = s.find_first_of(SC::LeftParen);
+				auto e = s.find_last_of(SC::RightParen);
+				auto origin = Util::SplitFields(s.substr(b + 1, e - b - 1), SC::Comma);
+				if (origin.size() != 3) Except::Abort(Code::INVALID_COORDINATE, s);
+				U.origin.x = Util::Float(origin[0]);
+				U.origin.y = Util::Float(origin[1]);
+				U.origin.z = Util::Float(origin[2]);
 			}
-			else ++i;
+			else U.equations.emplace_back(Parser_t::ParseEquation(s));
 		}
-
-		v = Parse::SplitFields(v.front(), SC::DAMPERSAND);
-
-		U.equations = v;
-
-		unitVolumes[name] = U;
 	}
 
 }
@@ -211,55 +130,99 @@ void InputManager_t::ParseUnitCompCard(HashTree_t& Tree)
 	using Except = Exception_t;
 	using Code = Except::Code;
 
+	static const string disp = string(2, SC::RightAngle);
+	static const string ORIGIN = "ORIGIN";
+
 	for (auto& T : Tree.children) {
-		auto& object = T.second;
-		auto prefix = Parse::EraseSpace(T.first);
-		auto v = Parse::SplitFields(prefix, string(1, SC::COLON));
-		if (v.size() != 2) 
-			Except::Abort(Code::BACKGROUND_MISSED, object.contents, object.GetLineInfo());
+		auto prefix = Util::EraseSpace(T.name);
+		auto v = Util::SplitFields(prefix, SC::Colon);
+		if (v.size() != 2)
+			Except::Abort(Code::BACKGROUND_MISSED, T.contents, T.GetLineInfo());
 		auto name = v.front();
 		auto background = v.back();
-		auto contents = Parse::EraseSpace(object.contents);
-		v = Parse::SplitFields(contents, string(1, SC::SEMICOLON));
+		auto contents = Util::EraseSpace(T.contents);
+		v = Util::SplitFields(contents, SC::SemiColon);
 
-		UnitComp_t U;
-
+		UnitComp_t& U = unitComps[name];
 		U.background = background;
 
 		for (const auto& s : v) {
-			auto u = Parse::SplitFields(s, SC::RDBRACKET);
-			U.unitvols.push_back(u.front());
-			U.displace.push_back(vector<string>());
-			u.erase(u.begin());
-			for (const auto& k : u) {
-				auto lpos = k.find(SC::LPAREN) + 1;
-				auto rpos = k.find(SC::RPAREN);
-				if (lpos == string::npos && rpos == string::npos)
-					U.displace.back().push_back(k);
-				else if (lpos != string::npos && rpos != string::npos)
-					U.displace.back().push_back(k.substr(lpos, rpos - lpos));
-				else
-					Except::Abort(Code::MISMATCHED_BRAKETS, object.contents, object.GetLineInfo());
+			if (Util::Uppercase(s.substr(0, ORIGIN.size())) == ORIGIN) {
+				auto b = s.find_first_of(SC::LeftParen);
+				auto e = s.find_last_of(SC::RightParen);
+				auto origin = Util::SplitFields(s.substr(b + 1, e - b - 1), SC::Comma);
+				if (origin.size() != 3) Except::Abort(Code::INVALID_COORDINATE, s);
+				U.origin.x = Util::Float(origin[0]);
+				U.origin.y = Util::Float(origin[1]);
+				U.origin.z = Util::Float(origin[2]);
+			}
+			else {
+				auto u = Util::SplitFields(s, disp);
+				U.unitvols.emplace_back(u.front());
+				auto& D = U.displace.emplace_back();
+				for (auto k = u.begin() + 1; k < u.end(); ++k) {
+					auto& d = D.emplace_back();
+					auto& s = *k;
+					if (std::find_if(s.begin(), s.end(), isalpha) != s.end()) { // Rotation
+						d.type = Displace_t::Type::Rotation;
+						auto r = Util::SplitFields(s, SC::Equal);
+						if (r.size() != 2)
+							Except::Abort(Code::INVALID_ROTATION, s);
+						switch (toupper(r[0][0])) {
+							case 'X' : d.axis = Displace_t::Axis::X; break;
+							case 'Y' : d.axis = Displace_t::Axis::Y; break;
+							case 'Z' : d.axis = Displace_t::Axis::Z; break;
+							default : Except::Abort(Code::INVALID_ROTATION, s);
+						}
+						d.move[static_cast<int>(d.axis)] = Util::Float(r[1]);
+					}
+					else { // Translation
+						d.type = Displace_t::Type::Translation;
+						d.axis = Displace_t::Axis::INVALID;
+						auto t = Util::EraseSpace(s, "()");
+						auto v = Util::SplitFields(t, SC::Comma);
+						if (v.size() != 3) Except::Abort(Code::INVALID_COORDINATE, s);
+						for (int i = 0; i < 3; ++i)
+							d.move[i] = Util::Float(v[i]);
+					}
+				}
 			}
 		}
 
-		unitComps[name] = U;
+		unitComps[name] = std::move(U);
 	}
 }
 
 void InputManager_t::Preprocess()
 {
-	InspectSyntax(original);
+	using Preprocessor = Preprocessor_t;
+	using Except = Exception_t;
+	using Code = Except::Code;
 
-	modified = Parse::ReplaceMacro(original);
+	try {
+		Preprocessor::DeleteComment(contents);
+	}
+	catch (exception& e) {
+		Except::Abort(Code::MISMATCHED_BRAKETS, e.what());
+	}
 
-	Parse::ReplaceComments(modified);
+	try {
+		Preprocessor::CheckBalance(contents, {"{", "[", "("}, {"}", "]", ")"} );
+	}
+	catch (exception& e) {
+		Except::Abort(Code::MISMATCHED_BRAKETS, e.what());
+	}
 
-	HashTree.ProcessMacro(modified);
+	Preprocessor::RemoveBlankInParenthesis(contents);
 
-	modified = Parse::EraseSpace(modified, string(1, SC::BLANK));
+	try {
+		Preprocessor::ApplyMacro(contents);
+	}
+	catch (exception& e) {
+		Except::Abort(Code::INVALID_MACRO, e.what());
+	}
 
-	HashTree.Make(modified);
+	contents.erase(std::remove(contents.begin(), contents.end(), SC::Blank), contents.end());
 }
 
 void InputManager_t::ReadInput(string file)
@@ -278,21 +241,22 @@ void InputManager_t::ReadInput(string file)
 	fin.close();
 
 	Preprocess();
+
+	HashTree.Make(contents);
 	
 	for (auto& T : HashTree.children) {
-		auto& contents = T.second;
-		string block = Parse::Trim(T.first);
-		Blocks ID = GetBlockID(block);
+		string block = Util::Trim(T.name);
+		Blocks ID = Util::GetBlockID(block);
 		switch (ID)
 		{
 		case Blocks::GEOMETRY :
-			ParseGeometryBlock(contents); break;
+			ParseGeometryBlock(T); break;
 		case Blocks::MATERIAL :
-			ParseMaterialBlock(contents); break;
+			ParseMaterialBlock(T); break;
 		case Blocks::OPTION :
-			ParseOptionBlock(contents); break;
+			ParseOptionBlock(T); break;
 		case Blocks::INVALID :
-			Except::Abort(Code::INVALID_INPUT_BLOCK, block, contents.GetLineInfo());
+			Except::Abort(Code::INVALID_INPUT_BLOCK, block, T.GetLineInfo());
 		}
 	}
 

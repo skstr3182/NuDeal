@@ -9,7 +9,11 @@
 #include <cstring>
 #include <sstream>
 #include <algorithm>
+#include <stack>
+#include <queue>
 #include <vector>
+#include <array>
+#include <initializer_list>
 #include <map>
 #include <deque>
 #include <set>
@@ -18,7 +22,10 @@
 #include <cfloat>
 #include <cassert>
 #include <thread>
-#include <queue>
+#include <regex>
+#include <type_traits>
+#include <unordered_set>
+#include <unordered_map>
 
 /// C++17 Required
 

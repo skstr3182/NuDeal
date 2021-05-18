@@ -1,339 +1,404 @@
 #include "Parser.h"
 #include "Exception.h"
+// https://gist.github.com/t-mat/b9f681b7591cdae712f6
 
 namespace IO
 {
 
-using Except = Exception_t;
-using Code = Except::Code;
+const initializer_list<char> Token_t::operators = {
+	SC::Caret,
+	SC::Asterisk,
+	SC::Slash,
+	SC::Plus,
+	SC::Minus,
+	SC::LeftAngle,
+	SC::RightAngle
+};
 
-string Parse_t::Uppercase(string& line)
+Token_t::Token_t(Type t, const string& s, int prec, bool ra) noexcept
+	: type{ t }, str{ s }, precedence{ prec }, rightAssociative{ ra }
 {
-	string l = line;
-	std::transform(l.begin(), l.end(), l.begin(), ::toupper);
-	return static_cast<string&&>(l);
-}
-
-int Parse_t::Integer(string field)
-{
-	int val;
-
-	try {
-		val = stoi(field);
+	if (type == Type::Function) {
+		if (str == "sqrt") Do = &sqrt;
+		else if (str == "exp") Do = &exp;
+		else if (str == "sin") Do = &sin;
+		else if (str == "cos") Do = &cos;
+		else
+			Except::Abort(Except::Code::INVALID_EQUATION);
 	}
-	catch (invalid_argument) {
-		Except::Abort(Code::INVALID_INTEGER, field);
+	else if (type == Type::Variable) { 
+		if (s != "x" && s != "y" && s != "z")
+			Except::Abort(Except::Code::INVALID_EQUATION);
 	}
-
-	if (val != stod(field)) Except::Abort(Code::INVALID_INTEGER, field);
-
-	return val;
 }
 
-double Parse_t::Float(string field)
+bool Token_t::IsFunction(siterator s, siterator end) noexcept
 {
-	double val;
-
-	try {
-		val = stod(field);
-	}
-	catch (std::invalid_argument) {
-		Except::Abort(Code::INVALID_FLOATING_POINT, field);
-	}
-
-	return val;
+	if (!isalpha(*s)) return false;
+	auto k = std::find_if_not(s, end, isalnum);
+	if (k == end) return false;
+	return *k == SC::LeftParen;
 }
 
-bool Parse_t::Logical(string field)
+bool Token_t::IsVariable(siterator s, siterator end) noexcept
 {
-	Uppercase(field);
-	if (!field.compare("T")) return true;
-	else if (!field.compare("TRUE")) return true;
-	else if (!field.compare("F")) return false;
-	else if (!field.compare("FALSE")) return false;
-
-	Except::Abort(Code::INVALID_LOGICAL, field);
+	if (!isalpha(*s)) return false;
+	auto k = std::find_if_not(s, end, isalnum);
+	if (k == end) 
+		return true;
+	else 
+		return std::find(operators.begin(), operators.end(), *k) != operators.end();
 }
 
-string Parse_t::Trim(const string& field, const string& delimiter)
+Token_t Token_t::GetNumeric(siterator& pos, const string& container)
 {
-	string s = field;
-	auto pos = s.find_first_not_of(delimiter);
-	s.erase(0, pos);
-	pos = s.find_last_not_of(delimiter) + 1;
-	s.erase(pos);
+	auto beg = pos;
+	size_t sz;
+	stod(string(pos, container.end()), &sz);
+	pos += sz;
 
-	return static_cast<string&&>(s);
+	return Token_t(Type::Number, string(beg, pos));
 }
 
-int Parse_t::LineCount(const string& line, size_type count)
+Token_t Token_t::GetFunction(siterator& pos, const string& container)
 {
-	auto beg = line.begin();
-	auto end = line.end();
+	auto beg = pos;
+	pos = std::find(pos, container.end(), SC::LeftParen);
 
-	if (count != string::npos) end = beg + count;
-
-	return static_cast<int>(std::count(beg, end, SC::LF));
+	return Token_t(Type::Function, string(beg, pos), 15);
 }
 
-string Parse_t::EraseSpace(const string& line, const string& delimiter)
+Token_t Token_t::GetVariable(siterator& pos)
 {
-	string s = line;
-	for (const auto& i : delimiter)
-		s.erase(std::remove(s.begin(), s.end(), i), s.end());
-	return static_cast<string&&>(s);
+	auto beg = pos;
+	return Token_t(Type::Variable, string(beg, ++pos));
 }
 
-Parse_t::size_type Parse_t::FindEndOfMacro(const string& line, size_type pos)
+Token_t Token_t::GetParenthesis(siterator& pos)
 {
-	if (line[pos] != SC::HASHTAG) return string::npos;
-
-	size_type backslash, LF;
-	size_type macro_end = pos;
-
-	do {
-		LF = line.find(SC::LF, macro_end);
-		backslash = line.find(SC::BACKSLASH, macro_end);
-		macro_end = LF + 1;
-	} while (backslash < LF);
-
-	return macro_end;
+	auto beg = pos;
+	if (*pos == SC::LeftParen)
+		return Token_t(Type::LeftParen, string(beg, ++pos));
+	else 
+		return Token_t(Type::RightParen, string(beg, ++pos));
 }
 
-string Parse_t::ReplaceMacro(const string& line, char replace)
+Token_t Token_t::GetOperator(siterator& pos, const string& container)
 {
-	string s = line;
-	size_type macro_beg, pos = 0;
+	auto beg = pos;
+	int pr = -1; bool ra = false;
+	Type t = Type::BinaryOp;
 
-	while ((macro_beg = s.find_first_of(SC::HASHTAG, pos)) != string::npos) {
-		auto macro_end = FindEndOfMacro(s, macro_beg);
-		std::replace_if(s.begin() + macro_beg, s.begin() + macro_end, 
-			[] (char c) { return c != SC::LF; }, replace);
-		pos = macro_end;
-	}
-
-	return static_cast<string&&>(s);
-}
-
-vector<string> Parse_t::ExtractMacro(const string& line)
-{
-	vector<string> macro;
-
-	size_type beg = 0, pos;
-
-	pos = line.find(SC::BLANK);
-	macro.push_back(Trim(line.substr(0, pos)));
-
-	beg = pos + 1;
-
-	if ((pos = line.find(SC::RPAREN, beg)) != string::npos) {
-		macro.push_back(Trim(line.substr(beg, pos - beg)));
-		macro.push_back(Trim(line.substr(pos + 1)));
-	}
-	else {
-		pos = line.find(SC::BLANK, beg);
-		macro.push_back(Trim(line.substr(beg, pos - beg)));
-		macro.push_back(Trim(line.substr(pos + 1)));
-	}
-
-	return static_cast<vector<string>&&>(macro);
-}
-
-
-string Parse_t::GetLine(stringstream& in, const char delimiter)
-{
-	string s;
-
-	std::getline(in, s, delimiter);
-
-	std::replace(s.begin(), s.end(), SC::TAB, SC::BLANK);
-	std::replace(s.begin(), s.end(), SC::CR, SC::BLANK);
-
-	return static_cast<string&&>(s);
-}
-
-string Parse_t::GetBlock(stringstream& in)
-{
-	string section;
-	auto file_pos = in.tellg();
-
-	while (!in.eof()) {
-		auto s = GetLine(in, SC::RBRACE);
-		s += in.str()[in.tellg()];
-		section += s;
-
-		cout << section << endl << "123" << endl;
-
-		if (Trim(s).empty()) continue;
-		if (!IsClosed(section)) continue;
-
+	switch (*pos) {
+	case SC::Caret :
+		pr = 13; ra = true; break;
+	case SC::Asterisk : case SC::Slash :
+		pr = 12; break;
+	case SC::Plus : case SC::Minus : {
+		if (pos == container.begin()) {
+			pr = 14; t = Type::UnaryOp; ra = true;
+		}
+		else {
+			auto prev = *(pos - 1);
+			if (!isalnum(prev)) {
+				pr = 14; t = Type::UnaryOp; ra = true;
+			}
+			else pr = 11;
+		}
 		break;
 	}
-
-	return static_cast<string&&>(section);
-}
-
-Parse_t::size_type Parse_t::FindEndPoint(const string& contents, size_type& pos)
-{
-	pos = contents.find_first_of(SC::LBRACE, pos);
-
-	size_type end, beg = pos;
-
-	while ((end = contents.find_first_of(SC::RBRACE, beg)) != string::npos) {
-		if (IsClosed(contents.substr(pos, end - pos + 1))) break;
-		beg = end + 1;
-	}
-	return end;
-}
-
-string Parse_t::GetBlock(const string& contents, size_type pos)
-{
-	string section;
-
-	size_type LF_beg, LF_end = pos;
-
-	while (LF_end != string::npos) {
-		
+	case SC::LeftAngle : case SC::RightAngle :
+		pr = 10; break;
 	}
 
-	return static_cast<string&&>(section);
+	return Token_t(t, string(beg, ++pos), pr, ra);
 }
 
-void Parse_t::ReplaceComments(string& line)
+deque<Token_t> Parser_t::Tokenize(const string& line) noexcept
 {
+	using Type = Token_t::Type;
+
+	deque<Token_t> tokens;
+
+	for (auto i = line.begin(); i < line.end(); ) {
+		if (Token_t::IsNumeric(i))
+			tokens.emplace_back(Token_t::GetNumeric(i, line));
+		else if (Token_t::IsFunction(i, line.end())) 
+			tokens.emplace_back(Token_t::GetFunction(i, line));
+		else if (Token_t::IsVariable(i, line.end()))
+			tokens.emplace_back(Token_t::GetVariable(i));
+		else if (Token_t::IsParen(i))
+			tokens.emplace_back(Token_t::GetParenthesis(i));
+		else if (Token_t::IsOperator(i))
+			tokens.emplace_back(Token_t::GetOperator(i, line));
+		else 
+			Except::Abort(Except::Code::INVALID_EQUATION);
+	}
+
+	return static_cast<deque<Token_t>&&>(tokens);
+}
+
+deque<Token_t> Parser_t::ShuntingYard(const deque<Token_t>& tokens) noexcept
+{
+	using Type = Token_t::Type;
+
+	deque<Token_t> queue;
+	vector<Token_t> stack;
+
+	for (const auto& token : tokens) {
+
+		switch (token.TokenType()) {
+
+			case Type::Number :
+			case Type::Variable :
+				queue.push_back(token); break;
+
+			case Type::Function:
+			case Type::UnaryOp:
+			case Type::BinaryOp: {
+				const auto o1 = token;
+				while (!stack.empty()) {
+					const auto o2 = stack.back();
+					if ((!o1.RightAssociative() && o1.Precedence() <= o2.Precedence()) ||
+						(o1.RightAssociative() && o1.Precedence() < o2.Precedence())) {
+						stack.pop_back();
+						queue.push_back(o2);
+						continue;
+					}
+					break;
+				}
+				stack.push_back(o1);
+			}
+			break;
+
+			case Type::LeftParen :
+				stack.push_back(token); break;
+			case Type::RightParen: {
+				while (!stack.empty() && stack.back().TokenType() != Type::LeftParen) {
+					queue.push_back(stack.back());
+					stack.pop_back();
+				}
+				stack.pop_back();
+			}
+			break;
+		}
+
+	}
+
+	while (!stack.empty()) {
+		queue.push_back(std::move(stack.back()));
+		stack.pop_back();
+	}
+
+	return static_cast<deque<Token_t>&&>(queue);
+}
+
+Parser_t::Variable_t Parser_t::Aggregate(const deque<Token_t>& queue) noexcept
+{
+	using Type = Token_t::Type;
+	auto Tokens = deque<Token_t>(queue.begin(), queue.end() - 1);
+	vector<map<string, double>> stack;
+	while (!Tokens.empty()) {
+		const auto token = std::move(Tokens.front());
+		Tokens.pop_front();
+		switch (token.TokenType()) {
+			case Type::Number: {
+				auto& V = stack.emplace_back();
+				string key = "";
+				V[key] += stod(token.GetString());
+				break;
+			}
+			case Type::Variable : {
+				auto& V = stack.emplace_back();
+				auto key = token.GetString();
+				V[key] += 1.0;
+				break;
+			}
+			case Type::Function: {
+				auto operand = std::move(stack.back());
+				stack.pop_back();
+				if (operand.size() != 1)
+					Except::Abort(Except::Code::INVALID_EQUATION);
+				auto o = operand.begin();
+				auto key = o->first;
+				if (!key.empty())
+					Except::Abort(Except::Code::INVALID_EQUATION);
+				auto& result = stack.emplace_back();
+				result[key] = token.Do(o->second);
+				break;
+			}
+			case Type::UnaryOp: {
+				auto op = token.GetString().front();
+				auto& T = stack.back();
+				switch (op) {
+					case SC::Plus: break;
+					case SC::Minus: 
+						for (auto& t : T) t.second = -t.second;
+						break;
+				}
+				break;
+			}
+			case Type::BinaryOp: {
+				auto rhs = std::move(stack.back()); stack.pop_back();
+				auto lhs = std::move(stack.back()); stack.pop_back();
+				const auto op = token.GetString().front();
+				auto& T = stack.emplace_back();
+				switch (op) {
+					case SC::Caret: T = TreatPow(lhs, rhs); break;
+					case SC::Asterisk: T = TreatMult(lhs, rhs); break;
+					case SC::Slash: T = TreatDiv(lhs, rhs); break;
+					case SC::Plus: T = TreatAdd(lhs, rhs); break;
+					case SC::Minus: T = TreatSub(lhs, rhs); break;
+				}
+				break;
+			}
+		}
+	}
+
+	auto rhs = std::move(stack.back()); stack.pop_back();
+	auto lhs = std::move(stack.back()); stack.pop_back();
+	Variable_t T;
+
+	auto sign = queue.back().GetString().front();
+	if (sign == SC::LeftAngle)
+		T = TreatSub(lhs, rhs);
+	else if (sign == SC::RightAngle)
+		T = TreatSub(rhs, lhs);
+	else
+		Except::Abort(Except::Code::INVALID_EQUATION);
+
+	for (auto iter = T.begin(); iter != T.end(); ++iter) {
+		if (iter->first.empty()) continue;
+		auto key = iter->first;
+		if (key.size() > 2) Except::Abort(Except::Code::INVALID_EQUATION);
+	}
+
+	return static_cast<Variable_t&&>(T);
+}
+
+Parser_t::Variable_t Parser_t::TreatAdd(const Variable_t& lhs, const Variable_t& rhs)
+{
+	auto result = std::move(lhs);
+	for (const auto& r : rhs) result[r.first] += r.second;
+	return static_cast<Variable_t&&>(result);
+}
+
+Parser_t::Variable_t Parser_t::TreatSub(const Variable_t& lhs, const Variable_t& rhs)
+{
+	auto result = std::move(lhs);
+	for (const auto& r : rhs) result[r.first] -= r.second;
+	return static_cast<Variable_t&&>(result);
+}
+
+Parser_t::Variable_t Parser_t::TreatMult(const Variable_t& lhs, const Variable_t& rhs)
+{
+	Variable_t result;
+	for (const auto& l : lhs) {
+		for (const auto& r : rhs) {
+			auto key = l.first + r.first;
+			std::sort(key.begin(), key.end());
+			result[key] += l.second * r.second;
+		}
+	}
+	return static_cast<Variable_t&&>(result);
+}
+
+Parser_t::Variable_t Parser_t::TreatDiv(const Variable_t& lhs, const Variable_t& rhs)
+{
+	Variable_t result;
+	if (rhs.size() != 1)
+		Except::Abort(Except::Code::INVALID_EQUATION);
+	auto r = rhs.begin();
+	if (!r->first.empty()) {
+		for (auto& l : lhs) {
+			auto p = l.first.find(r->first);
+			if (p == string::npos)
+				Except::Abort(Except::Code::INVALID_EQUATION);
+			auto key = l.first;
+			key.erase(p, 1);
+			result[key] += l.second / r->second;
+		}
+	}
+	else {
+		for (auto& l : lhs) {
+			auto key = l.first;
+			result[key] += l.second / r->second;
+		}
+	}
+	return static_cast<Variable_t&&>(result);
+}
+
+Parser_t::Variable_t Parser_t::TreatPow(const Variable_t& lhs, const Variable_t& rhs)
+{
+	Variable_t result;
 	
-	size_type pos;
+	if (rhs.size() != 1 || !rhs.begin()->first.empty()) 
+		Except::Abort(Except::Code::INVALID_EQUATION);
 
-	// C-style Comment
-
-	do {
-		pos = line.find(SC::COMMENT);
-		if (pos == string::npos) break;
-		auto LF = line.find(SC::LF, pos);
-		line.replace(pos, LF - pos, string(1, SC::BLANK));
-	} while (pos != string::npos);
-
-	// Fortran-style Comment
-
-	do {
-		pos = line.find(SC::BANG);
-		if (pos == string::npos) break;
-		auto LF = line.find(SC::LF, pos);
-		line.replace(pos, LF - pos, string(1, SC::BLANK));
-	} while (pos != string::npos);
-
-}
-
-vector<string> Parse_t::SplitFields(string line, const string& delimiter)
-{
-	vector<string> splitted;
-
-	size_type beg, pos = 0;
-
-	while ((beg = line.find_first_not_of(delimiter, pos)) != string::npos) {
-		pos = line.find_first_of(delimiter, beg + 1);
-		splitted.push_back(line.substr(beg, pos - beg));
-	}
-
-	return static_cast<vector<string>&&>(splitted);
-}
-
-
-void Parse_t::AreBracketsMatched(const string& contents)
-{
-	vector<size_type> pos;
-
-	for (auto i = contents.begin(); i < contents.end(); ++i) {
-		if (*i == SC::LBRACE)
-			pos.push_back(i - contents.begin());
-		else if (*i == SC::RBRACE) {
-			if (pos.empty()) throw runtime_error("Not closed }");
-			pos.erase(pos.end() - 1);
+	if (lhs.size() == 1) {
+		if (lhs.begin()->first.empty()) {
+			decltype(result)::key_type key = "";
+			result[key] = pow(lhs.begin()->second, rhs.begin()->second);
+		}
+		else {
+			auto p = rhs.begin()->second;
+			if (trunc(p) != p)
+				Except::Abort(Except::Code::INVALID_EQUATION);
+			decltype(result)::key_type key = "";
+			if (!trunc(p))
+				result[key] = 1.0;
+			else if (trunc(p) < 0)
+				Except::Abort(Except::Code::INVALID_EQUATION);
+			else {
+				for (int i = 0; i < trunc(p); ++i) key += lhs.begin()->first;
+				result[key] = pow(lhs.begin()->second, p);
+			}
 		}
 	}
-
-	if (!pos.empty()) throw runtime_error("Not closed }");
-
-	pos.clear();
-
-	for (auto i = contents.begin(); i < contents.end(); ++i) {
-		if (*i == SC::LPAREN)
-			pos.push_back(i - contents.begin());
-		else if (*i == SC::RPAREN) {
-			if (pos.empty()) throw runtime_error("Not closed )");
-			pos.erase(pos.end() - 1);
+	else {
+		auto p = rhs.begin()->second;
+		if (trunc(p) != p)
+			Except::Abort(Except::Code::INVALID_EQUATION);
+		if (!trunc(p))
+			result[""] = 1.0;
+		else if (trunc(p) < 0)
+			Except::Abort(Except::Code::INVALID_EQUATION);
+		else {
+			result = lhs;
+			for (int i = 0; i < trunc(p); ++i) result = TreatMult(result, lhs);
 		}
 	}
-
-	if (!pos.empty()) throw runtime_error("Not closed )");
+	return static_cast<Variable_t&&>(result);
 }
 
-void Parse_t::IsMacroValid(const string& contents)
+array<double, 10> Parser_t::ParseEquation(const string& line)
 {
-	const set<string> directives = { "#define" };
-	map<string, string> macro_table;
+	static const map<string, int> order = {
+		{"xx", 0},
+		{"yy", 1},
+		{"zz", 2},
+		{"xy", 3},
+		{"yz", 4},
+		{"zx", 5},
+		{"x",  6},
+		{"y",  7},
+		{"z",  8},
+		{"",   9}
+	};
 
-	size_type macro_beg, pos = 0;
-
-	while ((macro_beg = contents.find(SC::HASHTAG, pos)) != string::npos) {
-		auto macro_end = FindEndOfMacro(contents, macro_beg);
-		auto macro = contents.substr(macro_beg, macro_end - macro_beg);
-		auto v = ExtractMacro(macro);
-		
-		if (directives.find(v[0]) == directives.end()) 
-			throw runtime_error("Invalid directive");
-		if (macro_table.find(v[1]) != macro_table.end()) 
-			throw runtime_error("Redefined macro");
-		macro_table[v[1]] = v[2];
-		pos = macro_end;
-	}
-}
-
-void Parse_t::IsVariableCorrect(const string& contents)
-{
-	auto s = ReplaceMacro(contents);
-
-	size_type beg, pos = 0;
-	string line;
-	set<string> variables;
+	auto tokens = Tokenize(line);
+	auto queue = ShuntingYard(tokens);
+	auto eqn = Aggregate(queue);
 	
-	while ((beg = s.find_first_not_of(SC::LBRACE, pos)) != string::npos) {
-		pos = s.find_first_of(SC::LBRACE, beg + 1);
-		if (pos == string::npos) continue;
-		auto sub = Trim(s.substr(beg, pos - beg));
-		size_type p;
-		if ((p = sub.find_last_of(SC::RBRACE)) != string::npos)
-			sub = Trim(sub.substr(p + 1));
-		if ((p = sub.find_first_of(SC::LPAREN)) != string::npos)
-			sub = Trim(sub.substr(0, p));
-		if ((p = sub.find(SC::COLON)) != string::npos)
-			sub.erase(std::remove(sub.begin(), sub.end(), SC::BLANK), sub.end());
-		cout << sub << endl;
-		if (sub.find(SC::BLANK) != string::npos || sub.empty()) 
-			throw runtime_error("Invalid variable name!");
-		if (variables.find(sub) != variables.end()) 
-			throw runtime_error("Redfeind variable!");
-		variables.insert(sub);
+	array<double, 10> result = {0.0, };
+
+	for (auto iter = eqn.begin(); iter != eqn.end(); ++iter) {
+		auto key = iter->first;
+		auto l = order.find(key)->second;
+		result[l] = iter->second;
 	}
 
-	for (auto var : variables) {
-		size_type pos;
-		if ((pos = var.find(SC::COLON)) != string::npos) {
-			auto parent = var.substr(pos + 1);
-			if (variables.find(parent) == variables.end())
-				throw runtime_error("Undefined variable! : " + parent);
-		}
-	}
-
+	return static_cast<array<double, 10>&&>(result);
 }
-
-bool Parse_t::IsClosed(const string& s) 
-{
-	auto lcount = std::count(s.begin(), s.end(), SC::LBRACE);
-	auto rcount = std::count(s.begin(), s.end(), SC::RBRACE);
-
-	return (lcount == rcount) && (lcount > 0);
-}
-
 
 }
