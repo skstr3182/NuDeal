@@ -11,6 +11,8 @@ const initializer_list<char> Token_t::operators = {
 	SC::Slash,
 	SC::Plus,
 	SC::Minus,
+	SC::LeftAngle,
+	SC::RightAngle
 };
 
 Token_t::Token_t(Type t, const string& s, int prec, bool ra) noexcept
@@ -22,67 +24,53 @@ Token_t::Token_t(Type t, const string& s, int prec, bool ra) noexcept
 		else if (str == "sin") Do = &sin;
 		else if (str == "cos") Do = &cos;
 		else
-			Except::Abort(Except::Code::INVALID_FLOATING_POINT);
-	}
-	else if (type == Type::Number) {
-		v = Util_t::Float(str);
-		coefficient = 1.0; exponent = 1;
+			Except::Abort(Except::Code::INVALID_EQUATION);
 	}
 	else if (type == Type::Variable) { 
 		if (s != "x" && s != "y" && s != "z")
-			Except::Abort(Except::Code::INVALID_VARIABLE);
-		coefficient = 1.0; exponent = 1; 
+			Except::Abort(Except::Code::INVALID_EQUATION);
 	}
 }
 
 bool Token_t::IsFunction(siterator s, siterator end) noexcept
 {
+	if (!isalpha(*s)) return false;
 	auto k = std::find_if_not(s, end, isalnum);
-
-	return isalpha(*s) && *k == SC::LeftParen;
+	if (k == end) return false;
+	return *k == SC::LeftParen;
 }
 
 bool Token_t::IsVariable(siterator s, siterator end) noexcept
 {
 	if (!isalpha(*s)) return false;
-	if (*s != 'x' && *s != 'y' && *s != 'z') return false;
-	return true;
+	auto k = std::find_if_not(s, end, isalnum);
+	if (k == end) 
+		return true;
+	else 
+		return std::find(operators.begin(), operators.end(), *k) != operators.end();
 }
 
-Token_t Token_t::GetNumeric(siterator& pos, siterator end)
+Token_t Token_t::GetNumeric(siterator& pos, const string& container)
 {
 	auto beg = pos;
-	int dot = 0, exp = 0, sign = 0;
-	
-	for (; pos < end; ++pos) {
-		if (isdigit(*pos)) continue;
-		else if (*pos == SC::Dot) ++dot;
-		else if (toupper(*pos) == 'E') ++exp;
-		else if (*pos == SC::Plus || *pos == SC::Minus) ++sign;
-		else break;
-
-		if (dot > 1 || exp > 1 || sign > 1)
-			Except::Abort(Except::Code::INVALID_FLOATING_POINT);
-	}
+	size_t sz;
+	stod(string(pos, container.end()), &sz);
+	pos += sz;
 
 	return Token_t(Type::Number, string(beg, pos));
 }
 
-Token_t Token_t::GetFunction(siterator& pos, siterator end)
+Token_t Token_t::GetFunction(siterator& pos, const string& container)
 {
 	auto beg = pos;
-	pos = std::find(pos, end, SC::LeftParen);
+	pos = std::find(pos, container.end(), SC::LeftParen);
 
-	return Token_t(Type::Function, string(beg, pos), 5);
+	return Token_t(Type::Function, string(beg, pos), 15);
 }
 
 Token_t Token_t::GetVariable(siterator& pos)
 {
 	auto beg = pos;
-
-	if (*pos != 'x' && *pos != 'y' && *pos != 'z')
-		Except::Abort(Except::Code::INVALID_VARIABLE);
-	
 	return Token_t(Type::Variable, string(beg, ++pos));
 }
 
@@ -91,64 +79,60 @@ Token_t Token_t::GetParenthesis(siterator& pos)
 	auto beg = pos;
 	if (*pos == SC::LeftParen)
 		return Token_t(Type::LeftParen, string(beg, ++pos));
-	else if (*pos == SC::RightParen)
+	else 
 		return Token_t(Type::RightParen, string(beg, ++pos));
 }
 
-Token_t Token_t::GetOperator(siterator& pos)
+Token_t Token_t::GetOperator(siterator& pos, const string& container)
 {
 	auto beg = pos;
 	int pr = -1; bool ra = false;
+	Type t = Type::BinaryOp;
 
 	switch (*pos) {
 	case SC::Caret :
-		pr = 4; ra = true; break;
-	case SC::Asterisk :
-	case SC::Slash :
-		pr = 3; break;
-	case SC::Plus :
-	case SC::Minus :
-		pr = 2; break;
-	case SC::LeftAngle :
-	case SC::RightAngle :
-		pr = 5; break;
+		pr = 13; ra = true; break;
+	case SC::Asterisk : case SC::Slash :
+		pr = 12; break;
+	case SC::Plus : case SC::Minus : {
+		if (pos == container.begin()) {
+			pr = 14; t = Type::UnaryOp; ra = true;
+		}
+		else {
+			auto prev = *(pos - 1);
+			if (!isalnum(prev)) {
+				pr = 14; t = Type::UnaryOp; ra = true;
+			}
+			else pr = 11;
+		}
+		break;
+	}
+	case SC::LeftAngle : case SC::RightAngle :
+		pr = 10; break;
 	}
 
-	return Token_t(Type::Operator, string(beg, ++pos), pr, ra);
-}
-
-Token_t Token_t::GetAngle(siterator& pos)
-{
-	auto beg = pos;
-	return Token_t(Type::Angle, string(beg, ++pos));
+	return Token_t(t, string(beg, ++pos), pr, ra);
 }
 
 deque<Token_t> Parser_t::Tokenize(const string& line) noexcept
 {
 	using Type = Token_t::Type;
 
-	auto eq = line;
-	eq = regex_replace(eq, regex(R"(y\*x)"), R"(x\*y)");
-	eq = regex_replace(eq, regex(R"(z\*y)"), R"(y\*z)");
-	eq = regex_replace(eq, regex(R"(x\*z)"), R"(z\*x)");
-
 	deque<Token_t> tokens;
 
-	for (auto i = eq.begin(); i < eq.end(); ) {
+	for (auto i = line.begin(); i < line.end(); ) {
 		if (Token_t::IsNumeric(i))
-			tokens.push_back(Token_t::GetNumeric(i, eq.end()));
-		else if (Token_t::IsFunction(i, eq.end())) 
-			tokens.push_back(Token_t::GetFunction(i, eq.end()));
-		else if (Token_t::IsVariable(i, eq.end()))
-			tokens.push_back(Token_t::GetVariable(i));
+			tokens.emplace_back(Token_t::GetNumeric(i, line));
+		else if (Token_t::IsFunction(i, line.end())) 
+			tokens.emplace_back(Token_t::GetFunction(i, line));
+		else if (Token_t::IsVariable(i, line.end()))
+			tokens.emplace_back(Token_t::GetVariable(i));
 		else if (Token_t::IsParen(i))
-			tokens.push_back(Token_t::GetParenthesis(i));
+			tokens.emplace_back(Token_t::GetParenthesis(i));
 		else if (Token_t::IsOperator(i))
-			tokens.push_back(Token_t::GetOperator(i));
-		else if (Token_t::IsAngle(i))
-			tokens.push_back(Token_t::GetAngle(i));
+			tokens.emplace_back(Token_t::GetOperator(i, line));
 		else 
-			Except::Abort(Except::Code::INVALID_FLOATING_POINT);
+			Except::Abort(Except::Code::INVALID_EQUATION);
 	}
 
 	return static_cast<deque<Token_t>&&>(tokens);
@@ -167,11 +151,11 @@ deque<Token_t> Parser_t::ShuntingYard(const deque<Token_t>& tokens) noexcept
 
 			case Type::Number :
 			case Type::Variable :
-			case Type::Angle :
 				queue.push_back(token); break;
 
-			case Type::Function :
-			case Type::Operator: {
+			case Type::Function:
+			case Type::UnaryOp:
+			case Type::BinaryOp: {
 				const auto o1 = token;
 				while (!stack.empty()) {
 					const auto o2 = stack.back();
@@ -190,11 +174,9 @@ deque<Token_t> Parser_t::ShuntingYard(const deque<Token_t>& tokens) noexcept
 			case Type::LeftParen :
 				stack.push_back(token); break;
 			case Type::RightParen: {
-				bool match = false;
 				while (!stack.empty() && stack.back().TokenType() != Type::LeftParen) {
 					queue.push_back(stack.back());
 					stack.pop_back();
-					match = true;
 				}
 				stack.pop_back();
 			}
@@ -208,17 +190,215 @@ deque<Token_t> Parser_t::ShuntingYard(const deque<Token_t>& tokens) noexcept
 		stack.pop_back();
 	}
 
-	return queue;
+	return static_cast<deque<Token_t>&&>(queue);
+}
+
+Parser_t::Variable_t Parser_t::Aggregate(const deque<Token_t>& queue) noexcept
+{
+	using Type = Token_t::Type;
+	auto Tokens = deque<Token_t>(queue.begin(), queue.end() - 1);
+	vector<map<string, double>> stack;
+	while (!Tokens.empty()) {
+		const auto token = std::move(Tokens.front());
+		Tokens.pop_front();
+		switch (token.TokenType()) {
+			case Type::Number: {
+				auto& V = stack.emplace_back();
+				string key = "";
+				V[key] += stod(token.GetString());
+				break;
+			}
+			case Type::Variable : {
+				auto& V = stack.emplace_back();
+				auto key = token.GetString();
+				V[key] += 1.0;
+				break;
+			}
+			case Type::Function: {
+				auto operand = std::move(stack.back());
+				stack.pop_back();
+				if (operand.size() != 1)
+					Except::Abort(Except::Code::INVALID_EQUATION);
+				auto o = operand.begin();
+				auto key = o->first;
+				if (!key.empty())
+					Except::Abort(Except::Code::INVALID_EQUATION);
+				auto& result = stack.emplace_back();
+				result[key] = token.Do(o->second);
+				break;
+			}
+			case Type::UnaryOp: {
+				auto op = token.GetString().front();
+				auto& T = stack.back();
+				switch (op) {
+					case SC::Plus: break;
+					case SC::Minus: 
+						for (auto& t : T) t.second = -t.second;
+						break;
+				}
+				break;
+			}
+			case Type::BinaryOp: {
+				auto rhs = std::move(stack.back()); stack.pop_back();
+				auto lhs = std::move(stack.back()); stack.pop_back();
+				const auto op = token.GetString().front();
+				auto& T = stack.emplace_back();
+				switch (op) {
+					case SC::Caret: T = TreatPow(lhs, rhs); break;
+					case SC::Asterisk: T = TreatMult(lhs, rhs); break;
+					case SC::Slash: T = TreatDiv(lhs, rhs); break;
+					case SC::Plus: T = TreatAdd(lhs, rhs); break;
+					case SC::Minus: T = TreatSub(lhs, rhs); break;
+				}
+				break;
+			}
+		}
+	}
+
+	auto rhs = std::move(stack.back()); stack.pop_back();
+	auto lhs = std::move(stack.back()); stack.pop_back();
+	Variable_t T;
+
+	auto sign = queue.back().GetString().front();
+	if (sign == SC::LeftAngle)
+		T = TreatSub(lhs, rhs);
+	else if (sign == SC::RightAngle)
+		T = TreatSub(rhs, lhs);
+	else
+		Except::Abort(Except::Code::INVALID_EQUATION);
+
+	for (auto iter = T.begin(); iter != T.end(); ++iter) {
+		if (iter->first.empty()) continue;
+		auto key = iter->first;
+		if (key.size() > 2) Except::Abort(Except::Code::INVALID_EQUATION);
+	}
+
+	return static_cast<Variable_t&&>(T);
+}
+
+Parser_t::Variable_t Parser_t::TreatAdd(const Variable_t& lhs, const Variable_t& rhs)
+{
+	auto result = std::move(lhs);
+	for (const auto& r : rhs) result[r.first] += r.second;
+	return static_cast<Variable_t&&>(result);
+}
+
+Parser_t::Variable_t Parser_t::TreatSub(const Variable_t& lhs, const Variable_t& rhs)
+{
+	auto result = std::move(lhs);
+	for (const auto& r : rhs) result[r.first] -= r.second;
+	return static_cast<Variable_t&&>(result);
+}
+
+Parser_t::Variable_t Parser_t::TreatMult(const Variable_t& lhs, const Variable_t& rhs)
+{
+	Variable_t result;
+	for (const auto& l : lhs) {
+		for (const auto& r : rhs) {
+			auto key = l.first + r.first;
+			std::sort(key.begin(), key.end());
+			result[key] += l.second * r.second;
+		}
+	}
+	return static_cast<Variable_t&&>(result);
+}
+
+Parser_t::Variable_t Parser_t::TreatDiv(const Variable_t& lhs, const Variable_t& rhs)
+{
+	Variable_t result;
+	if (rhs.size() != 1)
+		Except::Abort(Except::Code::INVALID_EQUATION);
+	auto r = rhs.begin();
+	if (!r->first.empty()) {
+		for (auto& l : lhs) {
+			auto p = l.first.find(r->first);
+			if (p == string::npos)
+				Except::Abort(Except::Code::INVALID_EQUATION);
+			auto key = l.first;
+			key.erase(p, 1);
+			result[key] += l.second / r->second;
+		}
+	}
+	else {
+		for (auto& l : lhs) {
+			auto key = l.first;
+			result[key] += l.second / r->second;
+		}
+	}
+	return static_cast<Variable_t&&>(result);
+}
+
+Parser_t::Variable_t Parser_t::TreatPow(const Variable_t& lhs, const Variable_t& rhs)
+{
+	Variable_t result;
+	
+	if (rhs.size() != 1 || !rhs.begin()->first.empty()) 
+		Except::Abort(Except::Code::INVALID_EQUATION);
+
+	if (lhs.size() == 1) {
+		if (lhs.begin()->first.empty()) {
+			decltype(result)::key_type key = "";
+			result[key] = pow(lhs.begin()->second, rhs.begin()->second);
+		}
+		else {
+			auto p = rhs.begin()->second;
+			if (trunc(p) != p)
+				Except::Abort(Except::Code::INVALID_EQUATION);
+			decltype(result)::key_type key = "";
+			if (!trunc(p))
+				result[key] = 1.0;
+			else if (trunc(p) < 0)
+				Except::Abort(Except::Code::INVALID_EQUATION);
+			else {
+				for (int i = 0; i < trunc(p); ++i) key += lhs.begin()->first;
+				result[key] = pow(lhs.begin()->second, p);
+			}
+		}
+	}
+	else {
+		auto p = rhs.begin()->second;
+		if (trunc(p) != p)
+			Except::Abort(Except::Code::INVALID_EQUATION);
+		if (!trunc(p))
+			result[""] = 1.0;
+		else if (trunc(p) < 0)
+			Except::Abort(Except::Code::INVALID_EQUATION);
+		else {
+			result = lhs;
+			for (int i = 0; i < trunc(p); ++i) result = TreatMult(result, lhs);
+		}
+	}
+	return static_cast<Variable_t&&>(result);
 }
 
 array<double, 10> Parser_t::ParseEquation(const string& line)
 {
+	static const map<string, int> order = {
+		{"xx", 0},
+		{"yy", 1},
+		{"zz", 2},
+		{"xy", 3},
+		{"yz", 4},
+		{"zx", 5},
+		{"x",  6},
+		{"y",  7},
+		{"z",  8},
+		{"",   9}
+	};
+
 	auto tokens = Tokenize(line);
-	decltype(tokens) lhs, rhs;
-
 	auto queue = ShuntingYard(tokens);
+	auto eqn = Aggregate(queue);
+	
+	array<double, 10> result = {0.0, };
 
-	return array<double, 10>();
+	for (auto iter = eqn.begin(); iter != eqn.end(); ++iter) {
+		auto key = iter->first;
+		auto l = order.find(key)->second;
+		result[l] = iter->second;
+	}
+
+	return static_cast<array<double, 10>&&>(result);
 }
 
 }

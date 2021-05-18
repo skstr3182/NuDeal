@@ -12,7 +12,7 @@ public :
 
 	using SC = SpecialCharacters;
 	using Except = Exception_t;
-	using siterator = string::iterator;
+	using siterator = string::const_iterator;
 
 	static const initializer_list<char> operators;
 
@@ -21,11 +21,10 @@ public :
 		Variable,
 		Function,
 		Number,
-		Operator,
+		UnaryOp,
+		BinaryOp,
 		LeftParen,
 		RightParen,
-		Angle,
-		Invalid = -1
 	};
 
 	Token_t(Type t, const string& s, int prec = -1, bool ra = false) noexcept;
@@ -36,15 +35,12 @@ public :
 	{ return *s == SC::LeftParen || *s == SC::RightParen; }
 	static bool IsOperator(siterator s) noexcept 
 	{ return std::find(operators.begin(), operators.end(), *s) != operators.end(); }
-	static bool IsAngle(siterator s) noexcept
-	{ return *s == SC::LeftAngle || *s == SC::RightAngle; }
 
-	static Token_t GetNumeric(siterator& pos, siterator end);
-	static Token_t GetFunction(siterator& pos, siterator end);
+	static Token_t GetNumeric(siterator& pos, const string& container);
+	static Token_t GetFunction(siterator& pos, const string& container);
 	static Token_t GetVariable(siterator& pos);
 	static Token_t GetParenthesis(siterator& pos);
-	static Token_t GetOperator(siterator& pos);
-	static Token_t GetAngle(siterator& pos);
+	static Token_t GetOperator(siterator& pos, const string& container);
 
 	Type TokenType() const noexcept { return type; }
 	bool RightAssociative() const noexcept { return rightAssociative; }
@@ -58,10 +54,8 @@ private :
 	const int precedence;
 	const bool rightAssociative;
 
-	// For Numeric
-	double v = 0.0;
-	// For Variable
-	double coefficient = 0.0; int exponent = 0;
+public :
+
 	// For Function
 	double (*Do) (double) = NULL;
 };
@@ -78,13 +72,19 @@ private :
 
 	static deque<Token_t> Tokenize(const string& line) noexcept;
 	static deque<Token_t> ShuntingYard(const deque<Token_t>& tokens) noexcept;
-	static void Calculator(deque<string>& tokens) noexcept;
+
+	using Variable_t = map<string, double>;
+	static Variable_t Aggregate(const deque<Token_t>& queue) noexcept;
+	static Variable_t TreatAdd(const Variable_t& lhs, const Variable_t& rhs);
+	static Variable_t TreatSub(const Variable_t& lhs, const Variable_t& rhs);
+	static Variable_t TreatMult(const Variable_t& lhs, const Variable_t& rhs);
+	static Variable_t TreatDiv(const Variable_t& lhs, const Variable_t& rhs);
+	static Variable_t TreatPow(const Variable_t& lhs, const Variable_t& rhs);
 
 public :
 	
 	static array<double, 10> ParseEquation(const string& line);
 
 };
-
 
 }

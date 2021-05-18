@@ -23,6 +23,9 @@
 #include <cassert>
 #include <thread>
 #include <regex>
+#include <type_traits>
+#include <unordered_set>
+#include <unordered_map>
 
 /// C++17 Required
 

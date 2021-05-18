@@ -22,7 +22,6 @@ public :
 		int line_info = 0, num_lines = 0;
 		string name, contents;
 		const HashTree_t *parent = NULL;
-		//map<string, HashTree_t> children;
 		vector<HashTree_t> children;
 		string GetLineInfo() { return "Line : " + to_string(line_info); }
 		void Make(const string& file, size_type Beg = 0, size_type End = string::npos);
@@ -60,18 +59,35 @@ public :
 
 public :
 	
+	using Equation_t = array<double, 10>;
+
 	struct UnitVolume_t
 	{
-		double3 origin;
-		vector<array<double, 10>> equations;
+		double3 origin = {0.0, 0.0, 0.0};
+		vector<Equation_t> equations;
+	};
+
+	struct Displace_t
+	{
+		enum class Type { Rotation, Translation };
+		enum class Axis { X, Y, Z, INVALID = -1 };
+		Type type = Type::Translation;
+		Axis axis = Axis::INVALID;
+		array<double, 3> move = {0.0, };
+
+		bool IsRotation() const noexcept { return type == Type::Rotation; }
+		bool IsTranslation() const noexcept { return type == Type::Translation; }
+		Axis GetAxis() const noexcept { return axis; }
+		const array<double, 3>& GetTrans() const noexcept { return move; }
+		double GetRot() const noexcept { return move[static_cast<int>(axis)]; }
 	};
 
 	struct UnitComp_t
 	{
-		string origin = "0, 0, 0";
+		double3 origin = {0.0, 0.0, 0.0};
 		string background;
 		vector<string> unitvols;
-		vector<vector<string>> displace;
+		vector<vector<Displace_t>> displace;
 	};
 
 private :

@@ -107,27 +107,20 @@ void InputManager_t::ParseUnitVolumeCard(HashTree_t& Tree)
 		auto contents = Util::EraseSpace(T.contents);
 		auto v = Util::SplitFields(contents, SC::SemiColon);
 		
-		UnitVolume_t U;
+		UnitVolume_t& U = unitVolumes[name];
 
 		for (auto& s : v) {
 			if (Util::Uppercase(s).find(ORIGIN) != string::npos) {
 				auto b = s.find_first_of(SC::LeftParen);
 				auto e = s.find_last_of(SC::RightParen);
 				auto origin = Util::SplitFields(s.substr(b + 1, e - b - 1), SC::Comma);
-				if (origin.size() != 3) Except::Abort(Code::INVALID_ORIGIN_DATA, s);
+				if (origin.size() != 3) Except::Abort(Code::INVALID_COORDINATE, s);
 				U.origin.x = Util::Float(origin[0]);
 				U.origin.y = Util::Float(origin[1]);
 				U.origin.z = Util::Float(origin[2]);
 			}
-			else {
-				auto something = Parser_t::ParseEquation(s);
-			}
+			else U.equations.emplace_back(Parser_t::ParseEquation(s));
 		}
-		v = Util::SplitFields(v.front(), SC::SemiColon);
-
-		//U.equations = v;
-
-		unitVolumes[name] = std::move(U);
 	}
 
 }
@@ -138,35 +131,61 @@ void InputManager_t::ParseUnitCompCard(HashTree_t& Tree)
 	using Code = Except::Code;
 
 	static const string disp = string(2, SC::RightAngle);
+	static const string ORIGIN = "ORIGIN";
 
 	for (auto& T : Tree.children) {
 		auto prefix = Util::EraseSpace(T.name);
-		if (std::count(prefix.begin(), prefix.end(), SC::Colon) != 1)
-			Except::Abort(Code::BACKGROUND_MISSED, T.contents, T.GetLineInfo());
 		auto v = Util::SplitFields(prefix, SC::Colon);
+		if (v.size() != 2)
+			Except::Abort(Code::BACKGROUND_MISSED, T.contents, T.GetLineInfo());
 		auto name = v.front();
 		auto background = v.back();
 		auto contents = Util::EraseSpace(T.contents);
 		v = Util::SplitFields(contents, SC::SemiColon);
 
-		UnitComp_t U;
-
+		UnitComp_t& U = unitComps[name];
 		U.background = background;
 
 		for (const auto& s : v) {
-			auto u = Util::SplitFields(s, disp);
-			U.unitvols.push_back(u.front());
-			U.displace.push_back(vector<string>());
-			u.erase(u.begin());
-			for (const auto& k : u) {
-				auto lpos = k.find(SC::LeftParen) + 1;
-				auto rpos = k.find(SC::RightParen);
-				if (lpos == string::npos && rpos == string::npos)
-					U.displace.back().push_back(k);
-				else if (lpos != string::npos && rpos != string::npos)
-					U.displace.back().push_back(k.substr(lpos, rpos - lpos));
-				else
-					Except::Abort(Code::MISMATCHED_BRAKETS, T.contents, T.GetLineInfo());
+			if (Util::Uppercase(s.substr(0, ORIGIN.size())) == ORIGIN) {
+				auto b = s.find_first_of(SC::LeftParen);
+				auto e = s.find_last_of(SC::RightParen);
+				auto origin = Util::SplitFields(s.substr(b + 1, e - b - 1), SC::Comma);
+				if (origin.size() != 3) Except::Abort(Code::INVALID_COORDINATE, s);
+				U.origin.x = Util::Float(origin[0]);
+				U.origin.y = Util::Float(origin[1]);
+				U.origin.z = Util::Float(origin[2]);
+			}
+			else {
+				auto u = Util::SplitFields(s, disp);
+				U.unitvols.emplace_back(u.front());
+				auto& D = U.displace.emplace_back();
+				for (auto k = u.begin() + 1; k < u.end(); ++k) {
+					auto& d = D.emplace_back();
+					auto& s = *k;
+					if (std::find_if(s.begin(), s.end(), isalpha) != s.end()) { // Rotation
+						d.type = Displace_t::Type::Rotation;
+						auto r = Util::SplitFields(s, SC::Equal);
+						if (r.size() != 2)
+							Except::Abort(Code::INVALID_ROTATION, s);
+						switch (toupper(r[0][0])) {
+							case 'X' : d.axis = Displace_t::Axis::X; break;
+							case 'Y' : d.axis = Displace_t::Axis::Y; break;
+							case 'Z' : d.axis = Displace_t::Axis::Z; break;
+							default : Except::Abort(Code::INVALID_ROTATION, s);
+						}
+						d.move[static_cast<int>(d.axis)] = Util::Float(r[1]);
+					}
+					else { // Translation
+						d.type = Displace_t::Type::Translation;
+						d.axis = Displace_t::Axis::INVALID;
+						auto t = Util::EraseSpace(s, "()");
+						auto v = Util::SplitFields(t, SC::Comma);
+						if (v.size() != 3) Except::Abort(Code::INVALID_COORDINATE, s);
+						for (int i = 0; i < 3; ++i)
+							d.move[i] = Util::Float(v[i]);
+					}
+				}
 			}
 		}
 
