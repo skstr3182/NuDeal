@@ -14,8 +14,16 @@ public :
 		INVALID_INTEGER,
 		INVALID_FLOATING_POINT,
 		INVALID_LOGICAL,
+		INVALID_INPUT_BLOCK,
+		INVALID_INPUT_CARD,
+		INVALID_COORDINATE,
+		INVALID_ROTATION,
+		INVALID_MACRO,
+		INVALID_EQUATION,
+		BACKGROUND_MISSED,
+		SEMICOLON_MISSED,
+		MISMATCHED_BRAKETS,
 		UNSPECIFIED_ERROR,
-		COUNTS,
 	};
 
 	static constexpr char *error_messages[] = {
@@ -23,6 +31,15 @@ public :
 		"Invalid integer expression!",
 		"Invalid floating point expression!",
 		"Invalid logical exrpession!",
+		"Invalid input block!",
+		"Invalid input card!",
+		"Invalid coordinate!",
+		"Invalid rotation!",
+		"Invalid macro!",
+		"Invalid equation!",
+		"Missed background of geometry",
+		"Semicolon missed!",
+		"Mismatched braces!",
 		"Unspecified error!"
 	};
 

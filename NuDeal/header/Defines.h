@@ -9,7 +9,11 @@
 #include <cstring>
 #include <sstream>
 #include <algorithm>
+#include <stack>
+#include <queue>
 #include <vector>
+#include <array>
+#include <initializer_list>
 #include <map>
 #include <deque>
 #include <set>
@@ -18,7 +22,10 @@
 #include <cfloat>
 #include <cassert>
 #include <thread>
-#include <queue>
+#include <regex>
+#include <type_traits>
+#include <unordered_set>
+#include <unordered_map>
 
 /// C++17 Required
 
@@ -87,14 +94,31 @@ namespace filesys = std::experimental::filesystem;
 #include "hdf5.h"
 #include "hdf5_hl.h"
 
-// using std definitions
-using std::string;
-using std::cout;
-using std::cin;
-using std::endl;
-using std::queue;
-using std::list;
-using std::fstream;
-using std::ifstream;
-using std::ofstream;
-using std::vector;
+// Type Definitions
+
+#ifdef FP64
+	
+using real = double;
+using real2 = double2;
+using real3 = double3;
+using real4 = double4;
+
+#define make_real2 make_double2;
+#define make_real3 make_double3;
+#define make_real4 make_double4;
+
+#else
+
+using real = float;
+using real2 = float2;
+using real3 = float3;
+using real4 = float4;
+
+#define make_real2 make_float2;
+#define make_real3 make_float3;
+#define make_real4 make_float4;
+
+#endif
+
+// Standard Namespace
+using namespace std;

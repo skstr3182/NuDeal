@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 
 	//for (int i = 0; i < 100; i++){
 		//cout << i + 1 << "-th iteration" << endl;
-		DebugUnitGeo();
+		Geometry::DebugUnitGeo();
 	//}
 
 	MPI_Finalize();
