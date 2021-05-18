@@ -18,9 +18,6 @@
     <ClInclude Include="header\HardCodeParam.h">
       <Filter>Header</Filter>
     </ClInclude>
-    <ClInclude Include="header\TypeDef.h">
-      <Filter>Header</Filter>
-    </ClInclude>
     <ClInclude Include="header\Defines.h">
       <Filter>Header</Filter>
     </ClInclude>
@@ -42,12 +39,24 @@
     <ClInclude Include="header\Parser.h">
       <Filter>Header\IO</Filter>
     </ClInclude>
+    <ClInclude Include="header\UnitGeo.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="header\GeoHandle.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="header\IOUtil.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="header\PhysicsProp.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="header\XS.h">
+      <Filter>Header</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Main.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="source\TypeDef.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="source\Input.cpp">
@@ -60,6 +69,18 @@
       <Filter>Source\IO</Filter>
     </ClCompile>
     <ClCompile Include="source\Parser.cpp">
+      <Filter>Source\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="source\UnitGeo.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\GeoHandle.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\PhysicsProp.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\IOUtil.cpp">
       <Filter>Source\IO</Filter>
     </ClCompile>
   </ItemGroup>

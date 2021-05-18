@@ -119,3 +119,6 @@ using real4 = float4;
 #define make_real4 make_float4;
 
 #endif
+
+// Standard Namespace
+using namespace std;
