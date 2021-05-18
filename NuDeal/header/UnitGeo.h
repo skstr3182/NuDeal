@@ -51,7 +51,7 @@ private:
 	// (c_xs*x+c_x)*x + (c_ys*y+c_y)*y + (c_zs*z+c_z)*z - c < 0
 	bool is_curve = false;
 
-	Equation_t eq;
+	Equation_t eq = { 0.0, };
 
 	double& c_xs = eq[0];
 	double& c_ys = eq[1];
