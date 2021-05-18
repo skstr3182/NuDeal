@@ -2,6 +2,9 @@
 #include "Defines.h"
 #include "UnitGeo.h"
 
+
+namespace Geometry {
+
 constexpr double mintau_default = 0.01;
 constexpr double maxtau_default = 0.0001;
 
@@ -52,3 +55,5 @@ public:
 
 	bool Discretize(int Dim, double minlen = mintau_default, double maxlen = maxtau_default);
 };
+
+}

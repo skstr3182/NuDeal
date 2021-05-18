@@ -1,5 +1,8 @@
 #include "GeoHandle.h"
 
+namespace Geometry
+{
+
 void GeometryHandler::init() {
 	nvol = nnode = divlevel = 0; isfinal = false; issetord = false;
 	x0 = y0 = z0 = Lx = Ly = Lz = 0.0;
@@ -44,9 +47,9 @@ void GeometryHandler::SetOrdinates(double origin[3], double L[3]) {
 }
 
 void GeometryHandler::append(UnitComp &acomp) {
-	int nvol = acomp.GetNvol();
-	const UnitVol* Volumes = acomp.GetVolumes();
-	const int* imat = acomp.GetMatIds();
+	int nvol = acomp.GetNumVolumes();
+	const auto& Volumes = acomp.GetVolumes();
+	const auto& imat = acomp.GetMatIds();
 	for (int i = 0; i < nvol; i++) {
 		UVbuf.push(Volumes[i]);
 		matidbuf.push(imat[i]);
@@ -61,10 +64,10 @@ void GeometryHandler::FinalizeVolumes() {
 		Volumes[i] = UVbuf.front();
 		imat[i] = matidbuf.front();
 		UVbuf.pop(); matidbuf.pop();
-		double xs[2], ys[2], zs[2];
+		double2 xs, ys, zs;
 		Volumes[i].GetBoundBox(xs, ys, zs);
-		BdL[i].x = xs[0]; BdL[i].y = ys[0]; BdL[i].z = zs[0];
-		BdR[i].x = xs[1]; BdR[i].y = ys[1]; BdR[i].z = zs[1];
+		BdL[i].x = xs.x; BdL[i].y = ys.x; BdL[i].z = zs.x;
+		BdR[i].x = xs.y; BdR[i].y = ys.y; BdR[i].z = zs.y;
 	}
 	if (!issetord) {
 		x0 = BdL[0].x; y0 = BdL[0].y; z0 = BdL[0].z;
@@ -111,4 +114,6 @@ bool GeometryHandler::Discretize(int Dim, double minlen, double maxlen) {
 	int ivol[8];
 	
 	return true;
+}
+
 }
