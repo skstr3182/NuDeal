@@ -84,15 +84,35 @@ bool UnitSurf::GetTriplePoint(double coeff0[4], double coeff1[4], double coeff2[
 {
 	// Construct (x, y)^T = A * (a, b) with combinations of {EQ1,EQ2} and {EQ1,EQ3}
 	// If A is singular, return false
-	double A[2][2];
-	A[0][0] = coeff2[2] * coeff0[0] - coeff0[2] * coeff2[0];
-	A[0][1] = coeff2[2] * coeff0[1] - coeff0[2] * coeff2[1];
-	A[1][0] = coeff2[2] * coeff1[0] - coeff1[2] * coeff2[0];
-	A[1][1] = coeff2[2] * coeff1[1] - coeff1[2] * coeff2[1];
+	double A[2][2], a, b;
+	if (abs(coeff0[2]) < eps_geo) {
+		A[0][0] = coeff0[0];
+		A[0][1] = coeff0[1];
+		a = coeff0[3];
+	}
+	else {
+		A[0][0] = coeff2[2] * coeff0[0];
+		A[0][1] = coeff2[2] * coeff0[1];
+		a = coeff2[2] * coeff0[3];
+	}
+	if (abs(coeff1[2]) < eps_geo) {
+		A[1][0] = coeff1[0];
+		A[1][1] = coeff1[1];
+		b = coeff1[3];
+	}
+	else {
+		A[1][0] = coeff2[2] * coeff1[0];
+		A[1][1] = coeff2[2] * coeff1[1];
+		b = coeff2[2] * coeff1[3];
+	}
+	A[0][0] -= coeff0[2] * coeff2[0];
+	A[0][1] -= coeff0[2] * coeff2[1];
+	A[1][0] -= coeff1[2] * coeff2[0];
+	A[1][1] -= coeff1[2] * coeff2[1];
 	double det = A[0][0] * A[1][1] - A[1][0] * A[0][1];
 	if (abs(det) < eps_geo) return false;
-	double a = coeff2[2] * coeff0[3] - coeff0[2] * coeff2[3];
-	double b = coeff2[2] * coeff1[3] - coeff1[2] * coeff2[3];
+	a -= coeff0[2] * coeff2[3];
+	b -= coeff1[2] * coeff2[3];
 	a /= det; b /= det;
 	sol[0] = A[1][1] * a - A[0][1] * b;
 	sol[1] = A[0][0] * b - A[1][0] * a;
@@ -625,6 +645,7 @@ bool UnitVol::CalBoundBox() {
 	// [2] Curve local extremum between curved surfaces and planes : (C,P)
 	//     o Same procedures as above
 	for (int i = 0; i < Surfaces.size(); i++) {
+		if (!Surfaces[i].IsCurve()) continue;
 		double localEx[6][3] = { { 0.0 }, };
 		for (int j = 0; j < Surfaces.size(); j++) {
 			if (i == j) continue;

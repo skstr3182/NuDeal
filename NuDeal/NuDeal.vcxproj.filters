@@ -42,9 +42,6 @@
     <ClInclude Include="header\Parser.h">
       <Filter>Header\IO</Filter>
     </ClInclude>
-    <ClInclude Include="header\IOUtil.h">
-      <Filter>Header</Filter>
-    </ClInclude>
     <ClInclude Include="header\PhysicsProp.h">
       <Filter>Header</Filter>
     </ClInclude>
