@@ -14,6 +14,7 @@
     <ClInclude Include="header\Defines.h" />
     <ClInclude Include="header\Exception.h" />
     <ClInclude Include="header\GeoHandle.h" />
+    <ClInclude Include="header\Geometry.h" />
     <ClInclude Include="header\HardCodeParam.h" />
     <ClInclude Include="header\Input.h" />
     <ClInclude Include="header\IODeclare.h" />

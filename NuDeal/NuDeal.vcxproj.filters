@@ -54,6 +54,9 @@
     <ClInclude Include="header\UnitGeo.h">
       <Filter>Header\Geometry</Filter>
     </ClInclude>
+    <ClInclude Include="header\Geometry.h">
+      <Filter>Header\Geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Main.cpp">
