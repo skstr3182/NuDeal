@@ -85,7 +85,6 @@ public :
 	struct UnitComp_t
 	{
 		double3 origin = {0.0, 0.0, 0.0};
-		string background;
 		vector<string> unitvols;
 		vector<vector<Displace_t>> displace;
 	};

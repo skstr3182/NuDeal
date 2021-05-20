@@ -54,7 +54,7 @@ Token_t Token_t::GetNumeric(siterator& pos, const string& container)
 {
 	auto beg = pos;
 	size_t sz;
-	stod(string(pos, container.end()), &sz);
+	std::stod(string(pos, container.end()), &sz);
 	pos += sz;
 
 	return Token_t(Type::Number, string(beg, pos));
@@ -196,35 +196,45 @@ deque<Token_t> Parser_t::ShuntingYard(const deque<Token_t>& tokens) noexcept
 Parser_t::Variable_t Parser_t::Aggregate(const deque<Token_t>& queue) noexcept
 {
 	using Type = Token_t::Type;
+
 	auto Tokens = deque<Token_t>(queue.begin(), queue.end() - 1);
-	vector<map<string, double>> stack;
+	vector<Variable_t> stack;
+
 	while (!Tokens.empty()) {
+		string key; double value;
 		const auto token = std::move(Tokens.front());
 		Tokens.pop_front();
 		switch (token.TokenType()) {
 			case Type::Number: {
 				auto& V = stack.emplace_back();
-				string key = "";
-				V[key] += stod(token.GetString());
+				key = "";
+				V[key] += Util::Float(token.GetString());
 				break;
 			}
 			case Type::Variable : {
 				auto& V = stack.emplace_back();
-				auto key = token.GetString();
+				key = token.GetString();
 				V[key] += 1.0;
 				break;
 			}
 			case Type::Function: {
-				auto operand = std::move(stack.back());
-				stack.pop_back();
+				// Pull back
+				auto operand = std::move(stack.back()); stack.pop_back();
+
+				// If operand is not a monomial
 				if (operand.size() != 1)
 					Except::Abort(Except::Code::INVALID_EQUATION);
-				auto o = operand.begin();
-				auto key = o->first;
+
+				key = operand.begin()->first;
+				value = operand.begin()->second;
+
+				// If operand is a variable
 				if (!key.empty())
 					Except::Abort(Except::Code::INVALID_EQUATION);
+
+				// Push result
 				auto& result = stack.emplace_back();
-				result[key] = token.Do(o->second);
+				result[key] = token.Do(value);
 				break;
 			}
 			case Type::UnaryOp: {
