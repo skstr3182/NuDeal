@@ -2,6 +2,28 @@
 
 namespace Geometry
 {
+	void splittree::Assign(int id) {
+		subnode = nullptr; uppernode = nullptr;
+		this->id = id; nleaf = 0;
+	}
+
+	void splittree::Assign(int id, splittree &uppernode) {
+		subnode = nullptr; this->uppernode = &uppernode;
+		this->id = id; nleaf = 0;
+	}
+
+	void splittree::Branching(int nleaf) {
+		subnode = new splittree[nleaf];
+		for (int i = 0; i < nleaf; i++) {
+			subnode[i].Assign(i, *this);
+		}
+	}
+
+	void splittree::RecordNodeInfo(vector<int> idvols, vector<double> vol, double3 midpt) {
+		thisinfo.idvols = idvols;
+		thisinfo.vol = vol;
+		thisinfo.midpt = midpt;
+	}
 
 inline bool InLocalBox(int mode, double3 ptL, double3 ptR, double3 aninter) {
 	if (aninter.x > ptL.x + eps_geo && aninter.x < ptR.x - eps_geo) {
@@ -25,11 +47,11 @@ void GeometryHandler::init() {
 	x0 = y0 = z0 = Lx = Ly = Lz = 0.0;
 }
 
-int GeometryHandler::FindVolId(double3 ptL, double3 ptR) {
+int GeometryHandler::FindVolId(double3 ptL, double3 ptR, bool lowest) {
 	int id = -1;
 	
 	// Store volumes whose bound boxes cross the finite box
-	deque<int> VolInBound;
+	vector<int> VolInBound;
 	for (int i = 0; i < nvol; i++) {
 		int inboundcount = 0;
 		double OL, OR;
@@ -65,28 +87,178 @@ int GeometryHandler::FindVolId(double3 ptL, double3 ptR) {
 	}
 
 	int nbnd = VolInBound.size();
+	if (!lowest) {
+		for (int i = 0; i < nbnd; i++) {
+			vector<double> interpts;
+			int idvol = VolInBound[i];
+			array<double, 2> val;
+
+			// Along x axis
+			double3 aninter;
+			aninter.y = ptL.y; aninter.z = ptL.z;
+			val[0] = ptL.y; val[1] = ptL.z;
+			int ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::YZ, val, interpts);
+			for (int j = 0; j < ninter; j++) {
+				aninter.x = interpts[j];
+				if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+			}
+			if (mode != OneD) {
+				aninter.y = ptR.y; val[0] = ptR.y;
+				ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::YZ, val, interpts);
+				for (int j = 0; j < ninter; j++) {
+					aninter.x = interpts[j];
+					if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+				}
+			}
+			if (mode == ThreeD) {
+				aninter.y = ptL.y; aninter.z = ptR.z;
+				val[0] = ptL.y; val[1] = ptR.z;
+				int ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::YZ, val, interpts);
+				for (int j = 0; j < ninter; j++) {
+					aninter.x = interpts[j];
+					if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+				}
+				aninter.y = ptR.y; val[0] = ptR.y;
+				ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::YZ, val, interpts);
+				for (int j = 0; j < ninter; j++) {
+					aninter.x = interpts[j];
+					if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+				}
+			}
+
+
+			// Along y axis
+			if (mode != OneD) {
+				aninter.x = ptL.x; aninter.z = ptL.z;
+				val[0] = ptL.x; val[1] = ptL.z;
+				ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::XZ, val, interpts);
+				for (int j = 0; j < ninter; j++) {
+					aninter.y = interpts[j];
+					if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+				}
+				aninter.x = ptR.x; val[0] = ptR.x;
+				ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::XZ, val, interpts);
+				for (int j = 0; j < ninter; j++) {
+					aninter.y = interpts[j];
+					if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+				}
+			}
+			if (mode == ThreeD) {
+				aninter.x = ptL.x; aninter.z = ptR.z;
+				val[0] = ptL.x; val[1] = ptR.z;
+				int ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::XZ, val, interpts);
+				for (int j = 0; j < ninter; j++) {
+					aninter.y = interpts[j];
+					if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+				}
+				aninter.x = ptR.x; val[0] = ptR.x;
+				ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::XZ, val, interpts);
+				for (int j = 0; j < ninter; j++) {
+					aninter.y = interpts[j];
+					if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+				}
+			}
+
+
+			// Along z axis
+			if (mode == ThreeD) {
+				aninter.x = ptL.x; aninter.y = ptL.y;
+				val[0] = ptL.x; val[1] = ptL.y;
+				ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::XY, val, interpts);
+				for (int j = 0; j < ninter; j++) {
+					aninter.z = interpts[j];
+					if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+				}
+				aninter.x = ptR.x; val[0] = ptR.x;
+				ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::XY, val, interpts);
+				for (int j = 0; j < ninter; j++) {
+					aninter.z = interpts[j];
+					if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+				}
+				aninter.x = ptL.x; aninter.y = ptR.y;
+				val[0] = ptL.x; val[1] = ptR.y;
+				int ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::XY, val, interpts);
+				for (int j = 0; j < ninter; j++) {
+					aninter.z = interpts[j];
+					if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+				}
+				aninter.y = ptR.y; val[0] = ptR.y;
+				ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::XY, val, interpts);
+				for (int j = 0; j < ninter; j++) {
+					aninter.z = interpts[j];
+					if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+				}
+			}
+		}
+	}
+
+	// When alive through above loops, this box has only one volume in it.
+	// Find the volume index
+	double xmid = 0.5*(ptL.x + ptR.x), ymid = 0.5*(ptL.y + ptR.y), zmid = 0.5*(ptL.z + ptR.z);
 	for (int i = 0; i < nbnd; i++) {
-		vector<double> interpts;
-		int idvol = VolInBound.front();
-		array<double, 2> val;
+		int idvol = VolInBound[i];
+		if (Volumes[idvol].IsInside(xmid, ymid, zmid, false)) return idvol;
+	}
 
-		// Along x axis
-		double3 aninter;
-		aninter.y = ptL.y; aninter.z = ptL.z;
-		val[0] = ptL.y; val[1] = ptL.z;
-		int ninter = Volumes[idvol].GetIntersection(UnitSurf::CartPlane::YZ, val, interpts);
-		for (int j = 0; j < ninter; j++) {
-			aninter.x = interpts[j];
-			if (InLocalBox(mode, ptL, ptR, aninter)) return id;
+	// Still alive? Error
+	return -100;
+}
+
+void GeometryHandler::RecursiveSplit(double3 ptL, double3 ptR, int thisLv, splittree &thisnode) {
+	double lx = lx0 / pow3[thisLv] , ly = ly0 / pow3[thisLv], lz = lz0 / pow3[thisLv];
+	bool lowest = false;
+	lowest = (lx / 3.0 < mintau);
+	if (mode != OneD) lowest = (ly / 3.0 < mintau);
+	if (mode == ThreeD) lowest = (lz / 3.0 < mintau);
+
+	int idvol = FindVolId(ptL, ptR, lowest);
+	if (idvol == -1) {
+		thisnode.Branching(27);
+		splittree* subnodes = thisnode.GetPtrSubnode();
+		double3 ptL1, ptR1;
+		lx /= 3.0; ly /= 3.0; lz /= 3.0;
+		int subid = 0;
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				for (int k = 0; k < 3; k++) {
+					ptL1.x = ptL.x + (double)i*lx; ptL1.y = ptL.y + (double)j*ly; ptL1.z = ptL.z + (double)k*lz;
+					ptL1.x = ptL.x + (double)(i + 1)*lx; ptL1.y = ptL.y + (double)(j + 1)*ly; ptL1.z = ptL.z + (double)(k + 1)*lz;
+					RecursiveSplit(ptL1, ptR1, (thisLv + 1), subnodes[subid]);
+					subid++;
+				}
+			}
 		}
-		if (mode != OneD) {
+	}
+	else {
+		vector<int> ids(idvol);
+		vector<double> vol(lx*ly*lz);
+		double3 midpt;
+		midpt.x = 0.5*(ptL.x + ptR.x); midpt.y = 0.5*(ptL.y + ptR.y); midpt.z = 0.5*(ptL.z + ptR.z);
+		thisnode.RecordNodeInfo(ids, vol, midpt);
+	}
+}
 
+void GeometryHandler::LevelCount(int thisLv, splittree &thisnode) {
+	if (thisLv > -1) nnodeLv[thisLv]++;
+	splittree *subnode = thisnode.GetPtrSubnode();
+	if (subnode != nullptr) {
+		int nleaf = thisnode.GetNleaf();
+		for (int i = 0; i < nleaf; i++) {
+			LevelCount(thisLv + 1, subnode[i]);
 		}
-		if (mode == ThreeD) {
+	}
+}
 
-		}
-
-		VolInBound.pop_front();
+void GeometryHandler::RecordDiscInfo(int thisLv, splittree &thisnode) {
+	int thisLvId = nnodeLv[thisLv], nleaf = thisnode.GetNleaf();
+	if (thisLv > 0) {
+		nnodeLv[thisLv]++;
+		divmap[thisLv][thisLvId] = nnodeLv[thisLv - 1];
+		info[thisLv][thisLvId] = thisnode.GetNodeInfo();
+	}
+	for (int i = 0; i < nleaf; i++) {
+		splittree *subnodes = thisnode.GetPtrSubnode();
+		RecordDiscInfo(thisLv + 1, subnodes[i]);
 	}
 }
 
@@ -165,8 +337,58 @@ bool GeometryHandler::Discretize(int Dim, double minlen, double maxlen) {
 	if (mode == ThreeD) Nz = Nz / minlen;
 	lx0 = Lx / (double)Nx; ly0 = Ly / (double)Ny; lz0 = Lz / (double)Nz;
 
+	// Determine the potentially maximal divlevel
+	double log3 = log(3.0);
+	int potentdivLv = log(Lx / mintau) / log3;
+	if (mode != OneD) potentdivLv = min(potentdivLv, (int)(log(Ly / mintau) / log3));
+	if (mode == ThreeD) potentdivLv = min(potentdivLv, (int)(log(Lz / mintau) / log3));
+	nnodeLv = new int[potentdivLv]; std::fill_n(nnodeLv, potentdivLv, 0);
+	divmap = new int*[potentdivLv];
+	info = new subdomain*[potentdivLv];
+	for (int i = 0; i < potentdivLv; i++)	pow3.push_back(pow(3.0, i));
+
 	// Ray tracing with the rays parallel to x,y,z axes
-	int ivol[8];
+	splittree root(0);
+	root.Branching(Nx*Ny*Nz);
+	splittree *zeronodes = root.GetPtrSubnode();
+	double3 ptL, ptR;
+	ptL.x = x0; ptL.y = y0; ptL.z = z0;
+	ptR.x = x0 + lx0; ptR.y = y0 + ly0; ptR.z = z0 + lz0;
+	int inode0 = 0;
+	for (int iz = 0; iz < Nz; iz++) {
+		for (int iy = 0; iy < Ny; iy++) {
+			for (int ix = 0; ix < Nx; ix++) {
+				RecursiveSplit(ptL, ptR, 0, zeronodes[inode0]);
+				inode0++;
+				ptL.x += lx0; ptR.x += lx0;
+			}
+			ptL.y += ly0; ptR.y += ly0;
+		}
+		ptL.z += lz0; ptR.z += lz0;
+	}
+
+	// Defining nnodeLv and divmap
+	LevelCount(-1, root);
+	for (int i = 0; i < potentdivLv; i++) {
+		if (nnodeLv[i] > 0) {
+			divmap[i] = new int[nnodeLv[i]];
+			info[i] = new subdomain[nnodeLv[i]];
+			std::fill_n(divmap[i], nnodeLv[i], 0);
+		}
+		else break;
+		divlevel++;
+	}
+	std::fill_n(nnodeLv, divlevel, 0);
+	RecordDiscInfo(-1, root);
+
+	// Print-out Division Information
+	ofstream DiscOut("Discretization.out");
+	for (int i = 0; i < divlevel; i++) {
+		for (int j = 0; j < nnodeLv[i]; j++) {
+			if (info[i][j].idvols[0] < 0) continue;
+			DiscOut << info[i][j].midpt.x << info[i][j].midpt.y << info[i][j].midpt.z << info[i][j].idvols[0] << endl;
+		}
+	}
 	
 	return true;
 }
