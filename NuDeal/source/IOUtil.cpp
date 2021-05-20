@@ -97,7 +97,7 @@ Util_t::size_type Util_t::FindEndPoint(const string& contents, size_type& pos)
 	return end;
 }
 
-vector<string> Util_t::SplitFields(string line, const string& delimiter)
+vector<string> Util_t::SplitFields(const string& line, const string& delimiter)
 {
 	vector<string> splitted;
 
@@ -111,7 +111,7 @@ vector<string> Util_t::SplitFields(string line, const string& delimiter)
 	return static_cast<vector<string>&&>(splitted);
 }
 
-vector<string> Util_t::SplitFields(string line, char delimiter)
+vector<string> Util_t::SplitFields(const string& line, char delimiter)
 {
 	vector<string> splitted;
 
@@ -123,6 +123,19 @@ vector<string> Util_t::SplitFields(string line, char delimiter)
 	}
 
 	return static_cast<vector<string>&&>(splitted);
+}
+
+double3 Util_t::GetCoordinate(const string& field)
+{
+	auto b = field.find_first_of(SC::LeftParen);
+	auto e = field.find_last_of(SC::RightParen);
+
+	if (b == string::npos) b = -1;
+	if (e == string::npos) e = field.size();
+
+	auto origin = SplitFields(field.substr(b + 1, e - b - 1), SC::Comma);
+	if (origin.size() != 3) Except::Abort(Code::INVALID_COORDINATE, field);
+	return make_double3(Float(origin[0]), Float(origin[1]), Float(origin[2]));
 }
 
 bool Util_t::IsClosed(const string& s) 

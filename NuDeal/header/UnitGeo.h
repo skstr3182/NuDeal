@@ -79,7 +79,7 @@ private:
 
 public:
 
-	//UnitSurf() { }
+	UnitSurf() {}
 	UnitSurf(const Equation_t& eq) 
 	{ Create(eq); }
 	UnitSurf(SurfType surftype, double *_coeff, CartPlane cartesianPln = CartPlane::XY)
@@ -99,7 +99,6 @@ public:
 	void Rotate(double cos, double sin, CartAxis Ax);
 	void Rotate(double2 c, CartAxis Ax) { Rotate(c.x, c.y, Ax); }
 
-	//int GetIntersection(CartPlane cartPlane, double *val, double2& sol);
 	int GetIntersection(CartPlane cartPlane, const array<double, 2>& val, array<double, 2>& sol);
 	bool IsInside(double x, double y, double z, bool includeOn = false);
 	int GetLocalExSelf(double so1[6][3]);

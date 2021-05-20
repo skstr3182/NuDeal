@@ -18,6 +18,7 @@ class Util_t;
 class Preprocessor_t;
 
 // Parser.h
+class Token_t;
 class Parser_t;
 
 }
