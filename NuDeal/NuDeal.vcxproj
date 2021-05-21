@@ -11,6 +11,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="header\Array.h" />
+    <ClInclude Include="header\Array.hpp" />
     <ClInclude Include="header\Defines.h" />
     <ClInclude Include="header\Exception.h" />
     <ClInclude Include="header\GeoHandle.h" />
@@ -18,6 +20,7 @@
     <ClInclude Include="header\HardCodeParam.h" />
     <ClInclude Include="header\Input.h" />
     <ClInclude Include="header\IODeclare.h" />
+    <ClInclude Include="header\IOUtil.h" />
     <ClInclude Include="header\Parser.h" />
     <ClInclude Include="header\Preprocessor.h" />
     <ClInclude Include="header\PhysicsProp.h" />
@@ -25,6 +28,8 @@
     <ClInclude Include="header\XS.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\Array.cpp" />
+    <ClCompile Include="source\Geometry.cpp" />
     <ClCompile Include="source\Parser.cpp" />
     <ClCompile Include="source\Preprocessor.cpp" />
     <ClCompile Include="source\IOUtil.cpp" />
