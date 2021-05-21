@@ -30,7 +30,7 @@ Array_t<T>::Array_t(const Array_t<T>& rhs)
 {
 	hostState = rhs.hostState;
 	ResizeHost(rhs.nx, rhs.ny, rhs.nz, rhs.nw);
-	std::copy(rhs.begin(), rhs.end(), begin());
+	std::copy(std::execution::par, rhs.begin(), rhs.end(), begin());
 }
 
 template <typename T>
@@ -80,10 +80,8 @@ void Array_t<T>::ResizeHost(size_type nx, size_type ny, size_type nz, size_type 
 template <typename T>
 void Array_t<T>::ResizeHost(const_pointer ptr, size_type nx, size_type ny, size_type nz, size_type nw)
 {
-	ClearHost();
-	SetDimension(nx, ny, nz, nw);
-	Entry = new T[n]; hostState = State::Alloc;
-	std::copy(ptr, ptr + n, begin());
+	ResizeHost(nx, ny, nz, nw);
+	std::copy(std::execution::par, ptr, ptr + n, begin());
 }
 
 template <typename T>
@@ -97,9 +95,7 @@ void Array_t<T>::ResizeDevice(size_type nx, size_type ny, size_type nz, size_typ
 template <typename T>
 void Array_t<T>::ResizeDevice(const_pointer ptr, size_type nx, size_type ny, size_type nz, size_type nw)
 {
-	ClearDevice();
-	SetDimension(nx, ny, nz, nw);
-	cudaMalloc(&d_Entry, n * sizeof(T)); devState = State::Alloc;
+	ResizeDevice(nx, ny, nz, nw);
 	cudaMemcpy(d_Entry, ptr, n * sizeof(T), cudaMemcpyHostToDevice);
 }
 

@@ -24,7 +24,7 @@ public:
 	{
 		Alloc,
 		Alias,
-		Undefined = -1
+		Undefined = -1,
 	};
 
 private:
@@ -82,7 +82,7 @@ public : // STL-Consistent Methods
 
 	iterator begin() noexcept { return Entry; }
 	const_iterator begin() const noexcept { return Entry; }
-	iterator end() noexcept return { Entry + n; }
+	iterator end() noexcept { return Entry + n; }
 	const_iterator end() const noexcept { return Entry + n; }
 	reference front() noexcept { return Entry[0]; }
 	const_reference front() const noexcept { return Entry[0]; }

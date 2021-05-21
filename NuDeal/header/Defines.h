@@ -11,11 +11,13 @@
 #include <algorithm>
 #include <stack>
 #include <queue>
+#include <list>
+#include <utility>
 #include <vector>
+#include <deque>
 #include <array>
 #include <initializer_list>
 #include <map>
-#include <deque>
 #include <set>
 #include <numeric>
 #include <chrono>
@@ -26,6 +28,7 @@
 #include <type_traits>
 #include <unordered_set>
 #include <unordered_map>
+#include <execution>
 
 /// C++17 Required
 
