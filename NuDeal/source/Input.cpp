@@ -199,14 +199,14 @@ void InputManager_t::Preprocess()
 	try {
 		Preprocessor::DeleteComment(contents);
 	}
-	catch (exception& e) {
+	catch (const exception& e) {
 		Except::Abort(Code::MISMATCHED_BRAKETS, e.what());
 	}
 
 	try {
 		Preprocessor::CheckBalance(contents, {"{", "[", "("}, {"}", "]", ")"} );
 	}
-	catch (exception& e) {
+	catch (const exception& e) {
 		Except::Abort(Code::MISMATCHED_BRAKETS, e.what());
 	}
 
@@ -215,24 +215,22 @@ void InputManager_t::Preprocess()
 	try {
 		Preprocessor::ApplyMacro(contents);
 	}
-	catch (exception& e) {
+	catch (const exception& e) {
 		Except::Abort(Code::INVALID_MACRO, e.what());
 	}
 
 	contents.erase(std::remove(contents.begin(), contents.end(), SC::Blank), contents.end());
 }
 
-void InputManager_t::ReadInput(string file)
+void InputManager_t::ReadInput(const string& file)
 {
 	using Except = Exception_t;
 	using Code = Except::Code;
 
 	ifstream fin(file);
-	
+
 	if (fin.fail()) Except::Abort(Code::FILE_NOT_FOUND, file);
-
 	this->file = file;
-
 	ExtractInput(fin);
 
 	fin.close();

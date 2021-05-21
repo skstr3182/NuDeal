@@ -29,10 +29,6 @@ public :
 	};
 
 private :
-
-
-
-private :
 	
 	string file;
 	string contents;
@@ -55,7 +51,7 @@ private :
 
 public :
 
-	void ReadInput(string file);
+	void ReadInput(const string& file);
 
 public :
 	
@@ -93,6 +89,11 @@ private :
 
 	map<string, UnitVolume_t> unitVolumes;
 	map<string, UnitComp_t> unitComps;
+
+public :
+
+	const auto& GetUnitVolumeInfo() const { return unitVolumes; }
+	const auto& GetUnitCompInfo() const { return unitComps; }
 
 };
 
