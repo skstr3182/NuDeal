@@ -43,7 +43,7 @@ private:
 
 public: // Constructor & Destructor
 
-	Array_t() {}
+	Array_t() = default;
 	template <typename U> Array_t(const Array_t<U>& rhs) 
 	{ this->operator=(rhs); }
 	Array_t(const Array_t<T>& rhs) 
