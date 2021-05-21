@@ -44,14 +44,20 @@ private:
 public: // Constructor & Destructor
 
 	Array_t() {}
-	template <typename U> Array_t(const Array_t<U>& rhs) { this->operator=(rhs); }
-	Array_t(const Array_t<T>& rhs) { this->operator=(rhs); }
-	Array_t(Array_t<T>&& rhs) { this->operator=(rhs); }
-	Array_t(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1) 
+	template <typename U> Array_t(const Array_t<U>& rhs) 
+	{ this->operator=(rhs); }
+	Array_t(const Array_t<T>& rhs) 
+	{ this->operator=(rhs); }
+	Array_t(Array_t<T>&& rhs) 
+	{ this->operator=(rhs); }
+	explicit Array_t
+	(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1) 
 	{ ResizeHost(nx, ny, nz, nw); }
-	Array_t(const_pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1)
+	explicit Array_t
+	(const_pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1)
 	{ ResizeHost(ptr, nx, ny, nz, nw); }
-	~Array_t() { Clear(); }
+	~Array_t() 
+	{ Clear(); }
 
 public: // Aliasing 
 
@@ -103,11 +109,27 @@ public : // Arithmatic Operations
 	inline Array_t<T>& operator=(const Array_t<T>& rhs);
 	inline Array_t<T>& operator=(Array_t<T>&& rhs);
 
+	inline Array_t<T>& operator+=(const_reference val);
+	template <typename U> inline Array_t<T>& operator+=(const Array_t<U>& rhs);
+	inline Array_t<T>& operator+=(const Array_t<T>& rhs);
+
+	inline Array_t<T>& operator-=(const_reference val);
+	template <typename U> inline Array_t<T>& operator-=(const Array_t<U>& rhs);
+	inline Array_t<T>& operator-=(const Array_t<T>& rhs);
+
+	inline Array_t<T>& operator*=(const_reference val);
+	template <typename U> inline Array_t<T>& operator*=(const Array_t<U>& rhs);
+	inline Array_t<T>& operator*=(const Array_t<T>& rhs);
+
+	inline Array_t<T>& operator/=(const_reference val);
+	template <typename U> inline Array_t<T>& operator/=(const Array_t<U>& rhs);
+	inline Array_t<T>& operator/=(const Array_t<T>& rhs);
 
 public : // Indexing Operations
 
-	__forceinline__ __host__ __device__ reference 
-		operator[] (index_type i) noexcept 
+	__forceinline__ __host__ __device__ 
+	reference operator[] (index_type i) 
+	noexcept 
 	{ 
 #ifdef __CUDA_ARCH__
 		return d_Entry[i];
@@ -116,7 +138,8 @@ public : // Indexing Operations
 #endif
 	}
 	__forceinline__ __host__ __device__ const_reference 
-		operator[] (index_type i) const noexcept 
+	operator[] (index_type i) 
+	const noexcept 
 	{ 
 #ifdef __CUDA_ARCH__
 		return d_Entry[i];
@@ -124,8 +147,9 @@ public : // Indexing Operations
 		return Entry[i];
 #endif
 	}
-	__forceinline__ __host__ __device__ reference 
-		operator() (index_type ix, index_type iy = 0, index_type iz = 0, index_type iw = 0) noexcept 
+	__forceinline__ __host__ __device__ 
+	reference operator() (index_type ix, index_type iy = 0, index_type iz = 0, index_type iw = 0) 
+	noexcept 
 	{ 
 #ifdef __CUDA_ARCH__
 		return d_Entry[iw * nxyz + iz * nxy + iy * nx + ix];
@@ -133,8 +157,9 @@ public : // Indexing Operations
 		return Entry[iw * nxyz + iz * nxy + iy * nx + ix]; 
 #endif
 	}
-	__forceinline__ __host__ __device__ const_reference
-		operator() (index_type ix, index_type iy = 0, index_type iz = 0, index_type iw = 0) const noexcept
+	__forceinline__ __host__ __device__ 
+	const_reference operator() (index_type ix, index_type iy = 0, index_type iz = 0, index_type iw = 0) 
+	const noexcept
 	{
 #ifdef __CUDA_ARCH__
 		return d_Entry[iw * nxyz + iz * nxy + iy * nx + ix];

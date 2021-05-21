@@ -1,5 +1,6 @@
 #pragma once
 #include "Array.h"
+#include "CUDAExcept.h"
 
 namespace LinPack
 {
@@ -72,14 +73,15 @@ void Array_t<T>::ResizeDevice(size_type nx, size_type ny, size_type nz, size_typ
 {
 	ClearDevice();
 	SetDimension(nx, ny, nz, nw);
-	cudaMalloc(&d_Entry, n * sizeof(T)); SetDeviceState(State::Alloc);
+	cudaCheckError( cudaMalloc(&d_Entry, n * sizeof(T)) ); 
+	SetDeviceState(State::Alloc);
 }
 
 template <typename T>
 void Array_t<T>::ResizeDevice(const_pointer ptr, size_type nx, size_type ny, size_type nz, size_type nw)
 {
 	ResizeDevice(nx, ny, nz, nw);
-	cudaMemcpy(d_Entry, ptr, n * sizeof(T), cudaMemcpyHostToDevice);
+	cudaCheckError( cudaMemcpy(d_Entry, ptr, n * sizeof(T), cudaMemcpyHostToDevice) );
 }
 
 template <typename T>
@@ -134,6 +136,102 @@ inline Array_t<T>& Array_t<T>::operator=(Array_t<T>&& rhs)
 {
 	AliasHost(rhs); SetHostState(rhs.state);
 	rhs.Entry = NULL;
+	return *this;
+}
+
+template <typename T>
+inline Array_t<T>& Array_t<T>::operator+=(const_reference val)
+{
+	#pragma omp parallel for schedule(guided)
+	for (index_type i = 0; i < size(); ++i) Entry[i] += val;
+	return *this;
+}
+
+template <typename T> template <typename U>
+inline Array_t<T>& Array_t<T>::operator+=(const Array_t<U>& rhs)
+{
+	#pragma omp parallel for schedule(guided)
+	for (index_type i = 0; i < size(); ++i) Entry[i] += rhs.Entry[i];
+	return *this;
+}
+
+template <typename T>
+inline Array_t<T>& Array_t<T>::operator+=(const Array_t<T>& rhs)
+{
+	#pragma omp parallel for schedule(guided)
+	for (index_type i = 0; i < size(); ++i) Entry[i] += rhs.Entry[i];
+	return *this;
+}
+
+template <typename T>
+inline Array_t<T>& Array_t<T>::operator-=(const_reference val)
+{
+	#pragma omp parallel for schedule(guided)
+	for (index_type i = 0; i < size(); ++i) Entry[i] -= val;
+	return *this;
+}
+
+template <typename T> template <typename U>
+inline Array_t<T>& Array_t<T>::operator-=(const Array_t<U>& rhs)
+{
+	#pragma omp parallel for schedule(guided)
+	for (index_type i = 0; i < size(); ++i) Entry[i] -= rhs.Entry[i];
+	return *this;
+}
+
+template <typename T>
+inline Array_t<T>& Array_t<T>::operator-=(const Array_t<T>& rhs)
+{
+	#pragma omp parallel for schedule(guided)
+	for (index_type i = 0; i < size(); ++i) Entry[i] -= rhs.Entry[i];
+	return *this;
+}
+
+template <typename T>
+inline Array_t<T>& Array_t<T>::operator*=(const_reference val)
+{
+	#pragma omp parallel for schedule(guided)
+	for (index_type i = 0; i < size(); ++i) Entry[i] *= val;
+	return *this;
+}
+
+template <typename T> template <typename U>
+inline Array_t<T>& Array_t<T>::operator*=(const Array_t<U>& rhs)
+{
+	#pragma omp parallel for schedule(guided)
+	for (index_type i = 0; i < size(); ++i) Entry[i] *= rhs.Entry[i];
+	return *this;
+}
+
+template <typename T>
+inline Array_t<T>& Array_t<T>::operator*=(const Array_t<T>& rhs)
+{
+	#pragma omp parallel for schedule(guided)
+	for (index_type i = 0; i < size(); ++i) Entry[i] *= rhs.Entry[i];
+	return *this;
+}
+
+template <typename T>
+inline Array_t<T>& Array_t<T>::operator/=(const_reference val)
+{
+	#pragma omp parallel for schedule(guided)
+	for (index_type i = 0; i < size(); ++i) Entry[i] /= val;
+	return *this;
+}
+
+template <typename T> template <typename U>
+inline Array_t<T>& Array_t<T>::operator/=(const Array_t<U>& rhs)
+{
+	#pragma omp parallel for schedule(guided)
+	for (index_type i = 0; i < size(); ++i) Entry[i] /= rhs.Entry[i];
+	return *this;
+}
+
+template <typename T>
+inline Array_t<T>& Array_t<T>::operator/=(const Array_t<T>& rhs)
+{
+	#pragma omp parallel for schedule(guided)
+	for (index_type i = 0; i < size(); ++i) Entry[i] /= rhs.Entry[i];
 	return *this;
 }
 
