@@ -85,6 +85,21 @@ public :
 		vector<vector<Displace_t>> displace;
 	};
 
+	struct _UnitComp_t
+	{
+		double3 origin = {0.0, 0.0, 0.0};
+		string unitvol, material;
+	};
+
+	struct UnitCell_t
+	{
+		enum class Type {General, Rect, Hex};
+		Type type = Type::General;
+		double3 origin = {0.0, 0.0, 0.0};
+		double2 pitch = {0.0, 0.0};
+		vector<vector<string>> array;
+	};
+
 private :
 
 	map<string, UnitVolume_t> unitVolumes;

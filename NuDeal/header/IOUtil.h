@@ -34,14 +34,14 @@ struct SpecialCharacters
 };
 
 // Block
-const vector<string> BlockNames = {
+static const vector<string> BlockNames = {
 	"GEOMETRY",
 	"MATERIAL",
 	"OPTION"
 };
 
 // Card
-const vector<vector<string>> CardNames = {
+static const vector<vector<string>> CardNames = {
 	{ "UNITVOLUME", "UNITCOMP", "DISPLACE" },
 	{ "NG", "FORMAT" },
 	{ "CRITERIA" }

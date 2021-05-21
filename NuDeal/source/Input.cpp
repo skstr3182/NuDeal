@@ -165,8 +165,7 @@ void InputManager_t::ParseUnitCompCard(HashTree_t& Tree)
 				if (std::find_if(s.begin(), s.end(), isalpha) != s.end()) { // Rotation
 					d.type = Displace_t::Type::Rotation;
 					auto r = Util::SplitFields(s, SC::Equal);
-					if (r.size() != 2)
-						Except::Abort(Code::INVALID_ROTATION, s);
+					if (r.size() != 2) Except::Abort(Code::INVALID_ROTATION, s);
 					if (r[0] == "X") 
 						d.axis = Displace_t::Axis::X;
 					else if (r[0] == "Y") 
