@@ -13,6 +13,8 @@ int main(int argc, char *argv[])
 	LinPack::Array_t<double> b;
 	LinPack::Array_t<int> c;
 
+	vector<double> doubleVec(100);
+
 	IO::InputManager_t Parser;
 	std::string file = std::string(argv[1]);
 	Parser.ReadInput(file);

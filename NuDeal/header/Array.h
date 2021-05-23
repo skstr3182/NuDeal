@@ -84,10 +84,17 @@ public: // Clearing
 
 public: // Info.
 
-	bool IsHostAlloc() const noexcept { return state == State::Alloc; }
-	bool IsDeviceAlloc() const noexcept { return d_state == State::Alloc; }
-	bool IsHostAlias() const noexcept { return state == State::Alias; }
-	bool IsDeviceAlias() const noexcept { return d_state == State::Alias; }
+	inline bool IsHostAlloc() const noexcept { return state == State::Alloc; }
+	inline bool IsDeviceAlloc() const noexcept { return d_state == State::Alloc; }
+	inline bool IsHostAlias() const noexcept { return state == State::Alias; }
+	inline bool IsDeviceAlias() const noexcept { return d_state == State::Alias; }
+	
+	inline pointer GetHostPointer() noexcept { return Entry; }
+	inline const_pointer GetHostPointer() const noexcept { return Entry; }
+	__forceinline__ __host__ __device__ 
+	pointer GetDevicePointer() noexcept { return d_Entry; }
+	__forceinline__ __host__ __device__ 
+	const_pointer GetDevicePointer() const noexcept { return d_Entry; }
 
 public : // STL-Consistent Methods
 
@@ -100,6 +107,8 @@ public : // STL-Consistent Methods
 	inline reference back() noexcept { return Entry[n - 1]; }
 	inline const_reference back() const noexcept { return Entry[n - 1]; }
 	inline size_type size() const noexcept { return n; }
+	inline pointer data() noexcept { return Entry; }
+	inline const_pointer data() const noexcept { return Entry; }
 
 public : // Arithmatic Operations
 
