@@ -6,6 +6,18 @@ namespace Geometry
 
 constexpr double eps_geo = 1.e-10;
 
+enum class CartAxis {
+	X,
+	Y,
+	Z
+};
+
+enum class CartPlane {
+	XY,
+	YZ,
+	XZ
+};
+
 class UnitSurf {
 
 public :
@@ -19,18 +31,6 @@ public :
 		ROTAT,
 		SCALE,
 		SHAER
-	};
-
-	enum class CartAxis {
-		X,
-		Y,
-		Z
-	};
-
-	enum class CartPlane {
-		XY,
-		YZ,
-		XZ
 	};
 
 	enum class SurfType {
@@ -113,8 +113,6 @@ class UnitVol {
 public:
 	
 	using Transform = UnitSurf::TransformType;
-	using CartAxis = UnitSurf::CartAxis;
-	using CartPlane = UnitSurf::CartPlane;
 	using SurfType = UnitSurf::SurfType;
 
 private:
@@ -146,7 +144,7 @@ public:
 	void Append(const UnitSurf &asurf) { Surfaces.emplace_back(asurf); }
 	int GetNumSurfaces() const { return Surfaces.size(); }
 	double GetVolume() const { return vol; }
-	bool GetBoundBox(double2& xlr, double2& ylr, double2& zlr);
+	bool GetBoundBox (double2& xlr, double2& ylr, double2& zlr) const;
 
 	void Relocate(double dx, double dy, double dz);
 	void Relocate(double3 d) { Relocate(d.x, d.y, d.z); }
@@ -157,13 +155,17 @@ public:
 	int GetIntersection(CartPlane CartPlane, const array<double, 2>& val, vector<double>& sol);
 	bool Finalize();
 
-	UnitVol& operator=(const UnitVol& rhs) { *this = UnitVol(rhs); return *this; }
+	UnitVol& operator=(const UnitVol& rhs) {
+		this->Create(rhs.GetSurfaces());
+		rhs.GetBoundBox(xlr, ylr, zlr);
+		this->vol = rhs.GetVolume();
+		return *this;
+	}
 };
 
 inline void DebugUnitGeo() {
 	
 	using SurfType = UnitSurf::SurfType;
-	using CartPlane = UnitSurf::CartPlane;
 
 	double c_cir[3] = { 0.0, 0.0, 0.54 };
 	UnitSurf Circle(SurfType::CIRCLE, c_cir, CartPlane::XY);
@@ -200,36 +202,20 @@ inline void DebugUnitGeo() {
 	if (isbounded) cout << "Vol = " << Cylinder.GetVolume() << "cm^3" << endl;
 }
 
-class UnitComp {
-
-public:
-	
-	using CartAxis = UnitSurf::CartAxis;
-
+class UnitComp : public UnitVol{
 private:
 
-	vector<int> imat;
-	vector<UnitVol> Volumes;
-	double2 xlr, ylr, zlr;
+	int imat;
 
 public:
 	
-	UnitComp(int nvol, const UnitVol *Volumes) { Create(nvol, Volumes); }
-	UnitComp(const vector<UnitVol>& Volumes) { Create(Volumes); }
+	UnitComp(int imat, const UnitVol &Volume) { Create(imat, Volume); }
 	UnitComp(const UnitComp& rhs) { Create(rhs); }
 
-	void Rotate(double cos, double sin, CartAxis Ax);
-	void Rotate(double2 c, CartAxis Ax) { Rotate(c.x, c.y, Ax); }
-	void Relocate(double dx, double dy, double dz);
-	void Relocate(double3 d) { Relocate(d.x, d.y, d.z); }
-
-	void Create(int nvol, const UnitVol *Volumes);
-	void Create(const vector<UnitVol>& Volumes) { this->Volumes = Volumes; }
+	void Create(int nvol, const UnitVol &Volume);
 	void Create(const UnitComp& rhs);
 
-	int GetNumVolumes() const { return Volumes.size(); }
-	const auto& GetMatIds() const { return imat; }
-	const auto& GetVolumes() const { return Volumes; }
+	const auto& GetMatId() const { return imat; }
 };
 
 }

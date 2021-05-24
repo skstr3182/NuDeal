@@ -106,7 +106,6 @@ public:
 inline void DebugGeomHandle() {
 
 	using SurfType = UnitSurf::SurfType;
-	using CartPlane = UnitSurf::CartPlane;
 
 	double c_cir[3] = { 0.0, 0.0, 0.54 };
 	UnitSurf Circle(SurfType::CIRCLE, c_cir, CartPlane::XY);
@@ -149,6 +148,15 @@ inline void DebugGeomHandle() {
 	if (isbounded) cout << "Y : [" << ys.x << "," << ys.y << "] ";
 	if (isbounded) cout << "Z : [" << zs.x << "," << zs.y << "] " << endl;
 	if (isbounded) cout << "Vol = " << Box.GetVolume() << "cm^3" << endl;
+
+	UnitComp BoxComp(0, Box), CylComp(1, Cylinder);
+	GeometryHandler GeoHandle;
+	double origin[3] = { -0.63,-0.63,0 }, L[3] = { 1.26,1.26,3 };
+	GeoHandle.SetOrdinates(origin, L);
+	GeoHandle.append(BoxComp);
+	GeoHandle.append(CylComp);
+	GeoHandle.FinalizeVolumes();
+	GeoHandle.Discretize(Geometry::Dimension::TwoD, 0.25, 0.01);
 }
 
 }

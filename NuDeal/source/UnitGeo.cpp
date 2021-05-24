@@ -300,23 +300,24 @@ int UnitSurf::GetIntersection(CartPlane CartPlane, const array<double, 2>& val, 
 		}
 	}
 	else {
+		int rtrnval = 1;
 		switch (CartPlane) {
 		case CartPlane::XY:
-			if (abs(c_z) < eps_geo) break;
+			if (abs(c_z) < eps_geo) rtrnval = 0;
 			sol[0] = -(c_x*val[0] + c_y * val[1] + c) / c_z;
 			break;
 		case CartPlane::YZ:
-			if (abs(c_x) < eps_geo) break;
+			if (abs(c_x) < eps_geo) rtrnval = 0;
 			sol[0] = -(c_y*val[0] + c_z * val[1] + c) / c_x;
 			break;
 		case CartPlane::XZ:
-			if (abs(c_y) < eps_geo) break;
+			if (abs(c_y) < eps_geo) rtrnval = 0;
 			sol[0] = -(c_x*val[0] + c_z * val[1] + c) / c_y;
 			break;
 		default:
 			break;
 		}
-		return 1;
+		return rtrnval;
 	}
 }
 
@@ -519,8 +520,9 @@ int UnitVol::OneIntersection(int idx, CartPlane CartPlane,
 		}
 		for (int j = 0; j < Surfaces.size(); j++) {
 			if (j == idx) continue;
-			if (!Surfaces[j].IsInside(x, y, z)) {
+			if (!Surfaces[j].IsInside(x, y, z, true)) {
 				ninter--;
+				if (ninter == 0) break;
 				sol[0] = sol[1];
 			}
 		}
@@ -860,30 +862,21 @@ bool UnitVol::Finalize() {
 	return finalized;
 }
 
-bool UnitVol::GetBoundBox(double2& xlr, double2& ylr, double2& zlr) {
+bool UnitVol::GetBoundBox(double2& xlr, double2& ylr, double2& zlr) const {
 	xlr = this->xlr; ylr = this->ylr; zlr = this->zlr;
 	return isbounded;
 }
 
-void UnitComp::Create(int nvol, const UnitVol *Volumes) {
-	this->Volumes.resize(nvol);
-	for (int i = 0; i < nvol; ++i) this->Volumes[i] = Volumes[i];
+void UnitComp::Create(int imat, const UnitVol &Volume) {
+	this->UnitVol::operator=(Volume);
+	this->imat = imat;
 	// * Calculate Bound Box of UnitComp
 }
 
 void UnitComp::Create(const UnitComp& rhs)
 {
 	imat = rhs.imat;
-	Volumes = rhs.Volumes;
-	xlr = rhs.xlr; ylr = rhs.ylr; zlr = rhs.zlr;
-}
-
-void UnitComp::Rotate(double cos, double sin, CartAxis Ax) {
-	for (int i = 0; i < Volumes.size(); i++) Volumes[i].Rotate(cos, sin, Ax);
-}
-
-void UnitComp::Relocate(double dx, double dy, double dz) {
-	for (int i = 0; i < Volumes.size(); i++) Volumes[i].Relocate(dx, dy, dz);
+	this->UnitVol::operator=(rhs);
 }
 
 }

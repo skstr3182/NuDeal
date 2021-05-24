@@ -4,14 +4,21 @@
 #include "XS.h"
 #include "GeoHandle.h"
 
-class FluxDomain : public Geometry::GeometryHandler {
-// for neutronics
+class AngularFluxDomain : public Geometry::GeometryHandler {
 private:
-	double *flux;
+	double *bndflux;
 };
 
-class XSDomain : public Geometry::GeometryHandler {
+class FlatSrcDomain : public Geometry::GeometryHandler {
+// for neutronics
+private:
+	double *flux0, *flux1, *flux2;
+	double *srcF, *srfS, *srcEx;
+};
+
+class FlatXSDomain : public Geometry::GeometryHandler {
 private:
 	int *idiso;
 	double *pnum, *temperature;
+	double *xst, *xssm, *xsnf;
 };
