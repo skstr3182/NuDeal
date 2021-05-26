@@ -73,6 +73,8 @@ public: // Resizing
 	void ResizeHost(const_pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
 	void ResizeDevice(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
 	void ResizeDevice(const_pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
+	void ResizeDevice()
+	{ ResizeDevice(nx, ny, nz, nw); }
 	void Resize(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1) 
 	{ ResizeHost(nx, ny, nz, nw); ResizeDevice(nx, ny, nz, nw); }
 
