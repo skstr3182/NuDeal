@@ -25,6 +25,9 @@
     <Filter Include="Source\LinPack">
       <UniqueIdentifier>{5de1b854-acb9-4d71-ac79-3f5db3ec08bc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header\Exception">
+      <UniqueIdentifier>{a0eddbba-af5a-429b-ad52-22729bdcface}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header\HardCodeParam.h">
@@ -32,9 +35,6 @@
     </ClInclude>
     <ClInclude Include="header\Defines.h">
       <Filter>Header</Filter>
-    </ClInclude>
-    <ClInclude Include="header\Exception.h">
-      <Filter>Header\IO</Filter>
     </ClInclude>
     <ClInclude Include="header\Input.h">
       <Filter>Header\IO</Filter>
@@ -71,6 +71,12 @@
     </ClInclude>
     <ClInclude Include="header\Array.hpp">
       <Filter>Header\LinPack</Filter>
+    </ClInclude>
+    <ClInclude Include="header\IOExcept.h">
+      <Filter>Header\Exception</Filter>
+    </ClInclude>
+    <ClInclude Include="header\CUDAExcept.h">
+      <Filter>Header\Exception</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

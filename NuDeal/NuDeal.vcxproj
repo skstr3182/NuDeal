@@ -13,8 +13,9 @@
   <ItemGroup>
     <ClInclude Include="header\Array.h" />
     <ClInclude Include="header\Array.hpp" />
+    <ClInclude Include="header\CUDAExcept.h" />
     <ClInclude Include="header\Defines.h" />
-    <ClInclude Include="header\Exception.h" />
+    <ClInclude Include="header\IOExcept.h" />
     <ClInclude Include="header\GeoHandle.h" />
     <ClInclude Include="header\Geometry.h" />
     <ClInclude Include="header\HardCodeParam.h" />
