@@ -547,7 +547,7 @@ void UnitVol::Create(const UnitSurf &_Surfaces) {
 void UnitVol::Create(const UnitVol& rhs)
 {
 	Surfaces = rhs.Surfaces;
-	isbounded = rhs.isbounded; finalized = rhs.finalized;
+	isbounded = rhs.isbounded;
 	xlr = rhs.xlr; ylr = rhs.ylr; zlr = rhs.zlr;
 	vol = rhs.vol;
 }
@@ -563,9 +563,9 @@ void UnitVol::Relocate(double dx, double dy, double dz) {
 
 void UnitVol::Rotate(double cos, double sin, CartAxis Ax) {
 	for (int i = 0; i < Surfaces.size(); i++) Surfaces[i].Rotate(cos, sin, Ax);
-	if (finalized) {
-		Finalize();
-	}
+	if (isbounded) 
+		CalBoundBox();
+	
 }
 
 bool UnitVol::IsInside(double x, double y, double z, bool includeOn) {
@@ -853,13 +853,14 @@ double UnitVol::CalVolume(int nx, int ny, int nz) {
 	return (volsumXY+volsumXZ+volsumYZ)/3.0;
 }
 
-bool UnitVol::Finalize() {
+void UnitVol::Finalize() {
 	isbounded = CalBoundBox();
-	if (isbounded) {
-		vol = CalVolume();
-		finalized = true;
+	if (!isbounded) {
+		// Exception
 	}
-	return finalized;
+	else {
+		vol = CalVolume();
+	}
 }
 
 bool UnitVol::GetBoundBox(double2& xlr, double2& ylr, double2& zlr) const {

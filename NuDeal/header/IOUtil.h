@@ -34,14 +34,14 @@ struct SpecialCharacters
 };
 
 // Block
-const vector<string> BlockNames = {
+static const vector<string> BlockNames = {
 	"GEOMETRY",
 	"MATERIAL",
 	"OPTION"
 };
 
 // Card
-const vector<vector<string>> CardNames = {
+static const vector<vector<string>> CardNames = {
 	{ "UNITVOLUME", "UNITCOMP", "DISPLACE" },
 	{ "NG", "FORMAT" },
 	{ "CRITERIA" }
@@ -84,12 +84,11 @@ public :
 	static string Trim(const string& field, const string& delimiter = "\n ");
 	static int LineCount(const string& line, size_type count = string::npos);
 	static string EraseSpace(const string& line, const string& delimiter = "\n ");
-	/// Read Input
 	static size_type FindEndPoint(const string& contents, size_type& pos);
-	static vector<string> SplitFields(string line, const string& delimiter);
-	static vector<string> SplitFields(string line, char delimiter);
+	static vector<string> SplitFields(const string& line, const string& delimiter);
+	static vector<string> SplitFields(const string& line, char delimiter);
+	static double3 GetCoordinate(const string& field);
 	
-	// Check Synax Error
 	static bool IsClosed(const string& s);
 
 	static Blocks GetBlockID(string line)

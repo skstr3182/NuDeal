@@ -50,7 +50,7 @@ private:
 	// The realm defined with a surface would be,
 	// (c_xs*x+c_x)*x + (c_ys*y+c_y)*y + (c_zs*z+c_z)*z - c < 0
 	bool is_curve = false;
-
+	string name;
 	Equation_t eq = { 0.0, };
 
 	double& c_xs = eq[0];
@@ -79,7 +79,7 @@ private:
 
 public:
 
-	//UnitSurf() { }
+	UnitSurf() {}
 	UnitSurf(const Equation_t& eq) 
 	{ Create(eq); }
 	UnitSurf(SurfType surftype, double *_coeff, CartPlane cartesianPln = CartPlane::XY)
@@ -88,7 +88,8 @@ public:
 	{ Create(rhs);	}
 
 	void Create(SurfType surftype, double *_coeff, CartPlane cartesianPln = CartPlane::XY);
-	void Create(const Equation_t& eq) { this->eq = eq; SetCurve(); }
+	void Create(const Equation_t& eq, const string& name = "") 
+	{ this->eq = eq; SetCurve(); }
 	void Create(const UnitSurf& rhs) { eq = rhs.eq; is_curve = rhs.is_curve; }
 
 	const Equation_t& GetEquation() const { return eq; }
@@ -99,7 +100,6 @@ public:
 	void Rotate(double cos, double sin, CartAxis Ax);
 	void Rotate(double2 c, CartAxis Ax) { Rotate(c.x, c.y, Ax); }
 
-	//int GetIntersection(CartPlane cartPlane, double *val, double2& sol);
 	int GetIntersection(CartPlane cartPlane, const array<double, 2>& val, array<double, 2>& sol);
 	bool IsInside(double x, double y, double z, bool includeOn = false);
 	int GetLocalExSelf(double so1[6][3]);
@@ -117,8 +117,9 @@ public:
 
 private:
 
+	string name;
 	vector<UnitSurf> Surfaces;
-	bool isbounded = false, finalized = false;
+	bool isbounded = false;
 	double2 xlr, ylr, zlr;
 	double vol;
 
@@ -130,6 +131,7 @@ private:
 public:
 
 	UnitVol() {}
+	UnitVol(const string& name) { this->name = name; }
 	UnitVol(int nsurf, const UnitSurf *_Surfaces) { Create(nsurf, _Surfaces); }
 	UnitVol(const UnitSurf &_Surface) { Create(_Surface); }
 	UnitVol(const UnitVol& rhs) { Create(rhs); }
@@ -141,7 +143,8 @@ public:
 
 	bool IsAlloc() const { return !Surfaces.empty(); }
 	const auto& GetSurfaces() const { return Surfaces; }
-	void Append(const UnitSurf &asurf) { Surfaces.emplace_back(asurf); }
+	void Append(const UnitSurf &asurf) 
+	{ Surfaces.emplace_back(asurf); isbounded = false; }
 	int GetNumSurfaces() const { return Surfaces.size(); }
 	double GetVolume() const { return vol; }
 	bool GetBoundBox (double2& xlr, double2& ylr, double2& zlr) const;
@@ -150,10 +153,11 @@ public:
 	void Relocate(double3 d) { Relocate(d.x, d.y, d.z); }
 	void Rotate(double cos, double sin, CartAxis Ax);
 	void Rotate(double2 c, CartAxis Ax) { Rotate(c.x, c.y, Ax); }
+	void Translation(deque<int> move);
 
 	bool IsInside(double x, double y, double z, bool includeOn = false);
 	int GetIntersection(CartPlane CartPlane, const array<double, 2>& val, vector<double>& sol);
-	bool Finalize();
+	void Finalize();
 
 	UnitVol& operator=(const UnitVol& rhs) {
 		this->Create(rhs.GetSurfaces());
