@@ -21,36 +21,36 @@ template <typename T>
 void Array_t<T>::Alias(const Array_t<T>& rhs)
 {
 	SetDimension(rhs.nx, rhs.ny, rhs.nz, rhs.nw);
-	Entry = rhs.Entry; SetHostState(State::Alias);
-	d_Entry = rhs.d_Entry; SetDeviceState(State::Alias);
+	ptr_host = rhs.ptr_host;
+	ptr_device = rhs.ptr_device;
 }
 
 template <typename T>
 void Array_t<T>::AliasHost(const Array_t<T>& rhs)
 {
 	SetDimension(rhs.nx, rhs.ny, rhs.nz, rhs.nw);
-	Entry = rhs.Entry; SetHostState(State::Alias);
+	ptr_host = rhs.ptr_host;
 }
 
 template <typename T>
 void Array_t<T>::AliasHost(pointer ptr, size_type nx, size_type ny, size_type nz, size_type nw)
 {
 	SetDimension(nx, ny, nz, nw);
-	Entry = ptr; SetHostState(State::Alias);
+	ptr_host = ptr;
 }
 
 template <typename T>
 void Array_t<T>::AliasDevice(const Array_t<T>& rhs)
 {
 	SetDimension(rhs.nx, rhs.ny, rhs.nz, rhs.nw);
-	d_Entry = rhs.d_Entry; SetDeviceState(State::Alias);
+	ptr_device = rhs.ptr_device;
 }
 
 template <typename T>
 void Array_t<T>::AliasDevice(pointer ptr, size_type nx, size_type ny, size_type nz, size_type nw)
 {
 	SetDimension(nx, ny, nz, nw);
-	d_Entry = ptr; SetDeviceState(State::Alias);
+	ptr_device = ptr;
 }
 
 template <typename T>
@@ -58,7 +58,7 @@ void Array_t<T>::ResizeHost(size_type nx, size_type ny, size_type nz, size_type 
 {
 	ClearHost();
 	SetDimension(nx, ny, nz, nw);
-	Entry = new T[n]; SetHostState(State::Alloc);
+	ptr_host = new T[n];
 }
 
 template <typename T>
@@ -73,31 +73,28 @@ void Array_t<T>::ResizeDevice(size_type nx, size_type ny, size_type nz, size_typ
 {
 	ClearDevice();
 	SetDimension(nx, ny, nz, nw);
-	cudaCheckError( cudaMalloc(&d_Entry, n * sizeof(T)) ); 
-	SetDeviceState(State::Alloc);
+	cudaCheckError( cudaMalloc(&ptr_device, n * sizeof(T)) ); 
 }
 
 template <typename T>
 void Array_t<T>::ResizeDevice(const_pointer ptr, size_type nx, size_type ny, size_type nz, size_type nw)
 {
 	ResizeDevice(nx, ny, nz, nw);
-	cudaCheckError( cudaMemcpy(d_Entry, ptr, n * sizeof(T), cudaMemcpyHostToDevice) );
+	cudaCheckError( cudaMemcpy(ptr_device, ptr, n * sizeof(T), cudaMemcpyHostToDevice) );
 }
 
 template <typename T>
 void Array_t<T>::ClearHost()
 {
-	if (IsHostAlloc()) delete[] Entry;
-	Entry = static_cast<pointer>(NULL);
-	SetHostState(State::Undefined);
+	if (IsHostAlloc()) delete[] ptr_host;
+	ptr_host = static_cast<pointer>(NULL);
 }
 
 template <typename T>
 void Array_t<T>::ClearDevice()
 {
-	if (IsDeviceAlloc()) cudaFree(d_Entry);
-	d_Entry = static_cast<pointer>(NULL);
-	SetDeviceState(State::Undefined);
+	if (IsDeviceAlloc()) cudaFree(ptr_device);
+	ptr_device = static_cast<pointer>(NULL);
 }
 
 template <typename T>
@@ -119,7 +116,7 @@ inline Array_t<T>& Array_t<T>::operator=(const Array_t<U>& rhs)
 {
 	if (!IsHostAlloc() && !IsHostAlias()) ResizeHost(rhs.nx, rhs.ny, rhs.nz, rhs.nw);
 	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] = static_cast<T>(rhs.Entry[i]);
+	for (index_type i = 0; i < size(); ++i) ptr_host[i] = static_cast<T>(rhs.ptr_host[i]);
 	return *this;
 }
 
@@ -134,8 +131,8 @@ inline Array_t<T>& Array_t<T>::operator=(const Array_t<T>& rhs)
 template <typename T>
 inline Array_t<T>& Array_t<T>::operator=(Array_t<T>&& rhs)
 {
-	AliasHost(rhs); SetHostState(rhs.state);
-	rhs.Entry = NULL;
+	AliasHost(rhs);
+	rhs.ptr_host = NULL;
 	return *this;
 }
 
@@ -143,7 +140,7 @@ template <typename T>
 inline Array_t<T>& Array_t<T>::operator+=(const_reference val)
 {
 	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] += val;
+	for (index_type i = 0; i < size(); ++i) ptr_host[i] += val;
 	return *this;
 }
 
@@ -151,7 +148,7 @@ template <typename T> template <typename U>
 inline Array_t<T>& Array_t<T>::operator+=(const Array_t<U>& rhs)
 {
 	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] += rhs.Entry[i];
+	for (index_type i = 0; i < size(); ++i) ptr_host[i] += rhs.ptr_host[i];
 	return *this;
 }
 
@@ -159,7 +156,7 @@ template <typename T>
 inline Array_t<T>& Array_t<T>::operator+=(const Array_t<T>& rhs)
 {
 	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] += rhs.Entry[i];
+	for (index_type i = 0; i < size(); ++i) ptr_host[i] += rhs.ptr_host[i];
 	return *this;
 }
 
@@ -167,7 +164,7 @@ template <typename T>
 inline Array_t<T>& Array_t<T>::operator-=(const_reference val)
 {
 	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] -= val;
+	for (index_type i = 0; i < size(); ++i) ptr_host[i] -= val;
 	return *this;
 }
 
@@ -175,7 +172,7 @@ template <typename T> template <typename U>
 inline Array_t<T>& Array_t<T>::operator-=(const Array_t<U>& rhs)
 {
 	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] -= rhs.Entry[i];
+	for (index_type i = 0; i < size(); ++i) ptr_host[i] -= rhs.ptr_host[i];
 	return *this;
 }
 
@@ -183,7 +180,7 @@ template <typename T>
 inline Array_t<T>& Array_t<T>::operator-=(const Array_t<T>& rhs)
 {
 	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] -= rhs.Entry[i];
+	for (index_type i = 0; i < size(); ++i) ptr_host[i] -= rhs.ptr_host[i];
 	return *this;
 }
 
@@ -191,7 +188,7 @@ template <typename T>
 inline Array_t<T>& Array_t<T>::operator*=(const_reference val)
 {
 	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] *= val;
+	for (index_type i = 0; i < size(); ++i) ptr_host[i] *= val;
 	return *this;
 }
 
@@ -199,7 +196,7 @@ template <typename T> template <typename U>
 inline Array_t<T>& Array_t<T>::operator*=(const Array_t<U>& rhs)
 {
 	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] *= rhs.Entry[i];
+	for (index_type i = 0; i < size(); ++i) ptr_host[i] *= rhs.ptr_host[i];
 	return *this;
 }
 
@@ -207,7 +204,7 @@ template <typename T>
 inline Array_t<T>& Array_t<T>::operator*=(const Array_t<T>& rhs)
 {
 	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] *= rhs.Entry[i];
+	for (index_type i = 0; i < size(); ++i) ptr_host[i] *= rhs.ptr_host[i];
 	return *this;
 }
 
@@ -215,7 +212,7 @@ template <typename T>
 inline Array_t<T>& Array_t<T>::operator/=(const_reference val)
 {
 	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] /= val;
+	for (index_type i = 0; i < size(); ++i) ptr_host[i] /= val;
 	return *this;
 }
 
@@ -223,7 +220,7 @@ template <typename T> template <typename U>
 inline Array_t<T>& Array_t<T>::operator/=(const Array_t<U>& rhs)
 {
 	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] /= rhs.Entry[i];
+	for (index_type i = 0; i < size(); ++i) ptr_host[i] /= rhs.ptr_host[i];
 	return *this;
 }
 
@@ -231,7 +228,7 @@ template <typename T>
 inline Array_t<T>& Array_t<T>::operator/=(const Array_t<T>& rhs)
 {
 	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] /= rhs.Entry[i];
+	for (index_type i = 0; i < size(); ++i) ptr_host[i] /= rhs.ptr_host[i];
 	return *this;
 }
 

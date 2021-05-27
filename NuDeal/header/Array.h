@@ -1,5 +1,6 @@
 #pragma once
 #include "Defines.h"
+#include <thrust/device_vector.h>
 
 namespace LinPack
 {
@@ -32,14 +33,12 @@ private:
 	size_type n = 0;
 	size_type nx = 0, ny = 0, nz = 0, nw = 0;
 	size_type nxy = 0, nxyz = 0;
-	pointer Entry = static_cast<pointer>(NULL);
-	pointer d_Entry = static_cast<pointer>(NULL);
-	State state = State::Undefined;
-	State d_state = State::Undefined;
+	std::vector<T> container_host;
+	thrust::device_vector<T> container_device;
+	pointer ptr_host = static_cast<pointer>(NULL);
+	pointer ptr_device = static_cast<pointer>(NULL);
 
 	void SetDimension(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-	inline void SetHostState(State s) { state = s; }
-	inline void SetDeviceState(State s) { d_state = s; }
 
 public: // Constructor & Destructor
 
@@ -91,31 +90,35 @@ public: // Fill
 
 public: // Info.
 
-	inline bool IsHostAlloc() const noexcept { return state == State::Alloc; }
-	inline bool IsDeviceAlloc() const noexcept { return d_state == State::Alloc; }
-	inline bool IsHostAlias() const noexcept { return state == State::Alias; }
-	inline bool IsDeviceAlias() const noexcept { return d_state == State::Alias; }
+	inline bool IsHostAlloc() const noexcept 
+	{ return !container_host.empty(); }
+	inline bool IsDeviceAlloc() const noexcept 
+	{ return !container_device.empty(); }
+	inline bool IsHostAlias() const noexcept 
+	{ return ptr_host != NULL && container_host.empty(); }
+	inline bool IsDeviceAlias() const noexcept 
+	{ return ptr_device != NULL && container_device.empty(); }
 	
-	inline pointer GetHostPointer() noexcept { return Entry; }
-	inline const_pointer GetHostPointer() const noexcept { return Entry; }
+	inline pointer GetHostPointer() noexcept { return ptr_host; }
+	inline const_pointer GetHostPointer() const noexcept { return ptr_host; }
 	__forceinline__ __host__ __device__ 
-	pointer GetDevicePointer() noexcept { return d_Entry; }
+	pointer GetDevicePointer() noexcept { return ptr_device; }
 	__forceinline__ __host__ __device__ 
-	const_pointer GetDevicePointer() const noexcept { return d_Entry; }
+	const_pointer GetDevicePointer() const noexcept { return ptr_device; }
 
 public : // STL-Consistent Methods
 
-	inline iterator begin() noexcept { return Entry; }
-	inline const_iterator begin() const noexcept { return Entry; }
-	inline iterator end() noexcept { return Entry + n; }
-	inline const_iterator end() const noexcept { return Entry + n; }
-	inline reference front() noexcept { return Entry[0]; }
-	inline const_reference front() const noexcept { return Entry[0]; }
-	inline reference back() noexcept { return Entry[n - 1]; }
-	inline const_reference back() const noexcept { return Entry[n - 1]; }
+	inline iterator begin() noexcept { return ptr_host; }
+	inline const_iterator begin() const noexcept { return ptr_host; }
+	inline iterator end() noexcept { return ptr_host + n; }
+	inline const_iterator end() const noexcept { return ptr_host + n; }
+	inline reference front() noexcept { return ptr_host[0]; }
+	inline const_reference front() const noexcept { return ptr_host[0]; }
+	inline reference back() noexcept { return ptr_host[n - 1]; }
+	inline const_reference back() const noexcept { return ptr_host[n - 1]; }
 	inline size_type size() const noexcept { return n; }
-	inline pointer data() noexcept { return Entry; }
-	inline const_pointer data() const noexcept { return Entry; }
+	inline pointer data() noexcept { return ptr_host; }
+	inline const_pointer data() const noexcept { return ptr_host; }
 
 public : // Arithmatic Operations
 
@@ -148,18 +151,18 @@ public : // Indexing Operations
 	noexcept 
 	{ 
 #ifdef __CUDA_ARCH__
-		return d_Entry[i];
+		return ptr_device[i];
 #else
-		return Entry[i];
+		return ptr_host[i];
 #endif
 	}
 	__forceinline__ __host__ __device__ const_reference operator[] (index_type i) 
 	const noexcept 
 	{ 
 #ifdef __CUDA_ARCH__
-		return d_Entry[i];
+		return ptr_device[i];
 #else
-		return Entry[i];
+		return ptr_host[i];
 #endif
 	}
 	__forceinline__ __host__ __device__ 
@@ -167,9 +170,9 @@ public : // Indexing Operations
 	noexcept 
 	{ 
 #ifdef __CUDA_ARCH__
-		return d_Entry[iw * nxyz + iz * nxy + iy * nx + ix];
+		return ptr_device[iw * nxyz + iz * nxy + iy * nx + ix];
 #else
-		return Entry[iw * nxyz + iz * nxy + iy * nx + ix]; 
+		return ptr_host[iw * nxyz + iz * nxy + iy * nx + ix]; 
 #endif
 	}
 	__forceinline__ __host__ __device__ 
@@ -177,9 +180,9 @@ public : // Indexing Operations
 	const noexcept
 	{
 #ifdef __CUDA_ARCH__
-		return d_Entry[iw * nxyz + iz * nxy + iy * nx + ix];
+		return ptr_device[iw * nxyz + iz * nxy + iy * nx + ix];
 #else
-		return Entry[iw * nxyz + iz * nxy + iy * nx + ix];
+		return ptr_host[iw * nxyz + iz * nxy + iy * nx + ix];
 #endif
 	}
 };

@@ -87,6 +87,18 @@
     <ClInclude Include="header\Array.hpp">
       <Filter>Header\LinPack</Filter>
     </ClInclude>
+    <ClInclude Include="header\Vector.h">
+      <Filter>Header\LinPack</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Vector.hpp">
+      <Filter>Header\LinPack</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Array_v2.h">
+      <Filter>Header\LinPack</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Array_v2.hpp">
+      <Filter>Header\LinPack</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Input.cpp">
@@ -125,6 +137,9 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda\Array.cu">
+      <Filter>Cuda\LinPack</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda\Array_v2.cu">
       <Filter>Cuda\LinPack</Filter>
     </CudaCompile>
   </ItemGroup>

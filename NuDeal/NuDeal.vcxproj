@@ -13,6 +13,8 @@
   <ItemGroup>
     <ClInclude Include="header\Array.h" />
     <ClInclude Include="header\Array.hpp" />
+    <ClInclude Include="header\Array_v2.h" />
+    <ClInclude Include="header\Array_v2.hpp" />
     <ClInclude Include="header\Card.h" />
     <ClInclude Include="header\CUDAExcept.h" />
     <ClInclude Include="header\Defines.h" />
@@ -27,6 +29,8 @@
     <ClInclude Include="header\Preprocessor.h" />
     <ClInclude Include="header\PhysicsProp.h" />
     <ClInclude Include="header\UnitGeo.h" />
+    <ClInclude Include="header\Vector.h" />
+    <ClInclude Include="header\Vector.hpp" />
     <ClInclude Include="header\XS.h" />
   </ItemGroup>
   <ItemGroup>
@@ -43,11 +47,17 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda\Array.cu" />
+    <CudaCompile Include="cuda\Array_v2.cu">
+      <AdditionalCompilerOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </AdditionalCompilerOptions>
+    </CudaCompile>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4C24DF09-B724-4756-A70D-2B3F797526E2}</ProjectGuid>
     <RootNamespace>NuDeal</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <CudaToolkitCustomDir>
+    </CudaToolkitCustomDir>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -105,6 +115,7 @@
       <FastMath>true</FastMath>
       <AdditionalCompilerOptions>
       </AdditionalCompilerOptions>
+      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17 " %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -134,7 +145,9 @@
       <CodeGeneration>compute_60,sm_60</CodeGeneration>
       <GenerateLineInfo>true</GenerateLineInfo>
       <FastMath>true</FastMath>
-      <AdditionalCompilerOptions>--stdc++17</AdditionalCompilerOptions>
+      <AdditionalCompilerOptions>
+      </AdditionalCompilerOptions>
+      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17 " %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
