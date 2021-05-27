@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="header\Array.h" />
     <ClInclude Include="header\Array.hpp" />
+    <ClInclude Include="header\Card.h" />
     <ClInclude Include="header\CUDAExcept.h" />
     <ClInclude Include="header\Defines.h" />
     <ClInclude Include="header\IOExcept.h" />
@@ -39,6 +40,9 @@
     <ClCompile Include="source\UnitGeo.cpp" />
     <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\Input.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="cuda\Array.cu" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4C24DF09-B724-4756-A70D-2B3F797526E2}</ProjectGuid>
@@ -99,6 +103,8 @@
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <CodeGeneration>compute_60,sm_60</CodeGeneration>
       <FastMath>true</FastMath>
+      <AdditionalCompilerOptions>
+      </AdditionalCompilerOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -128,6 +134,7 @@
       <CodeGeneration>compute_60,sm_60</CodeGeneration>
       <GenerateLineInfo>true</GenerateLineInfo>
       <FastMath>true</FastMath>
+      <AdditionalCompilerOptions>--stdc++17</AdditionalCompilerOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

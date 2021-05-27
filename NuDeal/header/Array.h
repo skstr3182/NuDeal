@@ -84,6 +84,11 @@ public: // Clearing
 	void ClearDevice();	
 	void Clear() { ClearHost(); ClearDevice(); }
 
+public: // Fill
+
+	void Fill(const T& value);
+	void FillDevice(const T& value);
+
 public: // Info.
 
 	inline bool IsHostAlloc() const noexcept { return state == State::Alloc; }
@@ -148,8 +153,7 @@ public : // Indexing Operations
 		return Entry[i];
 #endif
 	}
-	__forceinline__ __host__ __device__ const_reference 
-	operator[] (index_type i) 
+	__forceinline__ __host__ __device__ const_reference operator[] (index_type i) 
 	const noexcept 
 	{ 
 #ifdef __CUDA_ARCH__

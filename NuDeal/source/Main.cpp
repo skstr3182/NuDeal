@@ -7,11 +7,16 @@
 
 int main(int argc, char *argv[])
 {
-	MPI_Init(&argc, &argv);
+	MPI_Init(&argc, &argv);	
 
-	LinPack::Array_t<double> a;
-	LinPack::Array_t<double> b;
-	LinPack::Array_t<int> c;
+	LinPack::Array_t<double> a(100);
+	LinPack::Array_t<string> str_array(10);
+
+	str_array[0] = "Some String";
+
+	a.ResizeDevice();
+	a.Fill(2.0);
+	a.FillDevice(2.0);
 
 	vector<double> doubleVec(100);
 

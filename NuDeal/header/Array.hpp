@@ -36,7 +36,7 @@ template <typename T>
 void Array_t<T>::AliasHost(pointer ptr, size_type nx, size_type ny, size_type nz, size_type nw)
 {
 	SetDimension(nx, ny, nz, nw);
-	Entry = rhs.Entry; SetHostState(State::Alias);
+	Entry = ptr; SetHostState(State::Alias);
 }
 
 template <typename T>

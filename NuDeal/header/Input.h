@@ -5,8 +5,6 @@
 namespace IO
 {
 
-using namespace std;
-
 class InputManager_t
 {
 

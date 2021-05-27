@@ -28,6 +28,12 @@
     <Filter Include="Header\Exception">
       <UniqueIdentifier>{a0eddbba-af5a-429b-ad52-22729bdcface}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Cuda">
+      <UniqueIdentifier>{7adcb616-d27f-4609-8c08-c8de71b6158c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Cuda\LinPack">
+      <UniqueIdentifier>{670e4a28-b212-47b8-a14f-b7dd95cf5ef2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header\HardCodeParam.h">
@@ -66,23 +72,23 @@
     <ClInclude Include="header\IOUtil.h">
       <Filter>Header\IO</Filter>
     </ClInclude>
-    <ClInclude Include="header\Array.h">
-      <Filter>Header\LinPack</Filter>
-    </ClInclude>
-    <ClInclude Include="header\Array.hpp">
-      <Filter>Header\LinPack</Filter>
-    </ClInclude>
     <ClInclude Include="header\IOExcept.h">
       <Filter>Header\Exception</Filter>
     </ClInclude>
     <ClInclude Include="header\CUDAExcept.h">
       <Filter>Header\Exception</Filter>
     </ClInclude>
+    <ClInclude Include="header\Card.h">
+      <Filter>Header\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Array.h">
+      <Filter>Header\LinPack</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Array.hpp">
+      <Filter>Header\LinPack</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\Main.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="source\Input.cpp">
       <Filter>Source\IO</Filter>
     </ClCompile>
@@ -113,5 +119,13 @@
     <ClCompile Include="source\Array.cpp">
       <Filter>Source\LinPack</Filter>
     </ClCompile>
+    <ClCompile Include="source\Main.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="cuda\Array.cu">
+      <Filter>Cuda\LinPack</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>
