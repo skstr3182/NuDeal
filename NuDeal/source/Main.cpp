@@ -4,46 +4,32 @@
 #include "Input.h"
 #include "HardCodeParam.h"
 #include "Array.hpp"
-#include "Array_v2.hpp"
-#include "Vector.hpp"
+#include "MPIInterface.h"
 
 int main(int argc, char *argv[])
 {
-	MPI_Init(&argc, &argv);	
+	MPI::Init(&argc, &argv);	
 
-	LinPack_v2::Array_t<double> a(10, 10, 10);
+	int2 *a = new int2[100];
+	int2 *b = new int2[100];
 
-	a.ResizeDevice();
+	std::is_same_v<int2, int2>;
 
-	//thrust::host_vector<int> ah(100);
-	//thrust::device_vector<int> ad(100);
+	std::fill(a, a + 100, make_int2(200, 300));
 
-	//LinPack_v2::Array_t<string> h;
-	//LinPack_v2::Array_t<string> hh;
+	//MPI::Send(a, 100, 0, 0, MPI_COMM_WORLD);
+	//MPI::Recv(b, 100, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-	//thrust::device_vector<int> dddd(1000);
+	MPI::Gather(a, 100, b, 100, 0, MPI_COMM_WORLD);
+	//MPI_Gather(a, 100, MPI_INT, b, 100, MPI_INT, 0, MPI_COMM_WORLD);
 
-	//h.Resize(hh.GetDims());
-	//a.ResizeDevice(b.GetDims());
-
-	//LinPack::Array_t<double> a(100);
-	//LinPack::Array_t<map<int, int>> str_array(10);
-
-	//str_array[0] = "Some String";
-
-	//a.ResizeDevice();
-	//a.Fill(2.0);
-	//a.FillDevice(2.0);
-
-	vector<double> doubleVec(100);
-
-	IO::InputManager_t Parser;
+	/*IO::InputManager_t Parser;
 	std::string file = std::string(argv[1]);
-	Parser.ReadInput(file);
+	Parser.ReadInput(file);*/
 	//Geometry::DebugUnitGeo();
 	//Geometry::DebugGeomHandle();
 
-	MPI_Finalize();
+	MPI::Finalize();
 
 	return EXIT_SUCCESS;
 }

@@ -27,8 +27,9 @@ enum class MacroXsCards {
 template <typename T>
 class InputCard_t
 {
-public:
+private:
 	static const vector<string> names;
+public:
 	static T GetID(const string& line);
 };
 
@@ -46,6 +47,16 @@ const vector<string> InputCard_t<MacroXsCards>::names = {
 	"NG",
 	"FORMAT"
 };
+
+template <typename T>
+class MPI_DataType_t
+{
+public:
+	static MPI_Datatype type;
+};
+
+MPI_Datatype MPI_DataType_t<int>::type = MPI_INT;
+
 
 template <typename T>
 T InputCard_t<T>::GetID(const string& line)

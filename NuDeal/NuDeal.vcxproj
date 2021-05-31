@@ -13,8 +13,6 @@
   <ItemGroup>
     <ClInclude Include="header\Array.h" />
     <ClInclude Include="header\Array.hpp" />
-    <ClInclude Include="header\Array_v2.h" />
-    <ClInclude Include="header\Array_v2.hpp" />
     <ClInclude Include="header\Card.h" />
     <ClInclude Include="header\CUDAExcept.h" />
     <ClInclude Include="header\Defines.h" />
@@ -25,16 +23,14 @@
     <ClInclude Include="header\Input.h" />
     <ClInclude Include="header\IODeclare.h" />
     <ClInclude Include="header\IOUtil.h" />
+    <ClInclude Include="header\MPIInterface.h" />
     <ClInclude Include="header\Parser.h" />
     <ClInclude Include="header\Preprocessor.h" />
     <ClInclude Include="header\PhysicsProp.h" />
     <ClInclude Include="header\UnitGeo.h" />
-    <ClInclude Include="header\Vector.h" />
-    <ClInclude Include="header\Vector.hpp" />
     <ClInclude Include="header\XS.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\Array.cpp" />
     <ClCompile Include="source\Geometry.cpp" />
     <ClCompile Include="source\Parser.cpp" />
     <ClCompile Include="source\Preprocessor.cpp" />
@@ -47,10 +43,6 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda\Array.cu" />
-    <CudaCompile Include="cuda\Array_v2.cu">
-      <AdditionalCompilerOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </AdditionalCompilerOptions>
-    </CudaCompile>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4C24DF09-B724-4756-A70D-2B3F797526E2}</ProjectGuid>

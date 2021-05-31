@@ -22,9 +22,6 @@
     <Filter Include="Header\LinPack">
       <UniqueIdentifier>{627e7751-ca39-4efa-b1f7-87d33fd24f31}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\LinPack">
-      <UniqueIdentifier>{5de1b854-acb9-4d71-ac79-3f5db3ec08bc}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header\Exception">
       <UniqueIdentifier>{a0eddbba-af5a-429b-ad52-22729bdcface}</UniqueIdentifier>
     </Filter>
@@ -33,6 +30,12 @@
     </Filter>
     <Filter Include="Cuda\LinPack">
       <UniqueIdentifier>{670e4a28-b212-47b8-a14f-b7dd95cf5ef2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header\MPI">
+      <UniqueIdentifier>{0aa38fac-04a2-4f59-85a3-10f6a4fe1c58}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\MPI">
+      <UniqueIdentifier>{8ea85d0d-a04f-4631-a32f-d6c25db0aaeb}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -87,17 +90,8 @@
     <ClInclude Include="header\Array.hpp">
       <Filter>Header\LinPack</Filter>
     </ClInclude>
-    <ClInclude Include="header\Vector.h">
-      <Filter>Header\LinPack</Filter>
-    </ClInclude>
-    <ClInclude Include="header\Vector.hpp">
-      <Filter>Header\LinPack</Filter>
-    </ClInclude>
-    <ClInclude Include="header\Array_v2.h">
-      <Filter>Header\LinPack</Filter>
-    </ClInclude>
-    <ClInclude Include="header\Array_v2.hpp">
-      <Filter>Header\LinPack</Filter>
+    <ClInclude Include="header\MPIInterface.h">
+      <Filter>Header\MPI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -128,18 +122,12 @@
     <ClCompile Include="source\Geometry.cpp">
       <Filter>Source\Geometry</Filter>
     </ClCompile>
-    <ClCompile Include="source\Array.cpp">
-      <Filter>Source\LinPack</Filter>
-    </ClCompile>
     <ClCompile Include="source\Main.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda\Array.cu">
-      <Filter>Cuda\LinPack</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cuda\Array_v2.cu">
       <Filter>Cuda\LinPack</Filter>
     </CudaCompile>
   </ItemGroup>
