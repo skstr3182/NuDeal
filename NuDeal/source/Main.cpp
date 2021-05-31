@@ -9,6 +9,7 @@
 int main(int argc, char *argv[])
 {
 	MPI::Init(&argc, &argv);	
+	MPI::Configure_cuda_types();
 
 	int2 *a = new int2[100];
 	int2 *b = new int2[100];
@@ -17,11 +18,9 @@ int main(int argc, char *argv[])
 
 	std::fill(a, a + 100, make_int2(200, 300));
 
-	//MPI::Send(a, 100, 0, 0, MPI_COMM_WORLD);
-	//MPI::Recv(b, 100, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
+	MPI::Send(a, 100, 0, 0, MPI_COMM_WORLD);
+	MPI::Recv(b, 100, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	MPI::Gather(a, 100, b, 100, 0, MPI_COMM_WORLD);
-	//MPI_Gather(a, 100, MPI_INT, b, 100, MPI_INT, 0, MPI_COMM_WORLD);
 
 	/*IO::InputManager_t Parser;
 	std::string file = std::string(argv[1]);
