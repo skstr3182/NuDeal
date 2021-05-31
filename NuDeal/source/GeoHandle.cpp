@@ -46,6 +46,18 @@ void GeometryHandler::init() {
 	x0 = y0 = z0 = Lx = Ly = Lz = 0.0;
 }
 
+GeometryHandler::~GeometryHandler() {
+	delete[] nnodeLv;
+	for (int i = 0; i < divlevel; i++) {
+		delete[]upperdivmap[i];
+		delete[]info[i];
+	}
+	delete[]upperdivmap;
+	delete[]Volumes;
+	delete[]imat;
+	delete[]BdL; delete[]BdR;
+}
+
 int GeometryHandler::FindVolId(double3 ptL, double3 ptR, bool lowest) {
 	int id = -1;
 	
@@ -57,22 +69,22 @@ int GeometryHandler::FindVolId(double3 ptL, double3 ptR, bool lowest) {
 		double Ll, Lr, Rl, Rr;
 		double Ldet, Rdet;
 		OL = BdL[i].x; OR = BdR[i].x;
-		Ll = OL - ptL.x; Lr = OL - ptR.x;
-		Rl = OR - ptL.x; Rr = OR - ptR.x;
+		Ll = ptL.x - OL; Lr = ptR.x - OL;
+		Rl = ptL.x - OR; Rr = ptR.x - OR;
 		if (Ll*Lr < 0 && Rl*Rr < 0) inboundcount++;
-		if (Lr*Rr > 0 && Ll*Rl > 0) continue;
-		if (mode != OneD) {
+		if (Lr*Rr > 0 && Ll*Rl > 0 && Ll*Lr > 0) continue;
+		if (mode != Dimension::OneD) {
 			OL = BdL[i].y; OR = BdR[i].y;
 			Ll = OL - ptL.y; Lr = OL - ptR.y;
 			Rl = OR - ptL.y; Rr = OR - ptR.y;
 			if (Ll*Lr < 0 && Rl*Rr < 0) inboundcount++;
-			if (Lr*Rr > 0 && Ll*Rl > 0) continue;
-			if (mode == ThreeD) {
+			if (Lr*Rr > 0 && Ll*Rl > 0 && Ll*Lr > 0) continue;
+			if (mode == Dimension::ThreeD) {
 				OL = BdL[i].z; OR = BdR[i].z;
 				Ll = OL - ptL.z; Lr = OL - ptR.z;
 				Rl = OR - ptL.z; Rr = OR - ptR.z;
 				if (Ll*Lr < 0 && Rl*Rr < 0) inboundcount++;
-				if (Lr*Rr > 0 && Ll*Rl > 0) continue;
+				if (Lr*Rr > 0 && Ll*Rl > 0 && Ll*Lr > 0) continue;
 				if (inboundcount == 3) return id;
 			}
 			else {
@@ -101,7 +113,7 @@ int GeometryHandler::FindVolId(double3 ptL, double3 ptR, bool lowest) {
 				aninter.x = interpts[j];
 				if (InLocalBox(CartAxis::X, ptL, ptR, aninter)) return id;
 			}
-			if (mode != OneD) {
+			if (mode != Dimension::OneD) {
 				aninter.y = ptR.y; val[0] = ptR.y;
 				ninter = Volumes[idvol].GetIntersection(CartPlane::YZ, val, interpts);
 				for (int j = 0; j < ninter; j++) {
@@ -109,7 +121,7 @@ int GeometryHandler::FindVolId(double3 ptL, double3 ptR, bool lowest) {
 					if (InLocalBox(CartAxis::X, ptL, ptR, aninter)) return id;
 				}
 			}
-			if (mode == ThreeD) {
+			if (mode == Dimension::ThreeD) {
 				aninter.y = ptL.y; aninter.z = ptR.z;
 				val[0] = ptL.y; val[1] = ptR.z;
 				int ninter = Volumes[idvol].GetIntersection(CartPlane::YZ, val, interpts);
@@ -127,7 +139,7 @@ int GeometryHandler::FindVolId(double3 ptL, double3 ptR, bool lowest) {
 
 
 			// Along y axis
-			if (mode != OneD) {
+			if (mode != Dimension::OneD) {
 				aninter.x = ptL.x; aninter.z = ptL.z;
 				val[0] = ptL.x; val[1] = ptL.z;
 				ninter = Volumes[idvol].GetIntersection(CartPlane::XZ, val, interpts);
@@ -142,7 +154,7 @@ int GeometryHandler::FindVolId(double3 ptL, double3 ptR, bool lowest) {
 					if (InLocalBox(CartAxis::Y, ptL, ptR, aninter)) return id;
 				}
 			}
-			if (mode == ThreeD) {
+			if (mode == Dimension::ThreeD) {
 				aninter.x = ptL.x; aninter.z = ptR.z;
 				val[0] = ptL.x; val[1] = ptR.z;
 				int ninter = Volumes[idvol].GetIntersection(CartPlane::XZ, val, interpts);
@@ -160,7 +172,7 @@ int GeometryHandler::FindVolId(double3 ptL, double3 ptR, bool lowest) {
 
 
 			// Along z axis
-			if (mode == ThreeD) {
+			if (mode == Dimension::ThreeD) {
 				aninter.x = ptL.x; aninter.y = ptL.y;
 				val[0] = ptL.x; val[1] = ptL.y;
 				ninter = Volumes[idvol].GetIntersection(CartPlane::XY, val, interpts);
@@ -218,12 +230,12 @@ void GeometryHandler::RecursiveSplit(double3 ptL, double3 ptR, int thisLv, split
 	bool lowest = false;
 	int nx = 3, ny = 1, nz = 1;
 	lowest = (lx / 3.0 < maxtau);
-	if (mode != OneD) {
+	if (mode != Dimension::OneD) {
 		ly = ly0 / pow3[thisLv];
 		lowest = lowest || (ly / 3.0 < maxtau);
 		ny = 3;
 	}
-	if (mode == ThreeD) {
+	if (mode == Dimension::ThreeD) {
 		lz = lz0 / pow3[thisLv];
 		lowest = lowest || (lz / 3.0 < maxtau);
 		nz = 3;
@@ -235,15 +247,15 @@ void GeometryHandler::RecursiveSplit(double3 ptL, double3 ptR, int thisLv, split
 		splittree* subnodes = thisnode.GetPtrSubnode();
 		double3 ptL1 = ptL, ptR1 = ptR;
 		lx /= 3.0; 
-		if (mode != OneD) ly /= 3.0;
-		if (mode == ThreeD) lz /= 3.0;
+		if (mode != Dimension::OneD) ly /= 3.0;
+		if (mode == Dimension::ThreeD) lz /= 3.0;
 		int subid = 0;
-		for (int i = 0; i < nx; i++) {
-			ptL1.x = ptL.x + (double)i*lx; ptR1.x = ptL.x + (double)(i + 1)*lx;
+		for (int k = 0; k < nz; k++) {
+			if (nz > 1) { ptL1.z = ptL.z + (double)k*lz; ptR1.z = ptL.z + (double)(k + 1)*lz; }
 			for (int j = 0; j < ny; j++) {
 				if (ny > 1) { ptL1.y = ptL.y + (double)j*ly; ptR1.y = ptL.y + (double)(j + 1)*ly; }
-				for (int k = 0; k < nz; k++) {
-					if (nz > 1) { ptL1.z = ptL.z + (double)k*lz; ptR1.z = ptL.z + (double)(k + 1)*lz; }
+				for (int i = 0; i < nx; i++) {
+					ptL1.x = ptL.x + (double)i*lx; ptR1.x = ptL.x + (double)(i + 1)*lx;
 					RecursiveSplit(ptL1, ptR1, (thisLv + 1), subnodes[subid]);
 					subid++;
 				}
@@ -270,14 +282,14 @@ void GeometryHandler::LevelCount(int thisLv, splittree &thisnode) {
 
 void GeometryHandler::RecordDiscInfo(int thisLv, splittree &thisnode) {
 	int thisLvId = nnodeLv[thisLv], nleaf = thisnode.GetNleaf();
-	if (thisLv > -1) {
-		nnodeLv[thisLv]++;
-		if (thisLv > 0) divmap[thisLv][thisLvId] = nnodeLv[thisLv - 1];
-		info[thisLv][thisLvId] = thisnode.GetNodeInfo();
-	}
 	for (int i = 0; i < nleaf; i++) {
 		splittree *subnodes = thisnode.GetPtrSubnode();
 		RecordDiscInfo(thisLv + 1, subnodes[i]);
+	}
+	if (thisLv > -1) {
+		nnodeLv[thisLv]++;
+		if (thisLv > 0) upperdivmap[thisLv][thisLvId] = nnodeLv[thisLv - 1];
+		info[thisLv][thisLvId] = thisnode.GetNodeInfo();
 	}
 }
 
@@ -326,39 +338,38 @@ void GeometryHandler::FinalizeVolumes() {
 	}
 }
 
-bool GeometryHandler::Discretize(int Dim, double minlen, double maxlen) {
-	//if (!isfinal) return false;
-	mode = Dim; mintau = minlen; maxtau = maxlen;
+bool GeometryHandler::Discretize(Dimension Dim, double minlen, double maxlen, int multiplier) {
+	mode = Dim; mintau = minlen * multiplier; maxtau = maxlen;
 	for (int i = 0; i < nvol; i++) {
 		double lxm = BdR[i].x - BdL[i].x, lym = BdR[i].y - BdL[i].y, lzm = BdR[i].z - BdL[i].z;
 		if (lxm < maxtau) {
 			cout << "  *** Warning: Given maximal length is too small. Reset to " << lxm;
 			maxtau = lxm;
 		}
-		if (mode != OneD && lym < maxtau) {
+		if (mode != Dimension::OneD && lym < maxtau) {
 			cout << "  *** Warning: Given maximal length is too small. Reset to " << lym;
 			maxtau = lym;
 		}
-		if (mode == ThreeD && lzm < maxtau) {
+		if (mode == Dimension::ThreeD && lzm < maxtau) {
 			cout << "  *** Warning: Given maximal length is too small. Reset to " << lzm;
 			maxtau = lzm;
 		}
 	}
 	
 	// Define zero-level parameters
-	Nx = Lx / minlen + 1; Ny = 1; Nz = 1;
-	if (mode != OneD) Ny = Ly / minlen + 1;
-	if (mode == ThreeD) Nz = Lz / minlen + 1;
+	Nx = multiplier * (int) (Lx / mintau + 1); Ny = 1; Nz = 1;
+	if (mode != Dimension::OneD) Ny = multiplier * (int) (Ly / mintau + 1);
+	if (mode == Dimension::ThreeD) Nz = multiplier * (int) (Lz / mintau + 1);
 	lx0 = Lx / (double)Nx; ly0 = Ly / (double)Ny; lz0 = Lz / (double)Nz;
 
 	// Determine the potentially maximal divlevel
 	double log3 = log(3.0);
-	int potentdivLv = log(Lx / maxtau) / log3;
-	if (mode != OneD) potentdivLv = max(potentdivLv, (int)(log(Ly / maxtau) / log3));
-	if (mode == ThreeD) potentdivLv = max(potentdivLv, (int)(log(Lz / maxtau) / log3));
+	int potentdivLv = log(lx0 / maxtau) / log3 + 1;
+	if (mode != Dimension::OneD) potentdivLv = max(potentdivLv, (int)(log(ly0 / maxtau) / log3) + 1);
+	if (mode == Dimension::ThreeD) potentdivLv = max(potentdivLv, (int)(log(lz0 / maxtau) / log3) + 1);
 	nnodeLv = new int[potentdivLv]; std::fill_n(nnodeLv, potentdivLv, 0);
-	divmap = new int*[potentdivLv];
-	info = new subdomain*[potentdivLv];
+	upperdivmap = new int*[potentdivLv];
+	info = new NodeInfo_t*[potentdivLv];
 	for (int i = 0; i < potentdivLv; i++)	pow3.push_back(pow(3.0, i));
 
 	// Ray tracing with the rays parallel to x,y,z axes
@@ -368,13 +379,13 @@ bool GeometryHandler::Discretize(int Dim, double minlen, double maxlen) {
 	double3 ptL, ptR;
 	int inode0 = 0;
 	ptL.z = z0; ptR.z = z0 + lz0;
-	if (Nz == 1) ptL.z = ptR.z = z0 + 0.5*lz0;
+	//if (Nz == 1) ptL.z = ptR.z = z0 + 0.5*lz0;
 	for (int iz = 0; iz < Nz; iz++) {
 		ptL.y = y0; ptR.y = y0 + ly0;
-		if (Ny == 1) ptL.y = ptR.y = y0 + 0.5*ly0;
+		//if (Ny == 1) ptL.y = ptR.y = y0 + 0.5*ly0;
 		for (int iy = 0; iy < Ny; iy++) {
 			ptL.x = x0; ptR.x = x0 + lx0;
-			if (Nx == 1) ptL.x = ptR.x = x0 + 0.5*lx0;
+			//if (Nx == 1) ptL.x = ptR.x = x0 + 0.5*lx0;
 			for (int ix = 0; ix < Nx; ix++) {
 				RecursiveSplit(ptL, ptR, 0, zeronodes[inode0]);
 				inode0++;
@@ -385,13 +396,13 @@ bool GeometryHandler::Discretize(int Dim, double minlen, double maxlen) {
 		ptL.z += lz0; ptR.z += lz0;
 	}
 
-	// Defining nnodeLv and divmap
+	// Defining nnodeLv and upperdivmap
 	LevelCount(-1, root);
 	for (int i = 0; i < potentdivLv; i++) {
 		if (nnodeLv[i] > 0) {
-			divmap[i] = new int[nnodeLv[i]];
-			info[i] = new subdomain[nnodeLv[i]];
-			std::fill_n(divmap[i], nnodeLv[i], 0);
+			upperdivmap[i] = new int[nnodeLv[i]];
+			info[i] = new NodeInfo_t[nnodeLv[i]];
+			std::fill_n(upperdivmap[i], nnodeLv[i], 0);
 		}
 		else break;
 		divlevel++;
@@ -399,19 +410,39 @@ bool GeometryHandler::Discretize(int Dim, double minlen, double maxlen) {
 	std::fill_n(nnodeLv, divlevel, 0);
 	RecordDiscInfo(-1, root);
 
+	cout << "Discretize Done!" << endl;
+
+	nnode = 0;
+	vector<double> volval(nvol);
+	std::fill(volval.begin(), volval.end(), 0.0);
 	// Print-out Division Information
 	ofstream DiscOut("Discretization.out");
 	for (int i = 0; i < divlevel; i++) {
 		for (int j = 0; j < nnodeLv[i]; j++) {
 			if (info[i][j].idvols[0] < 0) continue;
+			nnode++;
 			DiscOut << info[i][j].midpt.x << ' ';
 			DiscOut << info[i][j].midpt.y << ' ';
 			DiscOut << info[i][j].midpt.z << ' ';
 			DiscOut << info[i][j].idvols[0] << endl;
+			volval[info[i][j].idvols[0]] += info[i][j].vol[0];
 		}
+	}
+	for (int i = 0; i < nvol; i++) {
+		cout << "Vol " << i << ": " << volval[i] << endl;
 	}
 	
 	return true;
+}
+
+void GeometryHandler::GetDiscretizationInfo(DiscInfo_t &mesg) const {
+	mesg.mode = mode;
+	mesg.Nx = Nx; mesg.Ny = Ny; mesg.Nz = Nz;
+	mesg.nnode = nnode; mesg.divlevel = divlevel;
+	mesg.x0 = x0; mesg.y0 = y0; mesg.z0 = z0;
+	mesg.lx0 = lx0; mesg.ly0 = ly0; mesg.lz0 = lz0;
+	mesg.nnodeLv = (const int*)nnodeLv; mesg.upperdivmap = (const int**)upperdivmap;
+	mesg.info = (const NodeInfo_t**)info;
 }
 
 }

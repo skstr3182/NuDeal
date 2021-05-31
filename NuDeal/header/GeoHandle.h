@@ -8,23 +8,35 @@ constexpr double mintau_default = 0.01;
 constexpr double maxtau_default = 0.0001;
 constexpr double eps_dis = 1.e-10;
 
-enum Dimension {
+enum class Dimension {
 	ThreeD,
 	TwoD,
 	OneD
 };
 
-struct subdomain {
+struct NodeInfo_t {
 	double3 midpt;
 	vector<int> idvols;
 	vector<double> vol;
 };
 
+struct DiscInfo_t {
+	Dimension mode;
+
+	int Nx, Ny, Nz;
+	int nnode, divlevel;
+	const int *nnodeLv, **upperdivmap;
+	double x0, y0, z0;
+	double lx0, ly0, lz0;
+
+	const NodeInfo_t **info;
+};
+
 class splittree {
 private :
-	splittree *subnode, *uppernode;
+	splittree *subnode = nullptr, *uppernode = nullptr;
 	int id, nleaf;
-	subdomain thisinfo;
+	NodeInfo_t thisinfo;
 
 public:
 	splittree() {}
@@ -32,6 +44,8 @@ public:
 	splittree(int id) { Assign(id); }
 
 	splittree(int id, splittree &uppernode) { Assign(id, uppernode); }
+
+	~splittree() { if (subnode != nullptr) delete[]subnode; }
 
 	void Assign(int id);
 
@@ -49,7 +63,7 @@ public:
 
 	int GetUpperId() { return GetId(); }
 
-	subdomain GetNodeInfo() { return thisinfo; }
+	NodeInfo_t GetNodeInfo() { return thisinfo; }
 };
 
 class GeometryHandler {
@@ -58,13 +72,13 @@ private:
 	double x0, y0, z0, Lx, Ly, Lz;
 
 	double mintau, maxtau;
-	int mode;
+	Dimension mode;
 
 	int nvol, nnode, *nnodeLv; // nnodeLv : Number of nodes at each level, size : [divlevel]
-	int Nx, Ny, Nz, **divmap; // divmap : Node indices of one-level higher nodes, size [divlevel][nnodeLv[ir]]
+	int Nx, Ny, Nz, **upperdivmap; // upperdivmap : Node indices of one-level higher nodes, size [divlevel][nnodeLv[ir]]
 	int divlevel;
 	double lx0, ly0, lz0;
-	subdomain **info;
+	NodeInfo_t **info;
 	
 	UnitVol *Volumes;
 	queue<UnitVol> UVbuf;
@@ -88,6 +102,8 @@ public:
 	GeometryHandler() { init(); }
 
 	GeometryHandler(double origin[3], double L[3]);
+
+	~GeometryHandler();
 	
 	void SetOrdinates(double origin[3], double L[3]);
 
@@ -99,7 +115,9 @@ public:
 
 	void FinalizeVolumes();
 
-	bool Discretize(int Dim, double minlen = mintau_default, double maxlen = maxtau_default);
+	bool Discretize(Dimension Dim, double minlen = mintau_default, double maxlen = maxtau_default , int groundLv = 0);
+
+	void GetDiscretizationInfo(DiscInfo_t &mesg) const;
 };
 
 
@@ -114,10 +132,10 @@ inline void DebugGeomHandle() {
 	double c_zpln1[2] = { 1.0, 3.0 };
 	UnitSurf Zpln0(SurfType::ZPLN, c_zpln0), Zpln1(SurfType::ZPLN, c_zpln1);
 
-	double c_xpln0[2] = { -1.0, 0.63 };
-	double c_xpln1[2] = { 1.0, 0.63 };
-	double c_ypln0[2] = { -1.0, 0.63 };
-	double c_ypln1[2] = { 1.0, 0.63 };
+	double c_xpln0[2] = { -1.0, -0.63 };
+	double c_xpln1[2] = { 1.0, 1.89 };
+	double c_ypln0[2] = { -1.0, -0.63 };
+	double c_ypln1[2] = { 1.0, 1.89 };
 	UnitSurf Xpln0(SurfType::XPLN, c_xpln0), Xpln1(SurfType::XPLN, c_xpln1);
 	UnitSurf Ypln0(SurfType::YPLN, c_ypln0), Ypln1(SurfType::YPLN, c_ypln1);
 
@@ -150,13 +168,22 @@ inline void DebugGeomHandle() {
 	if (isbounded) cout << "Vol = " << Box.GetVolume() << "cm^3" << endl;
 
 	UnitComp BoxComp(0, Box), CylComp(1, Cylinder);
+	UnitComp CylComp2(1, Cylinder), CylComp3(1, Cylinder), CylComp4(1, Cylinder);
+	CylComp.Finalize(); CylComp2.Finalize(); CylComp3.Finalize(); CylComp4.Finalize();
+//	CylComp.Relocate(-0.63, 0.63, 0.);	CylComp2.Relocate(-0.63, -0.63, 0.);
+//	CylComp3.Relocate(0.63, 0.63, 0.);	CylComp4.Relocate(0.63, -0.63, 0.);
+	CylComp2.Relocate(1.26, 0., 0.);
+	CylComp3.Relocate(1.26, 1.26, 0.);	CylComp4.Relocate(0., 1.26, 0.);
 	GeometryHandler GeoHandle;
-	double origin[3] = { -0.63,-0.63,0 }, L[3] = { 1.26,1.26,3 };
+	double origin[3] = { -0.63,-0.63,0 }, L[3] = { 2.52, 2.52,3 };
 	GeoHandle.SetOrdinates(origin, L);
 	GeoHandle.append(BoxComp);
 	GeoHandle.append(CylComp);
+	GeoHandle.append(CylComp2);
+	GeoHandle.append(CylComp3);
+	GeoHandle.append(CylComp4);
 	GeoHandle.FinalizeVolumes();
-	GeoHandle.Discretize(Geometry::Dimension::TwoD, 0.25, 0.01);
+	GeoHandle.Discretize(Geometry::Dimension::TwoD, 0.2, 0.03);
 }
 
 }
