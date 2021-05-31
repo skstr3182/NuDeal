@@ -6,16 +6,16 @@
 namespace MPI
 {
 
+namespace // Anonymous Namespace
+{
 template <typename T, typename = void> class Datatype;
 
 // Built-in Datatype
 template <typename T>
 class Datatype<T, typename std::enable_if<std::is_scalar<T>::value>::type>
 {
-private:
-	static const MPI_Datatype _type;
 public:
-	static MPI_Datatype type() { return _type; }
+	static const MPI_Datatype type;
 };
 
 // User-defined Datatype
@@ -23,23 +23,23 @@ template <typename T>
 class Datatype<T, typename std::enable_if<!std::is_scalar<T>::value>::type>
 {
 public:
-	inline static MPI_Datatype _type = MPI_DATATYPE_NULL;
-public:
-	inline static MPI_Datatype type() { return _type; }
+	inline static MPI_Datatype type = MPI_DATATYPE_NULL;
 	inline static int Commit(MPI_Datatype *t)
 	{
-		_type = *t;
-		return MPI_Type_commit(&_type);
+		type = *t;
+		return MPI_Type_commit(&type);
 	}
 };
 
 // Built-in Datatype
 
-const MPI_Datatype Datatype<char>::_type = MPI_CHAR;
-const MPI_Datatype Datatype<bool>::_type = MPI_C_BOOL;
-const MPI_Datatype Datatype<int>::_type = MPI_INT;
-const MPI_Datatype Datatype<float>::_type = MPI_FLOAT;
-const MPI_Datatype Datatype<double>::_type = MPI_DOUBLE;
+const MPI_Datatype Datatype<char>::type = MPI_CHAR;
+const MPI_Datatype Datatype<bool>::type = MPI_C_BOOL;
+const MPI_Datatype Datatype<int>::type = MPI_INT;
+const MPI_Datatype Datatype<float>::type = MPI_FLOAT;
+const MPI_Datatype Datatype<double>::type = MPI_DOUBLE;
+
+} // Anonymous Namespace
 
 // Basic MPI Function Template Inliner
 
@@ -54,7 +54,7 @@ inline constexpr int Send(const T *buf,
 	int tag, 
 	MPI_Comm comm)
 {
-	return MPI_Send(buf, count, Datatype<T>::type(), dest, tag, comm);
+	return MPI_Send(buf, count, Datatype<T>::type, dest, tag, comm);
 }
 
 template <typename T>
@@ -65,7 +65,7 @@ inline constexpr int Recv(T *buf,
 	MPI_Comm comm, 
 	MPI_Status *stat = MPI_STATUS_IGNORE)
 {
-	return MPI_Recv(buf, count, Datatype<T>::type(), source, tag, comm, stat);
+	return MPI_Recv(buf, count, Datatype<T>::type, source, tag, comm, stat);
 }
 
 /*---------------------------------------------*/
@@ -80,7 +80,7 @@ inline constexpr int Isend(const T *buf,
 	MPI_Comm comm, 
 	MPI_Request *request)
 {
-	return MPI_Isend(buf, count, Datatype<T>::type(), dest, tag, comm, request);
+	return MPI_Isend(buf, count, Datatype<T>::type, dest, tag, comm, request);
 }
 
 template <typename T>
@@ -91,7 +91,7 @@ inline constexpr int Irecv(T *buf,
 	MPI_Comm comm,
 	MPI_Request *request)
 {
-	return MPI_Irecv(buf, count, Datatype<T>::type(), source, tag, comm, request);
+	return MPI_Irecv(buf, count, Datatype<T>::type, source, tag, comm, request);
 }
 
 /*---------------------------------------------*/
@@ -140,7 +140,7 @@ inline constexpr int Bcast(T *buffer,
 	int root,
 	MPI_Comm comm)
 {
-	return MPI_Bcast(buffer, count, Datatype<T>::type(), root, comm);
+	return MPI_Bcast(buffer, count, Datatype<T>::type, root, comm);
 }
 
 /*---------------------------------------------*/
@@ -155,8 +155,8 @@ inline constexpr int Gather(const T *sendbuf,
 	int root,
 	MPI_Comm comm)
 {
-	return MPI_Gather(sendbuf, sendcount, Datatype<T>::type(), 
-		recvbuf, recvcount, Datatype<U>::type(), root, comm);
+	return MPI_Gather(sendbuf, sendcount, Datatype<T>::type, 
+		recvbuf, recvcount, Datatype<U>::type, root, comm);
 }
 
 template <typename T, typename U>
@@ -168,8 +168,8 @@ inline constexpr int Gatherv(const T *sendbuf,
 	int root,
 	MPI_Comm comm)
 {
-	return MPI_Gatherv(sendbuf, sendcount, Datatype<T>::type(), 
-		recvbuf, recvcounts, displs, Datatype<U>::type(), root, comm);
+	return MPI_Gatherv(sendbuf, sendcount, Datatype<T>::type, 
+		recvbuf, recvcounts, displs, Datatype<U>::type, root, comm);
 }
 
 /*---------------------------------------------*/
@@ -184,8 +184,8 @@ inline constexpr int Scatter(const T *sendbuf,
 	int root,
 	MPI_Comm comm)
 {
-	return MPI_Scatter(sendbuf, sendcount, Datatype<T>::type(),
-		recvbuf, recvcount, Datatype<U>::type(), root, comm);
+	return MPI_Scatter(sendbuf, sendcount, Datatype<T>::type,
+		recvbuf, recvcount, Datatype<U>::type, root, comm);
 }
 
 template <typename T, typename U>
@@ -197,8 +197,8 @@ inline constexpr int Scatterv(const T *sendbuf,
 	int root,
 	MPI_Comm comm)
 {
-	return MPI_Scatterv(sendbuf, sendcounts, displs, Datatype<T>::type(),
-		recvbuf, recvcount, Datatype<U>::type(), root, comm);
+	return MPI_Scatterv(sendbuf, sendcounts, displs, Datatype<T>::type,
+		recvbuf, recvcount, Datatype<U>::type, root, comm);
 }
 
 /*---------------------------------------------*/
@@ -212,8 +212,8 @@ inline constexpr int Allgather(const T *sendbuf,
 	int recvcount,
 	MPI_Comm comm)
 {
-	return MPI_Allgather(sendbuf, sendcount, Datatype<T>::type(),
-		recvbuf, recvcount, Datatype<U>::type(), comm);
+	return MPI_Allgather(sendbuf, sendcount, Datatype<T>::type,
+		recvbuf, recvcount, Datatype<U>::type, comm);
 }
 
 template <typename T, typename U>
@@ -224,8 +224,8 @@ inline constexpr int Allgatherv(const T *sendbuf,
 	const int displs[],
 	MPI_Comm comm)
 {
-	return MPI_Allgatherv(sendbuf, sendcount, Datatype<T>::type(),
-		recvbuf, recvcounts, displs, Datatype<U>::type(), comm);
+	return MPI_Allgatherv(sendbuf, sendcount, Datatype<T>::type,
+		recvbuf, recvcounts, displs, Datatype<U>::type, comm);
 }
 
 /*---------------------------------------------*/
@@ -240,7 +240,7 @@ inline constexpr int Reduce(const T* sendbuf,
 	int root, 
 	MPI_Comm comm)
 {
-	return MPI_Reduce(sendbuf, recvbuf, count, Datatype<T>::type(), op, root, comm);
+	return MPI_Reduce(sendbuf, recvbuf, count, Datatype<T>::type, op, root, comm);
 }
 
 template <typename T>
@@ -250,7 +250,7 @@ inline constexpr int Allreduce(const T* sendbuf,
 	MPI_Op op, 
 	MPI_Comm comm)
 {
-	return MPI_Allreduce(sendbuf, recvbuf, count, Datatype<T>::type(), op, comm);
+	return MPI_Allreduce(sendbuf, recvbuf, count, Datatype<T>::type, op, comm);
 }
 
 /*---------------------------------------------*/
