@@ -30,18 +30,6 @@ struct Layout_t
 		this->n = nx * ny * nz * nw;
 	}
 	void clear() { this->operator()(0, 0, 0, 0); }
-	inline bool operator==(const Layout_t& rhs)
-	{
-		if (this->nx != rhs.nx) return false;
-		if (this->ny != rhs.ny) return false;
-		if (this->nz != rhs.nz) return false;
-		if (this->nw != rhs.nw) return false;
-		return true;
-	}
-	inline bool operator!=(const Layout_t& rhs)
-	{
-		return !this->operator==(rhs);
-	}
 };
 
 // Base Array Type
@@ -286,7 +274,7 @@ public: // Indexing Operator
 	}
 };
 
-// Host-Device Array Type
+// Host-Device Combined Array Type
 template <typename T>
 class Array_t<T, typename is_device_t<T>> : public ArrayBase_t<T>
 {
