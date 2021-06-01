@@ -5,6 +5,11 @@
 namespace LinPack
 {
 
+template <typename T, typename = void>
+class ArrayBase_t;
+
+
+
 template <typename T>
 class Array_t // Array_t<T>
 {

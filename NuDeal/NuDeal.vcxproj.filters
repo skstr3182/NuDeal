@@ -34,9 +34,6 @@
     <Filter Include="Header\MPI">
       <UniqueIdentifier>{0aa38fac-04a2-4f59-85a3-10f6a4fe1c58}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\MPI">
-      <UniqueIdentifier>{8ea85d0d-a04f-4631-a32f-d6c25db0aaeb}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header\HardCodeParam.h">
@@ -90,7 +87,7 @@
     <ClInclude Include="header\Array.hpp">
       <Filter>Header\LinPack</Filter>
     </ClInclude>
-    <ClInclude Include="header\MPIInterface.h">
+    <ClInclude Include="header\MPIBind.h">
       <Filter>Header\MPI</Filter>
     </ClInclude>
   </ItemGroup>

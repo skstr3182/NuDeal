@@ -1,4 +1,5 @@
 #include "Array.h"
+#include "Array.hpp"
 
 namespace LinPack
 {
@@ -25,7 +26,16 @@ void Array_t<T>::Fill(const_reference val)
 template class Array_t<bool>;
 template class Array_t<char>;
 template class Array_t<int>;
+template class Array_t<int2>;
+template class Array_t<int3>;
+template class Array_t<int4>;
 template class Array_t<float>;
+template class Array_t<float2>;
+template class Array_t<float3>;
+template class Array_t<float4>;
 template class Array_t<double>;
+template class Array_t<double2>;
+template class Array_t<double3>;
+template class Array_t<double4>;
 
 }

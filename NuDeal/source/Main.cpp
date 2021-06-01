@@ -4,23 +4,23 @@
 #include "Input.h"
 #include "HardCodeParam.h"
 #include "Array.hpp"
-#include "MPIInterface.h"
+#include "MPIBind.h"
 
 int main(int argc, char *argv[])
 {
 	MPI::Init(&argc, &argv);	
 	MPI::Configure_cuda_types();
 
-	int2 *a = new int2[100];
-	int2 *b = new int2[100];
 
-	std::is_same_v<int2, int2>;
+	LinPack::Array_t<float> arr(100);
 
-	std::fill(a, a + 100, make_int2(200, 300));
+	arr.Fill(200.0);
 
-	MPI::Send(a, 100, 0, 0, MPI_COMM_WORLD);
-	MPI::Recv(b, 100, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	MPI::Gather(a, 100, b, 100, 0, MPI_COMM_WORLD);
+	//std::fill(a, a + 100, make_int2(200, 300));
+
+	//MPI::Send(a, 100, 0, 0, MPI_COMM_WORLD);
+	//MPI::Recv(b, 100, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	//MPI::Gather(a, 100, b, 100, 0, MPI_COMM_WORLD);
 
 	/*IO::InputManager_t Parser;
 	std::string file = std::string(argv[1]);
