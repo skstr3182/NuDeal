@@ -1,5 +1,4 @@
 #include "Array.h"
-#include "Array.hpp"
 
 namespace LinPack
 {
