@@ -6,15 +6,20 @@
 #include "Array.hpp"
 #include "MPIBind.h"
 
+template class LinPack::Array_t<string>;
+
 int main(int argc, char *argv[])
 {
 	MPI::Init(&argc, &argv);	
 	MPI::Configure_cuda_types();
 
 
-	LinPack::Array_t<float> arr(100);
+	LinPack::Array_t<string> arr;
+	LinPack::Array_t<float> float_arr;
 
-	arr.Fill(200.0);
+	float_arr.ResizeHost(100, 100);
+	float_arr.Fill(1.0);
+	float_arr.CopyHtoD();
 
 	//std::fill(a, a + 100, make_int2(200, 300));
 

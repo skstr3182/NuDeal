@@ -1,4 +1,4 @@
-#include "Array.h"
+#include "Array.hpp"
 
 namespace LinPack
 {
@@ -12,14 +12,14 @@ __global__ void _Fill(size_t n, T val, T *ptr)
 }
 
 template <typename T>
-void Array_t<T>::Fill(const_reference val)
+void Array_t<T, is_device_t<T>>::Fill(const_reference val)
 {
 	dim3 threads(1024, 1, 1);
-	dim3 blocks(size() / threads.x + 1, 1, 1);
+	dim3 blocks(device_size() / threads.x + 1, 1, 1);
 
-	_Fill <<< blocks, threads >>> (size(), val, dev_ptr());
+	_Fill <<< blocks, threads >>> (device_size(), val, device_ptr());
 
-	std::fill(std::execution::par, begin(), end(), val);
+	MyBase::Fill(val);
 }
 
 template class Array_t<bool>;
