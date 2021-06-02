@@ -57,14 +57,14 @@ protected:
 
 protected:
 
-	void swap(ArrayBase_t<T>& rhs)
+	void _move(ArrayBase_t<T>&& rhs)
 	{
-		std::swap(L, rhs.L);
-		std::swap(unique_host, rhs.unique_host);
-		std::swap(entry_host, rhs.entry_host);
+		L = std::move(rhs.L);
+		unique_host = std::move(rhs.unique_host);
+		entry_host = std::move(rhs.entry_host);
 	}
 
-	void shallow_copy(const ArrayBase_t<T>& rhs)
+	void _copy(const ArrayBase_t<T>& rhs)
 	{
 		L = rhs.L;
 		entry_host = rhs.entry_host;
@@ -163,13 +163,13 @@ public: // Indexing Operator
 template <typename T>
 ArrayBase_t<T>::ArrayBase_t(const ArrayBase_t<T>& rhs)
 {
-	shallow_copy(rhs);
+	_copy(rhs);
 }
 
 template <typename T>
 ArrayBase_t<T>::ArrayBase_t(ArrayBase_t<T>&& rhs)
 {
-	swap(rhs);
+	_move(std::move(rhs)); rhs.Clear();
 }
 
 template <typename T>
@@ -183,16 +183,14 @@ ArrayBase_t<T>::ArrayBase_t(size_type nx, size_type ny, size_type nz, size_type 
 template <typename T>
 ArrayBase_t<T>& ArrayBase_t<T>::operator=(const ArrayBase_t<T>& rhs)
 {
-	Clear();
-	shallow_copy(rhs);
+	Clear(); _copy(rhs);
 	return *this;
 }
 
 template <typename T>
 ArrayBase_t<T>& ArrayBase_t<T>::operator=(ArrayBase_t<T>&& rhs)
 {
-	Clear();
-	swap(rhs);
+	_move(std::move(rhs)); rhs.Clear();
 	return *this;
 }
 
@@ -237,7 +235,7 @@ public: // Constructor & Destructor
 	// Default & Copy & Move
 	Array_t() = default;
 	Array_t(const Array_t<T>& rhs) : MyBase(rhs) {}
-	Array_t(Array_t<T>&& rhs) : MyBase(rhs) {}
+	Array_t(Array_t<T>&& rhs) : MyBase(std::move(rhs)) {}
 
 	// Explicit
 	explicit 
@@ -246,8 +244,14 @@ public: // Constructor & Destructor
 
 public: // Assignment
 
-	inline Array_t<T>& operator=(const Array_t<T>& rhs) { MyBase::operator=(rhs); return *this; }
-	inline Array_t<T>& operator=(Array_t<T>&& rhs) { MyBase::operator=(rhs); return *this; }
+	inline Array_t<T>& operator=(const Array_t<T>& rhs) 
+	{ 
+		MyBase::operator=(rhs); return *this; 
+	}
+	inline Array_t<T>& operator=(Array_t<T>&& rhs) 
+	{ 
+		MyBase::operator=(std::move(rhs)); return *this; 
+	}
 
 public: // Indexing Operator
 
@@ -298,19 +302,19 @@ private:
 
 private:
 
-	void swap(Array_t<T>& rhs)
+	void _move(Array_t<T>&& rhs)
 	{
-		MyBase::swap(rhs);
-		std::swap(L, rhs.L);
-		std::swap(entry_device, rhs.entry_device);
-		std::swap(unique_device, rhs.unique_device);
+		MyBase::_move(std::move(rhs));
+		L = std::move(rhs.L);
+		entry_device = std::move(rhs.entry_device);
+		unique_device = std::move(rhs.unique_device);
 	}
 
-	void shallow_copy(const Array_t<T>& rhs)
+	void _copy(const Array_t<T>& rhs)
 	{
-		MyBase::shallow_copy(rhs);
-		entry_device = rhs.entry_device;
+		MyBase::_copy(rhs);
 		L = rhs.L;
+		entry_device = rhs.entry_device;
 	}
 
 public: // Constructor & Destructor
@@ -432,28 +436,26 @@ public: // Indexing Operator
 template <typename T>
 Array_t<T, is_device_t<T>>::Array_t(const Array_t<T>& rhs)
 {
-	shallow_copy(rhs);
+	_copy(rhs);
 }
 
 template <typename T>
 Array_t<T, is_device_t<T>>::Array_t(Array_t<T>&& rhs)
 {
-	swap(rhs);
+	_move(std::move(rhs)); rhs.Clear();
 }
 
 template <typename T>
 Array_t<T>& Array_t<T, is_device_t<T>>::operator=(const Array_t<T>& rhs)
 {
-	Clear();
-	shallow_copy(rhs);
+	Clear(); _copy(rhs);
 	return *this;
 }
 
 template <typename T>
 Array_t<T>& Array_t<T, is_device_t<T>>::operator=(Array_t<T>&& rhs)
 {
-	Clear();
-	swap(rhs);
+	_move(std::move(rhs)); rhs.Clear();
 	return *this;
 }
 

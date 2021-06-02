@@ -42,7 +42,7 @@ template <typename T>
 void ArrayBase_t<T>::Alias(ArrayBase_t<T>& rhs)
 {
 	Clear();
-	shallow_copy(rhs);
+	_copy(rhs);
 }
 
 template <typename T>
@@ -182,7 +182,7 @@ template <typename T>
 void Array_t<T, is_device_t<T>>::Alias(Array_t<T>& rhs)
 {
 	Clear();
-	shallow_copy(rhs);
+	_copy(rhs);
 }
 
 template <typename T>
