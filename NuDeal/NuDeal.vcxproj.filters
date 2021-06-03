@@ -34,6 +34,9 @@
     <Filter Include="Header\MPI">
       <UniqueIdentifier>{0aa38fac-04a2-4f59-85a3-10f6a4fe1c58}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header\OMP">
+      <UniqueIdentifier>{58cf01f8-7d1c-462e-bdfa-49703228f796}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header\HardCodeParam.h">
@@ -89,6 +92,9 @@
     </ClInclude>
     <ClInclude Include="header\MPIBind.h">
       <Filter>Header\MPI</Filter>
+    </ClInclude>
+    <ClInclude Include="header\OpenMP.h">
+      <Filter>Header\OMP</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
