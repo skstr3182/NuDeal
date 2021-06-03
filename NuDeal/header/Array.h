@@ -75,7 +75,7 @@ public: // Constructor & Destructor
 	// Default & Copy & Move
 	ArrayBase_t() = default;
 	ArrayBase_t(const ArrayBase_t<T>& rhs);
-	ArrayBase_t(ArrayBase_t<T>&& rhs);
+	ArrayBase_t(ArrayBase_t<T>&& rhs) noexcept;
 
 	// Explicit
 	explicit
@@ -167,7 +167,7 @@ ArrayBase_t<T>::ArrayBase_t(const ArrayBase_t<T>& rhs)
 }
 
 template <typename T>
-ArrayBase_t<T>::ArrayBase_t(ArrayBase_t<T>&& rhs)
+ArrayBase_t<T>::ArrayBase_t(ArrayBase_t<T>&& rhs) noexcept
 {
 	_move(std::move(rhs)); rhs.Clear();
 }
@@ -235,7 +235,7 @@ public: // Constructor & Destructor
 	// Default & Copy & Move
 	Array_t() = default;
 	Array_t(const Array_t<T>& rhs) : MyBase(rhs) {}
-	Array_t(Array_t<T>&& rhs) : MyBase(std::move(rhs)) {}
+	Array_t(Array_t<T>&& rhs) noexcept : MyBase(std::move(rhs)) {}
 
 	// Explicit
 	explicit 
@@ -321,7 +321,7 @@ public: // Constructor & Destructor
 
 	Array_t() = default;
 	Array_t(const Array_t<T>& rhs);
-	Array_t(Array_t<T>&& rhs);
+	Array_t(Array_t<T>&& rhs) noexcept;
 
 	// Explicit
 	explicit 
@@ -440,7 +440,7 @@ Array_t<T, is_device_t<T>>::Array_t(const Array_t<T>& rhs)
 }
 
 template <typename T>
-Array_t<T, is_device_t<T>>::Array_t(Array_t<T>&& rhs)
+Array_t<T, is_device_t<T>>::Array_t(Array_t<T>&& rhs) noexcept
 {
 	_move(std::move(rhs)); rhs.Clear();
 }
