@@ -135,7 +135,7 @@ deque<Token_t> Parser_t::Tokenize(const string& line) noexcept
 			Except::Abort(Except::Code::INVALID_EQUATION);
 	}
 
-	return static_cast<deque<Token_t>&&>(tokens);
+	return tokens;
 }
 
 deque<Token_t> Parser_t::ShuntingYard(const deque<Token_t>& tokens) noexcept
@@ -190,7 +190,7 @@ deque<Token_t> Parser_t::ShuntingYard(const deque<Token_t>& tokens) noexcept
 		stack.pop_back();
 	}
 
-	return static_cast<deque<Token_t>&&>(queue);
+	return queue;
 }
 
 Parser_t::Variable_t Parser_t::Aggregate(const deque<Token_t>& queue) noexcept
@@ -283,21 +283,21 @@ Parser_t::Variable_t Parser_t::Aggregate(const deque<Token_t>& queue) noexcept
 		if (key.size() > 2) Except::Abort(Except::Code::INVALID_EQUATION);
 	}
 
-	return static_cast<Variable_t&&>(T);
+	return T;
 }
 
 Parser_t::Variable_t Parser_t::TreatAdd(const Variable_t& lhs, const Variable_t& rhs)
 {
 	auto result = std::move(lhs);
 	for (const auto& r : rhs) result[r.first] += r.second;
-	return static_cast<Variable_t&&>(result);
+	return result;
 }
 
 Parser_t::Variable_t Parser_t::TreatSub(const Variable_t& lhs, const Variable_t& rhs)
 {
 	auto result = std::move(lhs);
 	for (const auto& r : rhs) result[r.first] -= r.second;
-	return static_cast<Variable_t&&>(result);
+	return result;
 }
 
 Parser_t::Variable_t Parser_t::TreatMult(const Variable_t& lhs, const Variable_t& rhs)
@@ -310,7 +310,7 @@ Parser_t::Variable_t Parser_t::TreatMult(const Variable_t& lhs, const Variable_t
 			result[key] += l.second * r.second;
 		}
 	}
-	return static_cast<Variable_t&&>(result);
+	return result;
 }
 
 Parser_t::Variable_t Parser_t::TreatDiv(const Variable_t& lhs, const Variable_t& rhs)
@@ -335,7 +335,7 @@ Parser_t::Variable_t Parser_t::TreatDiv(const Variable_t& lhs, const Variable_t&
 			result[key] += l.second / r->second;
 		}
 	}
-	return static_cast<Variable_t&&>(result);
+	return result;
 }
 
 Parser_t::Variable_t Parser_t::TreatPow(const Variable_t& lhs, const Variable_t& rhs)
@@ -378,7 +378,7 @@ Parser_t::Variable_t Parser_t::TreatPow(const Variable_t& lhs, const Variable_t&
 			for (int i = 0; i < trunc(p); ++i) result = TreatMult(result, lhs);
 		}
 	}
-	return static_cast<Variable_t&&>(result);
+	return result;
 }
 
 array<double, 10> Parser_t::ParseEquation(const string& line)
@@ -408,7 +408,7 @@ array<double, 10> Parser_t::ParseEquation(const string& line)
 		result[l] = iter->second;
 	}
 
-	return static_cast<array<double, 10>&&>(result);
+	return result;
 }
 
 }
