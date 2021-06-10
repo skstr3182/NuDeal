@@ -14,6 +14,9 @@ class Exception_t;
 struct SpecialCharacters;
 class Util_t;
 
+// Card.h
+template <typename T> class InputCard_t;
+
 // Preprocessor.h
 class Preprocessor_t;
 

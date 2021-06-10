@@ -1,238 +1,203 @@
 #pragma once
 #include "Array.h"
-#include "CUDAExcept.h"
 
 namespace LinPack
 {
 
 template <typename T>
-void Array_t<T>::SetDimension(size_type nx, size_type ny, size_type nz, size_type nw)
+void ArrayBase_t<T>::Resize(size_type nx, size_type ny, size_type nz, size_type nw)
 {
-	this->nx = nx;
-	this->ny = ny;
-	this->nz = nz;
-	this->nw = nw;
-	this->nxy = nx * ny;
-	this->nxyz = nx * ny * nz;
-	this->n = nx * ny * nz * nw;
+	auto _L = std::move(L);
+
+	L(nx, ny, nz, nw);
+
+	if (L.n != _L.n) {
+		auto _unique_host = std::move(unique_host);
+		unique_host = std::make_unique<array_type>(L.n);
+		std::copy(std::execution::par, entry_host, entry_host + min(L.n, _L.n), unique_host.get());
+	}
+
+	entry_host = unique_host.get();
 }
 
 template <typename T>
-void Array_t<T>::Alias(const Array_t<T>& rhs)
+void ArrayBase_t<T>::Copy(const ArrayBase_t<T>& rhs)
 {
-	SetDimension(rhs.nx, rhs.ny, rhs.nz, rhs.nw);
-	Entry = rhs.Entry; SetHostState(State::Alias);
-	d_Entry = rhs.d_Entry; SetDeviceState(State::Alias);
+	Clear();
+	L = rhs.L;
+
+	unique_host = std::make_unique<array_type>(L.n);
+	entry_host = unique_host.get();
+	std::copy(std::execution::par, rhs.begin(), rhs.end(), host_ptr());
 }
 
 template <typename T>
-void Array_t<T>::AliasHost(const Array_t<T>& rhs)
+void ArrayBase_t<T>::Copy(const_pointer begin, const_pointer end)
 {
-	SetDimension(rhs.nx, rhs.ny, rhs.nz, rhs.nw);
-	Entry = rhs.Entry; SetHostState(State::Alias);
+	size_type sz = end ? end - begin : size();
+	std::copy(std::execution::par, begin, begin + sz, host_ptr());
 }
 
 template <typename T>
-void Array_t<T>::AliasHost(pointer ptr, size_type nx, size_type ny, size_type nz, size_type nw)
+void ArrayBase_t<T>::Alias(ArrayBase_t<T>& rhs)
 {
-	SetDimension(nx, ny, nz, nw);
-	Entry = rhs.Entry; SetHostState(State::Alias);
+	Clear();
+	_copy(rhs);
 }
 
 template <typename T>
-void Array_t<T>::AliasDevice(const Array_t<T>& rhs)
+void ArrayBase_t<T>::Alias(pointer ptr, size_type nx, size_type ny, size_type nz, size_type nw)
 {
-	SetDimension(rhs.nx, rhs.ny, rhs.nz, rhs.nw);
-	d_Entry = rhs.d_Entry; SetDeviceState(State::Alias);
+	Clear();
+	L(nx, ny, nz, nw);
+	entry_host = ptr;
 }
 
 template <typename T>
-void Array_t<T>::AliasDevice(pointer ptr, size_type nx, size_type ny, size_type nz, size_type nw)
-{
-	SetDimension(nx, ny, nz, nw);
-	d_Entry = ptr; SetDeviceState(State::Alias);
-}
-
-template <typename T>
-void Array_t<T>::ResizeHost(size_type nx, size_type ny, size_type nz, size_type nw)
-{
-	ClearHost();
-	SetDimension(nx, ny, nz, nw);
-	Entry = new T[n]; SetHostState(State::Alloc);
-}
-
-template <typename T>
-void Array_t<T>::ResizeHost(const_pointer ptr, size_type nx, size_type ny, size_type nz, size_type nw)
-{
-	ResizeHost(nx, ny, nz, nw);
-	std::copy(std::execution::par, ptr, ptr + n, begin());
-}
-
-template <typename T>
-void Array_t<T>::ResizeDevice(size_type nx, size_type ny, size_type nz, size_type nw)
-{
-	ClearDevice();
-	SetDimension(nx, ny, nz, nw);
-	cudaCheckError( cudaMalloc(&d_Entry, n * sizeof(T)) ); 
-	SetDeviceState(State::Alloc);
-}
-
-template <typename T>
-void Array_t<T>::ResizeDevice(const_pointer ptr, size_type nx, size_type ny, size_type nz, size_type nw)
-{
-	ResizeDevice(nx, ny, nz, nw);
-	cudaCheckError( cudaMemcpy(d_Entry, ptr, n * sizeof(T), cudaMemcpyHostToDevice) );
-}
-
-template <typename T>
-void Array_t<T>::ClearHost()
-{
-	if (IsHostAlloc()) delete[] Entry;
-	Entry = static_cast<pointer>(NULL);
-	SetHostState(State::Undefined);
-}
-
-template <typename T>
-void Array_t<T>::ClearDevice()
-{
-	if (IsDeviceAlloc()) cudaFree(d_Entry);
-	d_Entry = static_cast<pointer>(NULL);
-	SetDeviceState(State::Undefined);
-}
-
-template <typename T>
-inline Array_t<T>& Array_t<T>::operator=(const_reference val)
+void ArrayBase_t<T>::Fill(const_reference val)
 {
 	std::fill(std::execution::par, begin(), end(), val);
-	return *this;
 }
 
 template <typename T>
-inline Array_t<T>& Array_t<T>::operator=(const_pointer ptr)
+void Array_t<T, is_device_t<T>>::ResizeHost(size_type nx, size_type ny, size_type nz, size_type nw)
 {
-	std::copy(std::execution::par, ptr, ptr + size(), begin());
-	return *this;
-}
-
-template <typename T> template <typename U>
-inline Array_t<T>& Array_t<T>::operator=(const Array_t<U>& rhs)
-{
-	if (!IsHostAlloc() && !IsHostAlias()) ResizeHost(rhs.nx, rhs.ny, rhs.nz, rhs.nw);
-	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] = static_cast<T>(rhs.Entry[i]);
-	return *this;
+	MyBase::Resize(nx, ny, nz, nw);
 }
 
 template <typename T>
-inline Array_t<T>& Array_t<T>::operator=(const Array_t<T>& rhs)
+void Array_t<T, is_device_t<T>>::ResizeDevice(size_type nx, size_type ny, size_type nz, size_type nw)
 {
-	if (!IsHostAlloc() && !IsHostAlias()) ResizeHost(rhs.nx, rhs.ny, rhs.nz, rhs.nw);
-	std::copy(std::execution::par, rhs.begin(), rhs.end(), begin());
-	return *this;
+	auto _L = std::move(L);
+
+	L(nx, ny, nz, nw);
+
+	if (L.n != _L.n) {
+		auto _unique_device = std::move(unique_device);
+		unique_device = make_device_ptr(device_size());
+		cudaCheckError(
+			cudaMemcpy(unique_device.get(), entry_device, min(L.n, _L.n) * sizeof(T), cudaMemcpyDeviceToDevice)
+		);
+	}
+
+	entry_device = unique_device.get();
 }
 
 template <typename T>
-inline Array_t<T>& Array_t<T>::operator=(Array_t<T>&& rhs)
+void Array_t<T, is_device_t<T>>::ResizeHost()
 {
-	AliasHost(rhs); SetHostState(rhs.state);
-	rhs.Entry = NULL;
-	return *this;
+	if (L.n == MyBase::L.n)
+		MyBase::L = L;
+	else 
+		MyBase::Resize(L.nx, L.ny, L.nz, L.nw);
 }
 
 template <typename T>
-inline Array_t<T>& Array_t<T>::operator+=(const_reference val)
+void Array_t<T, is_device_t<T>>::ResizeDevice()
 {
-	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] += val;
-	return *this;
-}
-
-template <typename T> template <typename U>
-inline Array_t<T>& Array_t<T>::operator+=(const Array_t<U>& rhs)
-{
-	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] += rhs.Entry[i];
-	return *this;
+	if (L.n == MyBase::L.n)
+		L = MyBase::L;
+	else
+		ResizeDevice(MyBase::L.nx, MyBase::L.ny, MyBase::L.nz, MyBase::L.nw);
 }
 
 template <typename T>
-inline Array_t<T>& Array_t<T>::operator+=(const Array_t<T>& rhs)
+void Array_t<T, is_device_t<T>>::Resize(size_type nx, size_type ny, size_type nz, size_type nw)
 {
-	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] += rhs.Entry[i];
-	return *this;
+	ResizeHost(nx, ny, nz, nw);
+	ResizeDevice(nx, ny, nz, nw);
 }
 
 template <typename T>
-inline Array_t<T>& Array_t<T>::operator-=(const_reference val)
+void Array_t<T, is_device_t<T>>::Copy(const Array_t<T>& rhs)
 {
-	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] -= val;
-	return *this;
-}
+	Clear();
 
-template <typename T> template <typename U>
-inline Array_t<T>& Array_t<T>::operator-=(const Array_t<U>& rhs)
-{
-	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] -= rhs.Entry[i];
-	return *this;
-}
+	MyBase::Copy(rhs);
 
-template <typename T>
-inline Array_t<T>& Array_t<T>::operator-=(const Array_t<T>& rhs)
-{
-	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] -= rhs.Entry[i];
-	return *this;
+	L = rhs.L;
+	unique_device = make_device_ptr(device_size());
+	entry_device = unique_device.get();
+	cudaCheckError(
+		cudaMemcpy(entry_device, rhs.device_ptr(), L.n * sizeof(T), cudaMemcpyDeviceToDevice)
+	);
 }
 
 template <typename T>
-inline Array_t<T>& Array_t<T>::operator*=(const_reference val)
+void Array_t<T, is_device_t<T>>::Copy(const_pointer begin, const_pointer end)
 {
-	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] *= val;
-	return *this;
-}
+	cudaPointerAttributes attr;
+	cudaCheckError(cudaPointerGetAttributes(&attr, begin));
 
-template <typename T> template <typename U>
-inline Array_t<T>& Array_t<T>::operator*=(const Array_t<U>& rhs)
-{
-	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] *= rhs.Entry[i];
-	return *this;
-}
-
-template <typename T>
-inline Array_t<T>& Array_t<T>::operator*=(const Array_t<T>& rhs)
-{
-	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] *= rhs.Entry[i];
-	return *this;
+	size_type sz;
+	if (attr.type == cudaMemoryTypeDevice) {
+		sz = end ? end - begin : device_size();
+		cudaCheckError(
+			cudaMemcpy(entry_device, begin, sz * sizeof(T), cudaMemcpyDeviceToDevice)
+		);
+	}
+	else {
+		sz = end ? end - begin : host_size();
+		std::copy(std::execution::par, begin, begin + sz, entry_host);
+	}
 }
 
 template <typename T>
-inline Array_t<T>& Array_t<T>::operator/=(const_reference val)
+void Array_t<T, is_device_t<T>>::CopyHtoD()
 {
-	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] /= val;
-	return *this;
-}
-
-template <typename T> template <typename U>
-inline Array_t<T>& Array_t<T>::operator/=(const Array_t<U>& rhs)
-{
-	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] /= rhs.Entry[i];
-	return *this;
+	if (device_size() < host_size()) ResizeDevice();
+	cudaCheckError(
+		cudaMemcpy(entry_device, entry_host, host_size() * sizeof(T), cudaMemcpyHostToDevice)
+	);
 }
 
 template <typename T>
-inline Array_t<T>& Array_t<T>::operator/=(const Array_t<T>& rhs)
+void Array_t<T, is_device_t<T>>::CopyHtoD(const_pointer begin, const_pointer end)
 {
-	#pragma omp parallel for schedule(guided)
-	for (index_type i = 0; i < size(); ++i) Entry[i] /= rhs.Entry[i];
-	return *this;
+	size_t sz = end ? end - begin : device_size();
+	cudaCheckError(
+		cudaMemcpy(entry_device, begin, sz * sizeof(T), cudaMemcpyHostToDevice)
+	);
+}
+
+template <typename T>
+void Array_t<T, is_device_t<T>>::CopyDtoH()
+{
+	if (host_size() < device_size()) ResizeHost();
+	cudaCheckError(
+		cudaMemcpy(entry_host, entry_device, device_size() * sizeof(T), cudaMemcpyDeviceToHost)
+	);
+}
+
+template <typename T>
+void Array_t<T, is_device_t<T>>::CopyDtoH(const_pointer begin, const_pointer end)
+{
+	size_t sz = end ? end - begin : host_size();
+	cudaCheckError(
+		cudaMemcpy(entry_host, begin, sz * sizeof(T), cudaMemcpyDeviceToHost)
+	);
+}
+
+template <typename T>
+void Array_t<T, is_device_t<T>>::Alias(Array_t<T>& rhs)
+{
+	Clear();
+	_copy(rhs);
+}
+
+template <typename T>
+void Array_t<T, is_device_t<T>>::Alias(pointer ptr, size_type nx, size_type ny, size_type nz, size_type nw)
+{
+	Clear();
+	L(nx, ny, nz, nw);
+	
+	cudaPointerAttributes attr;
+	cudaCheckError(cudaPointerGetAttributes(&attr, ptr));
+
+	if (attr.type == cudaMemoryTypeDevice)
+		entry_device = ptr;
+	else
+		entry_host = ptr;
 }
 
 }

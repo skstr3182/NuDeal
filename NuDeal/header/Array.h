@@ -1,183 +1,462 @@
 #pragma once
 #include "Defines.h"
+#include "CUDAExcept.h"
 
 namespace LinPack
 {
 
-template <typename T>
-class Array_t
+namespace // Anonymous Namespace
 {
-template <typename U> friend class Array_t;
-public:
 
-	using reference       = T&;
-	using const_reference = const T&;
-	using size_type       = size_t;
-	using index_type			= long long;
-	using value_type      = T;
-	using pointer         = T*;
-	using const_pointer   = const T*;
-	using iterator        = pointer;
-	using const_iterator  = const_pointer;
-
-	enum class State
-	{
-		Alloc,
-		Alias,
-		Undefined = -1,
-	};
-
-private:
-
+struct Layout_t
+{
+	using size_type = size_t;
 	size_type n = 0;
 	size_type nx = 0, ny = 0, nz = 0, nw = 0;
 	size_type nxy = 0, nxyz = 0;
-	pointer Entry = static_cast<pointer>(NULL);
-	pointer d_Entry = static_cast<pointer>(NULL);
-	State state = State::Undefined;
-	State d_state = State::Undefined;
+	Layout_t() = default;
+	Layout_t(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1)
+	{
+		this->operator()(nx, ny, nz, nw);
+	}
+	void operator() (size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1)
+	{
+		this->nx = nx;
+		this->ny = ny;
+		this->nz = nz;
+		this->nw = nw;
+		this->nxy = nx * ny;
+		this->nxyz = nx * ny * nz;
+		this->n = nx * ny * nz * nw;
+	}
+	void clear() { this->operator()(0, 0, 0, 0); }
+};
 
-	void SetDimension(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-	inline void SetHostState(State s) { state = s; }
-	inline void SetDeviceState(State s) { d_state = s; }
+// Base Array Type
+template <typename T>
+class ArrayBase_t // ArrayBase_t<T>
+{
+public:
+
+	using reference = T & ;
+	using const_reference = const T&;
+	using size_type = Layout_t::size_type;
+	using index_type = long long;
+	using value_type = T;
+	using pointer = T * ;
+	using const_pointer = const T*;
+	using iterator = pointer;
+	using const_iterator = const_pointer;
+	using array_type = T[];
+
+protected:
+
+	Layout_t L;
+	std::unique_ptr<array_type> unique_host;
+	pointer entry_host = NULL;
+
+protected:
+
+	void _move(ArrayBase_t<T>&& rhs)
+	{
+		L = std::move(rhs.L);
+		unique_host = std::move(rhs.unique_host);
+		entry_host = std::move(rhs.entry_host);
+	}
+
+	void _copy(const ArrayBase_t<T>& rhs)
+	{
+		L = rhs.L;
+		entry_host = rhs.entry_host;
+	}
+
+public: // Constructor & Destructor
+
+	// Default & Copy & Move
+	ArrayBase_t() = default;
+	ArrayBase_t(const ArrayBase_t<T>& rhs);
+	ArrayBase_t(ArrayBase_t<T>&& rhs) noexcept;
+
+	// Explicit
+	explicit
+		ArrayBase_t(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
+
+public: // Assignment
+
+	inline ArrayBase_t<T>& operator=(const ArrayBase_t<T>& rhs);
+	inline ArrayBase_t<T>& operator=(ArrayBase_t<T>&& rhs);
+
+public: // Basic Info
+
+	inline bool IsAlloc() const noexcept { return entry_host && unique_host; }
+	inline bool IsAlias() const noexcept { return entry_host && !unique_host; }
+	inline bool HasHost() const noexcept { return entry_host; }
+
+	inline pointer host_ptr() noexcept { return entry_host; }
+	inline const_pointer host_ptr() const noexcept { return entry_host; }
+
+public:
+
+	inline pointer data() noexcept { return entry_host; }
+	inline const_pointer data() const noexcept { return entry_host; }
+	inline iterator begin() noexcept { return entry_host; }
+	inline const_iterator begin() const noexcept { return entry_host; }
+	inline iterator end() noexcept { return entry_host + L.n; }
+	inline const_iterator end() const noexcept { return entry_host + L.n; }
+	inline reference front() noexcept { return entry_host[0]; }
+	inline const_reference front() const noexcept { return entry_host[0]; }
+	inline reference back() noexcept { return entry_host[L.n - 1]; }
+	inline const_reference back() const noexcept { return entry_host[L.n - 1]; }
+	inline size_type size() const noexcept { return L.n; }
+
+public: // Clear
+
+	void Clear()
+	{
+		L.clear(); unique_host.reset(); entry_host = NULL;
+	}
+
+public: // Resize
+
+	void Resize(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
+
+public: // Copy
+
+	void Copy(const ArrayBase_t<T>& rhs);
+	void Copy(const_pointer begin, const_pointer end = NULL);
+
+public: // Alias
+
+	void Alias(ArrayBase_t<T>& rhs);
+	void Alias(pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
+
+public: // Fill
+
+	void Fill(const_reference val);
+
+public: // Indexing Operator
+
+	inline reference operator[] (index_type i) noexcept
+	{
+		return entry_host[i];
+	}
+
+	inline const_reference operator[] (index_type i) const noexcept
+	{
+		return entry_host[i];
+	}
+
+	inline reference operator()
+		(index_type x, index_type y = 0, index_type z = 0, index_type w = 0) noexcept
+	{
+		return entry_host[x + y * L.nx + z * L.nxy + w * L.nxyz];
+	}
+
+	inline const_reference operator()
+		(index_type x, index_type y = 0, index_type z = 0, index_type w = 0) const noexcept
+	{
+		return entry_host[x + y * L.nx + z * L.nxy + w * L.nxyz];
+	}
+
+}; // ArrayBase_t<T>
+
+template <typename T>
+ArrayBase_t<T>::ArrayBase_t(const ArrayBase_t<T>& rhs)
+{
+	_copy(rhs);
+}
+
+template <typename T>
+ArrayBase_t<T>::ArrayBase_t(ArrayBase_t<T>&& rhs) noexcept
+{
+	_move(std::move(rhs)); rhs.Clear();
+}
+
+template <typename T>
+ArrayBase_t<T>::ArrayBase_t(size_type nx, size_type ny, size_type nz, size_type nw)
+{
+	L(nx, ny, nz, nw);
+	unique_host = std::make_unique<array_type>(L.n);
+	entry_host = unique_host.get();
+}
+
+template <typename T>
+ArrayBase_t<T>& ArrayBase_t<T>::operator=(const ArrayBase_t<T>& rhs)
+{
+	Clear(); _copy(rhs);
+	return *this;
+}
+
+template <typename T>
+ArrayBase_t<T>& ArrayBase_t<T>::operator=(ArrayBase_t<T>&& rhs)
+{
+	_move(std::move(rhs)); rhs.Clear();
+	return *this;
+}
+
+template <typename T>
+using is_host_t = typename std::enable_if<!std::is_pod<T>::value>::type;
+template <typename T>
+using is_device_t = typename std::enable_if<std::is_pod<T>::value>::type;
+
+template <typename, typename = void> class cuda_allocator;
+
+template <typename T>
+class cuda_allocator<T, is_device_t<T>>
+{
+public:
+	inline static constexpr auto allocate = [](size_t sz) 
+	{
+		T *ptr; cudaCheckError(cudaMalloc(&ptr, sz * sizeof(T))); return ptr;
+	};
+	inline static constexpr auto deallocate = [](T *ptr)
+	{
+		cudaCheckError(cudaFree(ptr));
+	};
+};
+
+} // Anonymous Namespace
+
+/* Split Array Type								 */
+/* Host-Specialized : Not POD Type */
+/* Host-Device : POD Type					 */
+template <typename, typename = void> class Array_t;
+
+// Host-Specialized Array Type
+template <typename T>
+class Array_t<T, typename is_host_t<T>> : public ArrayBase_t<T>
+{
+private:
+	
+	using MyBase = ArrayBase_t<T>;
+
+public: // Constructor & Destructor
+
+	// Default & Copy & Move
+	Array_t() = default;
+	Array_t(const Array_t<T>& rhs) : MyBase(rhs) {}
+	Array_t(Array_t<T>&& rhs) noexcept : MyBase(std::move(rhs)) {}
+
+	// Explicit
+	explicit 
+	Array_t(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1)
+		: MyBase(nx, ny, nz, nw) {}
+
+public: // Assignment
+
+	inline Array_t<T>& operator=(const Array_t<T>& rhs) 
+	{ 
+		MyBase::operator=(rhs); return *this; 
+	}
+	inline Array_t<T>& operator=(Array_t<T>&& rhs) 
+	{ 
+		MyBase::operator=(std::move(rhs)); return *this; 
+	}
+
+public: // Indexing Operator
+
+	inline reference operator[] (index_type i) noexcept
+	{
+		return MyBase::operator[](i);
+	}
+
+	inline const_reference operator[] (index_type i) const noexcept
+	{
+		return MyBase::operator[](i);
+	}
+
+	inline reference operator()
+		(index_type x, index_type y = 0, index_type z = 0, index_type w = 0) noexcept
+	{
+		return MyBase::operator()(x, y, z, w);
+	}
+
+	inline const_reference operator()
+		(index_type x, index_type y = 0, index_type z = 0, index_type w = 0) const noexcept
+	{
+		return MyBase::operator()(x, y, z, w);
+	}
+};
+
+// Host-Device Combined Array Type
+template <typename T>
+class Array_t<T, typename is_device_t<T>> : public ArrayBase_t<T>
+{
+private:
+	
+	using MyBase = ArrayBase_t<T>;
+	
+	inline static constexpr auto allocate = cuda_allocator<T>::allocate;
+	inline static constexpr auto deallocate = cuda_allocator<T>::deallocate;
+
+	inline static constexpr auto make_device_ptr(size_t sz)
+	{
+		return std::unique_ptr<array_type, std::function<void(T*)>>(allocate(sz), deallocate);
+	}
+
+private:
+
+	Layout_t L;
+	std::unique_ptr<array_type, std::function<void(T*)>> unique_device;
+	pointer entry_device = NULL;
+
+private:
+
+	void _move(Array_t<T>&& rhs)
+	{
+		MyBase::_move(std::move(rhs));
+		L = std::move(rhs.L);
+		entry_device = std::move(rhs.entry_device);
+		unique_device = std::move(rhs.unique_device);
+	}
+
+	void _copy(const Array_t<T>& rhs)
+	{
+		MyBase::_copy(rhs);
+		L = rhs.L;
+		entry_device = rhs.entry_device;
+	}
 
 public: // Constructor & Destructor
 
 	Array_t() = default;
-	template <typename U> Array_t(const Array_t<U>& rhs) 
-	{ this->operator=(rhs); }
-	Array_t(const Array_t<T>& rhs) 
-	{ this->operator=(rhs); }
-	Array_t(Array_t<T>&& rhs) 
-	{ this->operator=(rhs); }
-	explicit Array_t
-	(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1) 
-	{ ResizeHost(nx, ny, nz, nw); }
-	explicit Array_t
-	(const_pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1)
-	{ ResizeHost(ptr, nx, ny, nz, nw); }
-	~Array_t() 
-	{ Clear(); }
+	Array_t(const Array_t<T>& rhs);
+	Array_t(Array_t<T>&& rhs) noexcept;
 
-public: // Aliasing 
+	// Explicit
+	explicit 
+	Array_t(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1)
+		: MyBase(nx, ny, nz, nw) {}
 
-	void Alias(const Array_t<T>& rhs);
-	void AliasHost(const Array_t<T>& rhs);
-	void AliasHost(pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-	void AliasDevice(const Array_t<T>& rhs);
-	void AliasDevice(pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-
-public: // Resizing
-
-	void ResizeHost(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-	void ResizeHost(const_pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-	void ResizeDevice(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-	void ResizeDevice(const_pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-	void ResizeDevice()
-	{ ResizeDevice(nx, ny, nz, nw); }
-	void Resize(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1) 
-	{ ResizeHost(nx, ny, nz, nw); ResizeDevice(nx, ny, nz, nw); }
-
-public: // Clearing
-
-	void ClearHost();
-	void ClearDevice();	
-	void Clear() { ClearHost(); ClearDevice(); }
-
-public: // Info.
-
-	inline bool IsHostAlloc() const noexcept { return state == State::Alloc; }
-	inline bool IsDeviceAlloc() const noexcept { return d_state == State::Alloc; }
-	inline bool IsHostAlias() const noexcept { return state == State::Alias; }
-	inline bool IsDeviceAlias() const noexcept { return d_state == State::Alias; }
+public: // Assignment
 	
-	inline pointer GetHostPointer() noexcept { return Entry; }
-	inline const_pointer GetHostPointer() const noexcept { return Entry; }
-	__forceinline__ __host__ __device__ 
-	pointer GetDevicePointer() noexcept { return d_Entry; }
-	__forceinline__ __host__ __device__ 
-	const_pointer GetDevicePointer() const noexcept { return d_Entry; }
-
-public : // STL-Consistent Methods
-
-	inline iterator begin() noexcept { return Entry; }
-	inline const_iterator begin() const noexcept { return Entry; }
-	inline iterator end() noexcept { return Entry + n; }
-	inline const_iterator end() const noexcept { return Entry + n; }
-	inline reference front() noexcept { return Entry[0]; }
-	inline const_reference front() const noexcept { return Entry[0]; }
-	inline reference back() noexcept { return Entry[n - 1]; }
-	inline const_reference back() const noexcept { return Entry[n - 1]; }
-	inline size_type size() const noexcept { return n; }
-	inline pointer data() noexcept { return Entry; }
-	inline const_pointer data() const noexcept { return Entry; }
-
-public : // Arithmatic Operations
-
-	inline Array_t<T>& operator=(const_reference val);
-	inline Array_t<T>& operator=(const_pointer ptr);
-	template <typename U> inline Array_t<T>& operator=(const Array_t<U>& rhs);
 	inline Array_t<T>& operator=(const Array_t<T>& rhs);
 	inline Array_t<T>& operator=(Array_t<T>&& rhs);
+	
+public:
 
-	inline Array_t<T>& operator+=(const_reference val);
-	template <typename U> inline Array_t<T>& operator+=(const Array_t<U>& rhs);
-	inline Array_t<T>& operator+=(const Array_t<T>& rhs);
+	inline bool IsDeviceAlloc() const noexcept { return entry_device && unique_device; }
+	inline bool IsDeviceAlias() const noexcept { return entry_device && !unique_device; }
+	inline bool HasDevice() const noexcept { return entry_device; }
 
-	inline Array_t<T>& operator-=(const_reference val);
-	template <typename U> inline Array_t<T>& operator-=(const Array_t<U>& rhs);
-	inline Array_t<T>& operator-=(const Array_t<T>& rhs);
+	inline pointer device_ptr() noexcept { return entry_device; }
+	inline const_pointer device_ptr() const noexcept { return entry_device; }
 
-	inline Array_t<T>& operator*=(const_reference val);
-	template <typename U> inline Array_t<T>& operator*=(const Array_t<U>& rhs);
-	inline Array_t<T>& operator*=(const Array_t<T>& rhs);
+	inline size_type device_size() const noexcept { return L.n; }
+	inline size_type host_size() const noexcept { return size(); }
 
-	inline Array_t<T>& operator/=(const_reference val);
-	template <typename U> inline Array_t<T>& operator/=(const Array_t<U>& rhs);
-	inline Array_t<T>& operator/=(const Array_t<T>& rhs);
+public: // Clear
 
-public : // Indexing Operations
-
-	__forceinline__ __host__ __device__ 
-	reference operator[] (index_type i) 
-	noexcept 
-	{ 
-#ifdef __CUDA_ARCH__
-		return d_Entry[i];
-#else
-		return Entry[i];
-#endif
+	void ClearHost()
+	{
+		MyBase::Clear();
 	}
-	__forceinline__ __host__ __device__ const_reference 
-	operator[] (index_type i) 
-	const noexcept 
-	{ 
-#ifdef __CUDA_ARCH__
-		return d_Entry[i];
-#else
-		return Entry[i];
-#endif
+
+	void ClearDevice()
+	{
+		L.clear(); unique_device.reset(); entry_device = NULL;
 	}
-	__forceinline__ __host__ __device__ 
-	reference operator() (index_type ix, index_type iy = 0, index_type iz = 0, index_type iw = 0) 
-	noexcept 
-	{ 
-#ifdef __CUDA_ARCH__
-		return d_Entry[iw * nxyz + iz * nxy + iy * nx + ix];
-#else
-		return Entry[iw * nxyz + iz * nxy + iy * nx + ix]; 
-#endif
+
+	void Clear()
+	{
+		MyBase::Clear(); 
+		L.clear(); unique_device.reset(); entry_device = NULL;
 	}
-	__forceinline__ __host__ __device__ 
-	const_reference operator() (index_type ix, index_type iy = 0, index_type iz = 0, index_type iw = 0) 
-	const noexcept
+
+public: // Resize
+
+	void ResizeHost(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
+	void ResizeHost();
+	void ResizeDevice(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
+	void ResizeDevice();
+	void Resize(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
+
+public: // Copy
+
+	void Copy(const Array_t<T>& rhs);
+	void Copy(const_pointer begin, const_pointer end = NULL);
+	void CopyHtoD();
+	void CopyHtoD(const_pointer begin, const_pointer end = NULL);
+	void CopyDtoH();
+	void CopyDtoH(const_pointer begin, const_pointer end = NULL);
+
+public: // Alias
+
+	void Alias(Array_t<T>& rhs);
+	void Alias(pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
+
+public: // Fill
+
+	void Fill(const_reference val);
+
+public: // Indexing Operator
+
+	__forceinline__ __host__ __device__
+		reference operator[] (index_type i) noexcept
 	{
 #ifdef __CUDA_ARCH__
-		return d_Entry[iw * nxyz + iz * nxy + iy * nx + ix];
+		return entry_device[i];
 #else
-		return Entry[iw * nxyz + iz * nxy + iy * nx + ix];
+		return MyBase::operator[](i);
 #endif
 	}
+
+	__forceinline__ __host__ __device__
+		const_reference operator[] (index_type i) const noexcept
+	{
+#ifdef __CUDA_ARCH__
+		return entry_device[i];
+#else
+		return MyBase::operator[](i);
+#endif
+	}
+
+	__forceinline__ __host__ __device__
+		reference operator() (index_type x, index_type y = 0, index_type z = 0, index_type w = 0) noexcept
+	{
+#ifdef __CUDA_ARCH__
+		return entry_device[x + y * L.nx + z * L.nxy + w * L.nxyz];
+#else
+		return MyBase::operator()(x, y, z, w);
+#endif
+	}
+
+	__forceinline__ __host__ __device__
+		const_reference operator() (index_type x, index_type y = 0, index_type z = 0, index_type w = 0) const noexcept
+	{
+#ifdef __CUDA_ARCH__
+		return entry_device[x + y * L.nx + z * L.nxy + w * L.nxyz];
+#else
+		return MyBase::operator()(x, y, z, w);
+#endif
+	}
+
 };
+
+template <typename T>
+Array_t<T, is_device_t<T>>::Array_t(const Array_t<T>& rhs)
+{
+	_copy(rhs);
+}
+
+template <typename T>
+Array_t<T, is_device_t<T>>::Array_t(Array_t<T>&& rhs) noexcept
+{
+	_move(std::move(rhs)); rhs.Clear();
+}
+
+template <typename T>
+Array_t<T>& Array_t<T, is_device_t<T>>::operator=(const Array_t<T>& rhs)
+{
+	Clear(); _copy(rhs);
+	return *this;
+}
+
+template <typename T>
+Array_t<T>& Array_t<T, is_device_t<T>>::operator=(Array_t<T>&& rhs)
+{
+	_move(std::move(rhs)); rhs.Clear();
+	return *this;
+}
 
 }

@@ -22,11 +22,20 @@
     <Filter Include="Header\LinPack">
       <UniqueIdentifier>{627e7751-ca39-4efa-b1f7-87d33fd24f31}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\LinPack">
-      <UniqueIdentifier>{5de1b854-acb9-4d71-ac79-3f5db3ec08bc}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header\Exception">
       <UniqueIdentifier>{a0eddbba-af5a-429b-ad52-22729bdcface}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Cuda">
+      <UniqueIdentifier>{7adcb616-d27f-4609-8c08-c8de71b6158c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Cuda\LinPack">
+      <UniqueIdentifier>{670e4a28-b212-47b8-a14f-b7dd95cf5ef2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header\MPI">
+      <UniqueIdentifier>{0aa38fac-04a2-4f59-85a3-10f6a4fe1c58}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header\OMP">
+      <UniqueIdentifier>{58cf01f8-7d1c-462e-bdfa-49703228f796}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -66,23 +75,29 @@
     <ClInclude Include="header\IOUtil.h">
       <Filter>Header\IO</Filter>
     </ClInclude>
-    <ClInclude Include="header\Array.h">
-      <Filter>Header\LinPack</Filter>
-    </ClInclude>
-    <ClInclude Include="header\Array.hpp">
-      <Filter>Header\LinPack</Filter>
-    </ClInclude>
     <ClInclude Include="header\IOExcept.h">
       <Filter>Header\Exception</Filter>
     </ClInclude>
     <ClInclude Include="header\CUDAExcept.h">
       <Filter>Header\Exception</Filter>
     </ClInclude>
+    <ClInclude Include="header\Card.h">
+      <Filter>Header\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Array.h">
+      <Filter>Header\LinPack</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Array.hpp">
+      <Filter>Header\LinPack</Filter>
+    </ClInclude>
+    <ClInclude Include="header\MPIBind.h">
+      <Filter>Header\MPI</Filter>
+    </ClInclude>
+    <ClInclude Include="header\OpenMP.h">
+      <Filter>Header\OMP</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\Main.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="source\Input.cpp">
       <Filter>Source\IO</Filter>
     </ClCompile>
@@ -110,8 +125,13 @@
     <ClCompile Include="source\Geometry.cpp">
       <Filter>Source\Geometry</Filter>
     </ClCompile>
-    <ClCompile Include="source\Array.cpp">
-      <Filter>Source\LinPack</Filter>
+    <ClCompile Include="source\Main.cpp">
+      <Filter>Source</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="cuda\Array.cu">
+      <Filter>Cuda\LinPack</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

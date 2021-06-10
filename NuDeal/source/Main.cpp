@@ -4,24 +4,27 @@
 #include "Input.h"
 #include "HardCodeParam.h"
 #include "Array.hpp"
+#include "MPIBind.h"
+#include "OpenMP.h"
 
 int main(int argc, char *argv[])
 {
-	MPI_Init(&argc, &argv);
+	MPI::Init(&argc, &argv);	
+	MPI::Configure_cuda_types();
 
-	LinPack::Array_t<double> a;
-	LinPack::Array_t<double> b;
-	LinPack::Array_t<int> c;
+	int arr[5] = {0, };
+	int arr2[5];
 
-	vector<double> doubleVec(100);
+	std::copy(arr, arr + 5, arr2);
 
-	IO::InputManager_t Parser;
+
+	/*IO::InputManager_t Parser;
 	std::string file = std::string(argv[1]);
-	Parser.ReadInput(file);
+	Parser.ReadInput(file);*/
 	//Geometry::DebugUnitGeo();
 	//Geometry::DebugGeomHandle();
 
-	MPI_Finalize();
+	MPI::Finalize();
 
 	return EXIT_SUCCESS;
 }
