@@ -2,29 +2,29 @@
 
 namespace Geometry
 {
-	void splittree::Assign(int id) {
-		subnode = nullptr; uppernode = nullptr;
-		this->id = id; nleaf = 0;
-	}
+void splittree::Assign(int id) {
+	subnode = nullptr; uppernode = nullptr;
+	this->id = id; nleaf = 0;
+}
 
-	void splittree::Assign(int id, splittree &uppernode) {
-		subnode = nullptr; this->uppernode = &uppernode;
-		this->id = id; nleaf = 0;
-	}
+void splittree::Assign(int id, splittree &uppernode) {
+	subnode = nullptr; this->uppernode = &uppernode;
+	this->id = id; nleaf = 0;
+}
 
-	void splittree::Branching(int nleaf) {
-		subnode = new splittree[nleaf];
-		this->nleaf = nleaf;
-		for (int i = 0; i < nleaf; i++) {
-			subnode[i].Assign(i, *this);
-		}
+void splittree::Branching(int nleaf) {
+	subnode = new splittree[nleaf];
+	this->nleaf = nleaf;
+	for (int i = 0; i < nleaf; i++) {
+		subnode[i].Assign(i, *this);
 	}
+}
 
-	void splittree::RecordNodeInfo(vector<int> idvols, vector<double> vol, double3 midpt) {
-		thisinfo.idvols = idvols;
-		thisinfo.vol = vol;
-		thisinfo.midpt = midpt;
-	}
+void splittree::RecordNodeInfo(int idvol, double volcm3, double3 midpt) {
+	thisinfo.idvol = idvol;
+	thisinfo.volcm3 = volcm3;
+	thisinfo.midpt = midpt;
+}
 
 inline bool InLocalBox(CartAxis axis, double3 ptL, double3 ptR, double3 aninter) {
 	switch (axis) {
@@ -44,18 +44,6 @@ inline bool InLocalBox(CartAxis axis, double3 ptL, double3 ptR, double3 aninter)
 void GeometryHandler::init() {
 	nvol = nnode = divlevel = 0; isfinal = false; issetord = false;
 	x0 = y0 = z0 = Lx = Ly = Lz = 0.0;
-}
-
-GeometryHandler::~GeometryHandler() {
-	delete[] nnodeLv;
-	for (int i = 0; i < divlevel; i++) {
-		delete[]upperdivmap[i];
-		delete[]info[i];
-	}
-	delete[]upperdivmap;
-	delete[]Volumes;
-	delete[]imat;
-	delete[]BdL; delete[]BdR;
 }
 
 int GeometryHandler::FindVolId(double3 ptL, double3 ptR, bool lowest) {
@@ -262,11 +250,11 @@ void GeometryHandler::RecursiveSplit(double3 ptL, double3 ptR, int thisLv, split
 			}
 		}
 	}
-	vector<int> ids{ idvol };
-	vector<double> vol{ lx*ly*lz };
+	//vector<int> ids{ idvol };
+	//vector<double> vol{ lx*ly*lz };
 	double3 midpt;
 	midpt.x = 0.5*(ptL.x + ptR.x); midpt.y = 0.5*(ptL.y + ptR.y); midpt.z = 0.5*(ptL.z + ptR.z);
-	thisnode.RecordNodeInfo(ids, vol, midpt);
+	thisnode.RecordNodeInfo(idvol, lx*ly*lz, midpt);
 }
 
 void GeometryHandler::LevelCount(int thisLv, splittree &thisnode) {
@@ -281,12 +269,14 @@ void GeometryHandler::LevelCount(int thisLv, splittree &thisnode) {
 }
 
 void GeometryHandler::RecordDiscInfo(int thisLv, splittree &thisnode) {
-	int thisLvId = nnodeLv[thisLv], nleaf = thisnode.GetNleaf();
+	int nleaf = thisnode.GetNleaf();
 	for (int i = 0; i < nleaf; i++) {
 		splittree *subnodes = thisnode.GetPtrSubnode();
 		RecordDiscInfo(thisLv + 1, subnodes[i]);
 	}
+
 	if (thisLv > -1) {
+		int thisLvId = nnodeLv[thisLv];
 		nnodeLv[thisLv]++;
 		if (thisLv > 0) upperdivmap[thisLv][thisLvId] = nnodeLv[thisLv - 1];
 		info[thisLv][thisLvId] = thisnode.GetNodeInfo();
@@ -311,8 +301,8 @@ void GeometryHandler::append(UnitComp &acomp) {
 
 void GeometryHandler::FinalizeVolumes() {
 	nvol = UVbuf.size();
-	Volumes = new UnitVol[nvol]; imat = new int[nvol];
-	BdL = new double3[nvol]; BdR = new double3[nvol];
+	Volumes.resize(nvol); imat.resize(nvol);
+	BdL.resize(nvol); BdR.resize(nvol);
 	for (int i = 0; i < nvol; i++) {
 		Volumes[i] = UVbuf.front();
 		imat[i] = matidbuf.front();
@@ -355,11 +345,11 @@ bool GeometryHandler::Discretize(Dimension Dim, double minlen, double maxlen, in
 			maxtau = lzm;
 		}
 	}
-	
+
 	// Define zero-level parameters
-	Nx = multiplier * (int) (Lx / mintau + 1); Ny = 1; Nz = 1;
-	if (mode != Dimension::OneD) Ny = multiplier * (int) (Ly / mintau + 1);
-	if (mode == Dimension::ThreeD) Nz = multiplier * (int) (Lz / mintau + 1);
+	Nx = multiplier * (int)(Lx / mintau + 1); Ny = 1; Nz = 1;
+	if (mode != Dimension::OneD) Ny = multiplier * (int)(Ly / mintau + 1);
+	if (mode == Dimension::ThreeD) Nz = multiplier * (int)(Lz / mintau + 1);
 	lx0 = Lx / (double)Nx; ly0 = Ly / (double)Ny; lz0 = Lz / (double)Nz;
 
 	// Determine the potentially maximal divlevel
@@ -367,9 +357,8 @@ bool GeometryHandler::Discretize(Dimension Dim, double minlen, double maxlen, in
 	int potentdivLv = log(lx0 / maxtau) / log3 + 1;
 	if (mode != Dimension::OneD) potentdivLv = max(potentdivLv, (int)(log(ly0 / maxtau) / log3) + 1);
 	if (mode == Dimension::ThreeD) potentdivLv = max(potentdivLv, (int)(log(lz0 / maxtau) / log3) + 1);
-	nnodeLv = new int[potentdivLv]; std::fill_n(nnodeLv, potentdivLv, 0);
-	upperdivmap = new int*[potentdivLv];
-	info = new NodeInfo_t*[potentdivLv];
+	nnodeLv.resize(potentdivLv); std::fill(nnodeLv.begin(), nnodeLv.end(), 0);
+	upperdivmap.resize(potentdivLv); info.resize(potentdivLv);
 	for (int i = 0; i < potentdivLv; i++)	pow3.push_back(pow(3.0, i));
 
 	// Ray tracing with the rays parallel to x,y,z axes
@@ -400,49 +389,49 @@ bool GeometryHandler::Discretize(Dimension Dim, double minlen, double maxlen, in
 	LevelCount(-1, root);
 	for (int i = 0; i < potentdivLv; i++) {
 		if (nnodeLv[i] > 0) {
-			upperdivmap[i] = new int[nnodeLv[i]];
-			info[i] = new NodeInfo_t[nnodeLv[i]];
-			std::fill_n(upperdivmap[i], nnodeLv[i], 0);
+			upperdivmap[i].resize(nnodeLv[i]);
+			info[i].resize(nnodeLv[i]);
+			std::fill(upperdivmap[i].begin(), upperdivmap[i].end(), 0);
 		}
 		else break;
 		divlevel++;
 	}
-	std::fill_n(nnodeLv, divlevel, 0);
+	std::fill(nnodeLv.begin(), nnodeLv.end(), 0);
 	RecordDiscInfo(-1, root);
 
 	cout << "Discretize Done!" << endl;
 
-	nnode = 0;
+	//PrintDiscInfo();
+
+	return true;
+}
+
+void GeometryHandler::PrintDiscInfo() const {
+	int nnode = 0;
 	vector<double> volval(nvol);
 	std::fill(volval.begin(), volval.end(), 0.0);
 	// Print-out Division Information
 	ofstream DiscOut("Discretization.out");
 	for (int i = 0; i < divlevel; i++) {
 		for (int j = 0; j < nnodeLv[i]; j++) {
-			if (info[i][j].idvols[0] < 0) continue;
+			if (info[i][j].idvol < 0) continue;
 			nnode++;
 			DiscOut << info[i][j].midpt.x << ' ';
 			DiscOut << info[i][j].midpt.y << ' ';
 			DiscOut << info[i][j].midpt.z << ' ';
-			DiscOut << info[i][j].idvols[0] << endl;
-			volval[info[i][j].idvols[0]] += info[i][j].vol[0];
+			DiscOut << info[i][j].idvol << endl;
+			volval[info[i][j].idvol] += info[i][j].volcm3;
 		}
 	}
 	for (int i = 0; i < nvol; i++) {
 		cout << "Vol " << i << ": " << volval[i] << endl;
 	}
-	
-	return true;
 }
 
-void GeometryHandler::GetDiscretizationInfo(DiscInfo_t &mesg) const {
-	mesg.mode = mode;
-	mesg.Nx = Nx; mesg.Ny = Ny; mesg.Nz = Nz;
-	mesg.nnode = nnode; mesg.divlevel = divlevel;
-	mesg.x0 = x0; mesg.y0 = y0; mesg.z0 = z0;
-	mesg.lx0 = lx0; mesg.ly0 = ly0; mesg.lz0 = lz0;
-	mesg.nnodeLv = (const int*)nnodeLv; mesg.upperdivmap = (const int**)upperdivmap;
-	mesg.info = (const NodeInfo_t**)info;
+void GeometryHandler::GetSizeScalars(int3 &N, int &nnode, int &divlevel, double3 &origin, double3 &Width0) const {
+	N.x = Nx; N.y = Ny; N.z = Nz; nnode = this->nnode; divlevel = this->divlevel;
+	origin.x = x0; origin.y = y0; origin.z = z0;
+	Width0.x = lx0, Width0.y = ly0; Width0.z = lz0;
 }
 
 }

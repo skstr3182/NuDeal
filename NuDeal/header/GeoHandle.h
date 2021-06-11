@@ -16,20 +16,10 @@ enum class Dimension {
 
 struct NodeInfo_t {
 	double3 midpt;
-	vector<int> idvols;
-	vector<double> vol;
-};
-
-struct DiscInfo_t {
-	Dimension mode;
-
-	int Nx, Ny, Nz;
-	int nnode, divlevel;
-	const int *nnodeLv, **upperdivmap;
-	double x0, y0, z0;
-	double lx0, ly0, lz0;
-
-	const NodeInfo_t **info;
+	//vector<int> idvols;
+	//vector<double> vol;
+	int idvol;
+	double volcm3;
 };
 
 class splittree {
@@ -53,7 +43,7 @@ public:
 
 	void Branching(int nleaf);
 
-	void RecordNodeInfo(vector<int> idvols, vector<double> vol, double3 midpt);
+	void RecordNodeInfo(int idvol, double volcm3, double3 midpt);
 
 	splittree* GetPtrSubnode() { return subnode; }
 
@@ -74,19 +64,21 @@ private:
 	double mintau, maxtau;
 	Dimension mode;
 
-	int nvol, nnode, *nnodeLv; // nnodeLv : Number of nodes at each level, size : [divlevel]
-	int Nx, Ny, Nz, **upperdivmap; // upperdivmap : Node indices of one-level higher nodes, size [divlevel][nnodeLv[ir]]
+	int nvol, nnode; // nnodeLv : Number of nodes at each level, size : [divlevel]
+	int Nx, Ny, Nz; // upperdivmap : Node indices of one-level higher nodes, size [divlevel][nnodeLv[ir]]
 	int divlevel;
 	double lx0, ly0, lz0;
-	NodeInfo_t **info;
+	vector<int> nnodeLv;
+	vector<vector<int>> upperdivmap;
+	vector<vector<NodeInfo_t>> info;
 	
-	UnitVol *Volumes;
+	vector<UnitVol> Volumes;
 	queue<UnitVol> UVbuf;
 
-	int *imat;
+	vector<int> imat;
 	queue<int> matidbuf;
 
-	double3 *BdL, *BdR;
+	vector<double3> BdL, BdR;
 	vector<double> pow3;
 
 	void init();
@@ -102,8 +94,6 @@ public:
 	GeometryHandler() { init(); }
 
 	GeometryHandler(double origin[3], double L[3]);
-
-	~GeometryHandler();
 	
 	void SetOrdinates(double origin[3], double L[3]);
 
@@ -117,7 +107,21 @@ public:
 
 	bool Discretize(Dimension Dim, double minlen = mintau_default, double maxlen = maxtau_default , int groundLv = 0);
 
-	void GetDiscretizationInfo(DiscInfo_t &mesg) const;
+	void PrintDiscInfo() const;
+
+	Dimension GetDimension() const { return mode; }
+
+	void GetSizeScalars(int3 &N, int &nnode, int &divlevel, double3 &origin, double3 &Width0) const;
+
+	const auto& GetNnodeLv() const { return nnodeLv; }
+
+	const auto& GetUpperdivmap() const { return upperdivmap; }
+
+	const auto& GetNodeinfo() const { return info; }
+
+	const auto& GetUnitVolumes() const { return Volumes; }
+	
+	const auto& GetMatIds() const { return imat; }
 };
 
 
