@@ -32,6 +32,11 @@ public:
 		type = *t;
 		return MPI_Type_commit(&type);
 	}
+	inline static int Free()
+	{
+		auto mpierr = MPI_Type_free(&type); type = MPI_DATATYPE_NULL;
+		return mpierr;
+	}
 	inline static MPI_Datatype GetType() { return type; }
 };
 
@@ -140,7 +145,11 @@ inline constexpr int Type_commit(MPI_Datatype *datatype)
 	return Datatype<T>::Commit(datatype);
 }
 
-inline constexpr int (*Type_free)(MPI_Datatype*) = MPI_Type_free;
+template <typename T>
+inline constexpr int Type_free()
+{
+	return Datatype<T>::Free();
+}
 
 /*---------------------------------------------*/
 /* Section 5.3: Barrier Synchronization        */
