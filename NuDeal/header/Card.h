@@ -49,16 +49,6 @@ const vector<string> InputCard_t<MacroXsCards>::names = {
 };
 
 template <typename T>
-class MPI_DataType_t
-{
-public:
-	static MPI_Datatype type;
-};
-
-MPI_Datatype MPI_DataType_t<int>::type = MPI_INT;
-
-
-template <typename T>
 T InputCard_t<T>::GetID(const string& line)
 {
 	static constexpr T INVALID = static_cast<T>(-1);

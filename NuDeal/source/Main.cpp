@@ -5,8 +5,8 @@
 #include "HardCodeParam.h"
 #include "XS.h"
 #include "Array.hpp"
-#include "MPIBind.h"
-#include "OpenMP.h"
+#include "MPI.hpp"
+#include "OMP.hpp"
 
 int main(int argc, char *argv[])
 {
