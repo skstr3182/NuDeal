@@ -24,17 +24,20 @@ void Array_t<T, N, is_portable_t<T>>::CreateDevice(size_type first, Ts... pack)
 template <typename T, unsigned N>
 void Array_t<T, N, is_portable_t<T>>::CopyH(const Array_t<T, N>& rhs)
 {
-	this->HostSide::operator=(rhs);
+	if (HostSide::empty()) {
+		ndim = rhs.ndim;
+		stride = rhs.stride;
+		HostSide::_create();
+	}
+	std::copy(std::execution::par, rhs.begin(), rhs.end(), begin());
 }
 
 template <typename T, unsigned N>
 void Array_t<T, N, is_portable_t<T>>::CopyD(const Array_t<T, N>& rhs)
 {
-	ndim = rhs.ndim;
-	stride = rhs.stride;
-	_cudamalloc();
+	if (device_empty()) _cudamalloc(rhs.ndim, rhs.stride);
 	cudaCheckError(
-		cudaMemcpy(device_data(), rhs.device_data(), size() * sizeof(T), cudaMemcpyDeviceToDevice)
+		cudaMemcpy(device_data(), rhs.device_data(), device_size() * sizeof(T), cudaMemcpyDeviceToDevice)
 	);
 }
 
@@ -43,7 +46,7 @@ void Array_t<T, N, is_portable_t<T>>::CopyHtoD()
 {
 	if (device_empty()) _cudamalloc();
 	cudaCheckError(
-		cudaMemcpy(device_data(), data(), size() * sizeof(T), cudaMemcpyHostToDevice)
+		cudaMemcpy(device_data(), data(), device_size() * sizeof(T), cudaMemcpyHostToDevice)
 	);
 }
 
@@ -59,7 +62,7 @@ void Array_t<T, N, is_portable_t<T>>::CopyDtoH()
 template <typename T, unsigned N>
 void Array_t<T, N, is_portable_t<T>>::CopyHtoD(const_pointer begin, const_pointer end)
 {
-	size_type sz = end ? end - begin : size();
+	size_type sz = end ? end - begin : device_size();
 	cudaCheckError(
 		cudaMemcpy(device_data(), begin, sz * sizeof(T), cudaMemcpyHostToDevice)
 	);
@@ -84,7 +87,7 @@ void Array_t<T, N, is_portable_t<T>>::CopyHtoH(const_pointer begin, const_pointe
 template <typename T, unsigned N>
 void Array_t<T, N, is_portable_t<T>>::CopyDtoD(const_pointer begin, const_pointer end)
 {
-	size_type sz = end ? end - begin : size();
+	size_type sz = end ? end - begin : device_size();
 	cudaCheckError(
 		cudaMemcpy(device_data(), begin, sz * sizeof(T), cudaMemcpyDeviceToDevice)
 	);
@@ -95,13 +98,18 @@ void Array_t<T, N, is_portable_t<T>>::FillDevice(const_reference val)
 {
 	if (device_empty()) return;
 
-	std::unique_ptr<array_type> host_ptr(new T[size()]);
-	T* ptr = host_ptr.get();
-	std::fill(std::execution::par, ptr, ptr + size(), val);
+	T* ptr;
+	if (empty()) {
+		ptr = new T[device_size()];
+		std::fill(std::execution::par, ptr, ptr + device_size(), val);
+	}
+	else ptr = data();
 
 	cudaCheckError(
-		cudaMemcpy(device_data(), ptr, size() * sizeof(T), cudaMemcpyHostToDevice)
+		cudaMemcpy(device_data(), ptr, device_size() * sizeof(T), cudaMemcpyHostToDevice)
 	);
+
+	if (empty()) delete[] ptr;
 }
 
 template <typename T, unsigned N>
@@ -112,16 +120,14 @@ void Array_t<T, N, is_portable_t<T>>::Reshape(size_type first, Ts... pack)
 	
 	if (device_empty()) return;
 
-	auto _n = size();
-
-	std::fill(stride.begin(), stride.end(), 0);
+	auto _n = device_size();
 
 	ndim = 1 + sizeof...(pack);
 	stride.front() = first;
 	int i = 1; (..., (stride[i++] = stride[i - 1] * pack));
 
 #ifdef _DEBUG
-	assert(_n == size());
+	assert(_n == device_size());
 #endif
 }
 

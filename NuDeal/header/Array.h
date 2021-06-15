@@ -118,6 +118,13 @@ protected:
 		std::fill(std::execution::par, begin(), end(), T{});
 	}
 
+	void _create(unsigned ndim, const Stride_t& stride)
+	{
+		this->ndim = ndim;
+		this->stride = stride;
+		_create();
+	}
+
 public: // Constructor
 
 	_ArrayBase_t() = default;
@@ -128,7 +135,6 @@ public: // Constructor
 		unique{ rhs.empty() ? NULL : new T[size()] },
 		entry{ unique.get() }
 	{ 
-		if (empty()) return;
 		std::copy(std::execution::par, rhs.begin(), rhs.end(), begin()); 
 	}
 
@@ -163,8 +169,8 @@ public: // Assignment
 
 	_ArrayBase_t<T, N>& operator=(const _ArrayBase_t<T, N>& rhs)
 	{
-		_ArrayBase_t<T, N> tmp(rhs);
-		_move(std::move(tmp)); 
+		if (empty() && !rhs.empty()) _create(rhs.ndim, rhs.stride);
+		std::copy(std::execution::par, rhs.begin(), rhs.end(), begin());
 		return *this;
 	}
 
@@ -189,7 +195,7 @@ public:
 	const_reference back() const noexcept { return entry[size() - 1]; }
 
 	constexpr bool empty() const noexcept { return !entry; }
-	constexpr __host__ __device__ size_type size() const noexcept { return stride[ndim - 1]; }
+	constexpr size_type size() const noexcept { return empty() ? 0 : stride[ndim - 1]; }
 
 	template <unsigned Dim>
 	__host__ __device__
@@ -231,7 +237,6 @@ public: // Fill
 
 	void Fill(const_reference val)
 	{
-		if (empty()) return;
 		std::fill(std::execution::par, begin(), end(), val);
 	}
 
@@ -250,6 +255,14 @@ public: // Reshape
 #ifdef _DEBUG
 		assert(_n == size());
 #endif
+	}
+
+public: // Clear
+
+	void Destroy() 
+	{
+		unique.reset();
+		entry = NULL;
 	}
 
 public: // Indexing Operator
@@ -345,7 +358,14 @@ private:
 	{
 		unique.reset(size() == 0 ? NULL : cuda_allocate(size()));
 		entry = unique.get();
-		cudaCheckError( cudaMemset(entry, 0x00, size() * sizeof(T)) );
+		cudaCheckError( cudaMemset(entry, 0x00, device_size() * sizeof(T)) );
+	}
+
+	void _cudamalloc(unsigned ndim, const Stride_t& stride)
+	{
+		this->ndim = ndim;
+		this->stride = stride;
+		_cudamalloc();
 	}
 
 public: // Constructor & Destructor
@@ -357,9 +377,8 @@ public: // Constructor & Destructor
 		unique{ rhs.device_empty() ? NULL : cuda_allocate(size()) },
 		entry{ unique.get() }
 	{
-		if (device_empty()) return;
 		cudaCheckError(
-			cudaMemcpy(device_data(), rhs.device_data(), size() * sizeof(T),
+			cudaMemcpy(device_data(), rhs.device_data(), device_size() * sizeof(T),
 				cudaMemcpyDeviceToDevice)
 		);
 	}
@@ -387,9 +406,11 @@ public: // Assignment
 
 	Array_t<T, N>& operator=(const Array_t<T, N>& rhs)
 	{ 
-		Array_t<T, N> tmp(rhs);
-		HostSide::_move(std::move(tmp));
-		_move(std::move(tmp)); 
+		HostSide::operator=(rhs);
+		if (device_empty() && !rhs.device_empty()) _cudamalloc(rhs.ndim, rhs.stride);
+		cudaCheckError(
+			cudaMemcpy(device_data(), rhs.device_data(), device_size() * sizeof(T), cudaMemcpyDeviceToDevice)
+		);
 		return *this;
 	}
 
@@ -415,6 +436,10 @@ public: // Status
 	__host__ __device__ const_pointer device_data() const noexcept 
 	{ 
 		return entry; 
+	}
+	__host__ __device__ constexpr size_type device_size() const noexcept
+	{
+		return device_empty() ? 0 : size();
 	}
 
 public: // Resize
@@ -449,8 +474,7 @@ public: // Clear
 
 	void Destroy()
 	{
-		HostSide::unique.reset();
-		HostSide::entry = NULL;
+		HostSide::Destroy();
 	}
 
 	void DestroyDevice()
