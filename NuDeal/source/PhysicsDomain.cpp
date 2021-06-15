@@ -1,4 +1,4 @@
-#include "PhysicsProp.h"
+#include "PhysicalDomain.h"
 #include "Array.hpp"
 
 namespace PhysicalDomain {

@@ -23,8 +23,10 @@
     <ClInclude Include="header\IODeclare.h" />
     <ClInclude Include="header\IOUtil.h" />
     <ClInclude Include="header\Parser.h" />
+    <ClInclude Include="header\PhysicalComposition.h" />
     <ClInclude Include="header\Preprocessor.h" />
-    <ClInclude Include="header\PhysicsProp.h" />
+    <ClInclude Include="header\PhysicalDomain.h" />
+    <ClInclude Include="header\ShortCharacteristics.h" />
     <ClInclude Include="header\UnitGeo.h" />
     <ClInclude Include="header\XS.h" />
   </ItemGroup>
@@ -32,10 +34,12 @@
     <ClCompile Include="source\Array.cpp" />
     <ClCompile Include="source\Geometry.cpp" />
     <ClCompile Include="source\Parser.cpp" />
+    <ClCompile Include="source\PhysicalComposition.cpp" />
     <ClCompile Include="source\Preprocessor.cpp" />
     <ClCompile Include="source\IOUtil.cpp" />
     <ClCompile Include="source\GeoHandle.cpp" />
-    <ClCompile Include="source\PhysicsProp.cpp" />
+    <ClCompile Include="source\PhysicsDomain.cpp" />
+    <ClCompile Include="source\ShortCharacteristics.cpp" />
     <ClCompile Include="source\UnitGeo.cpp" />
     <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\Input.cpp" />

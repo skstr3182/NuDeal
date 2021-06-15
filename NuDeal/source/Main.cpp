@@ -5,7 +5,6 @@
 #include "HardCodeParam.h"
 #include "XS.h"
 #include "Array.hpp"
-#include "PhysicsProp.h"
 
 int main(int argc, char *argv[])
 {

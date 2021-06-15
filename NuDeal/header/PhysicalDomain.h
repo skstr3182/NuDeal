@@ -4,6 +4,7 @@
 #include "XS.h"
 #include "GeoHandle.h"
 #include "Array.h"
+#include "PhysicalComposition.h"
 
 namespace PhysicalDomain {
 enum dir6 {
@@ -56,6 +57,8 @@ public:
 		Nxyz.x = Nx; Nxyz.y = Ny; Nxyz.z = Nz; nxyz.x = nx; nxyz.y = ny; nxyz.z = nz;
 		nnode = this->nnode; divlevel = this->divlevel;
 	}
+
+	void GetNodeSizes(double3 &lxyz0) const { lxyz0.x = lx0; lxyz0.y = ly0; lxyz0.z = lz0; }
 
 	const auto& GetNnodeLv() const { return nnodeLv; }
 
@@ -121,8 +124,10 @@ public:
 };
 
 class RaySegmentDomain : public ConnectedDomain {
+public:
+	template<typename T> using Array = LinPack::Array_t<T>;
 private:
-	double *bndflux;
+	Array<double> bndflux;
 public:
 	RaySegmentDomain() {};
 
