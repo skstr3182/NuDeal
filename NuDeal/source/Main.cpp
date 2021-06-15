@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 {
 	MPI::Init(&argc, &argv);	
 	MPI::Configure_cuda_types();
-
+	
 	//LinPack::Array_t<double> a;
 	//LinPack::Array_t<double> b;
 	//LinPack::Array_t<int> c;
@@ -30,7 +30,6 @@ int main(int argc, char *argv[])
 	//XS::XSLib C5G7Data(false, ng, nXSset, 0);
 	//C5G7Data.UploadXSData(typeXS, XSSet, XSSM);
 
-	MPI_Finalize();
-
+	MPI::Finalize();
 	return EXIT_SUCCESS;
 }
