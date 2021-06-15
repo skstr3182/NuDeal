@@ -1,5 +1,5 @@
 #include "PhysicalDomain.h"
-#include "Array.hpp"
+#include "Array.h"
 
 namespace PhysicalDomain {
 void BaseDomain::Create(const GeometryHandler &rhs) {

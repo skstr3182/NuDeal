@@ -12,7 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header\Array.h" />
-    <ClInclude Include="header\Array.hpp" />
     <ClInclude Include="header\Card.h" />
     <ClInclude Include="header\CUDAExcept.h" />
     <ClInclude Include="header\CUDATypeTraits.h" />

@@ -4,9 +4,12 @@
 #include "Input.h"
 #include "HardCodeParam.h"
 #include "XS.h"
-#include "Array.hpp"
+#include "Array.h"
 #include "MPI.hpp"
 #include "OMP.hpp"
+
+template class LinPack::Array_t<int>;
+template <typename T> using Array_t = LinPack::Array_t<T>;
 
 int main(int argc, char *argv[])
 {
@@ -29,8 +32,7 @@ int main(int argc, char *argv[])
 
 	//XS::XSLib C5G7Data(false, ng, nXSset, 0);
 	//C5G7Data.UploadXSData(typeXS, XSSet, XSSM);
-
-	MPI_Finalize();
-
+	
+	MPI::Finalize();
 	return EXIT_SUCCESS;
 }

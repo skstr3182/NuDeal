@@ -1,5 +1,5 @@
 #include "XS.h"
-#include "Array.hpp"
+#include "Array.h"
 
 namespace XS {
 XSLib::XSLib(bool isMicro, int ng, int nset, int scatorder){
