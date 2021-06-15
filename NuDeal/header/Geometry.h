@@ -2,7 +2,6 @@
 #include "Defines.h"
 #include "UnitGeo.h"
 #include "GeoHandle.h"
-#include "PhysicsProp.h"
 #include "IODeclare.h"
 
 namespace Geometry {

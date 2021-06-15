@@ -3,6 +3,7 @@
 #include "GeoHandle.h"
 #include "Input.h"
 #include "HardCodeParam.h"
+#include "XS.h"
 #include "Array.hpp"
 #include "MPIBind.h"
 #include "OpenMP.h"
@@ -12,19 +13,24 @@ int main(int argc, char *argv[])
 	MPI::Init(&argc, &argv);	
 	MPI::Configure_cuda_types();
 
-	int arr[5] = {0, };
-	int arr2[5];
+	//LinPack::Array_t<double> a;
+	//LinPack::Array_t<double> b;
+	//LinPack::Array_t<int> c;
 
-	std::copy(arr, arr + 5, arr2);
+	//vector<double> doubleVec(100);
 
+	//IO::InputManager_t Parser;
+	//std::string file = std::string(argv[1]);
+	//Parser.ReadInput(file);
 
-	/*IO::InputManager_t Parser;
-	std::string file = std::string(argv[1]);
-	Parser.ReadInput(file);*/
 	//Geometry::DebugUnitGeo();
 	//Geometry::DebugGeomHandle();
+	//PhysicalDomain::DebugPhysicalDomain();
 
-	MPI::Finalize();
+	//XS::XSLib C5G7Data(false, ng, nXSset, 0);
+	//C5G7Data.UploadXSData(typeXS, XSSet, XSSM);
+
+	MPI_Finalize();
 
 	return EXIT_SUCCESS;
 }

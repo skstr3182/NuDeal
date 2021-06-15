@@ -37,6 +37,24 @@
     <Filter Include="Header\OMP">
       <UniqueIdentifier>{58cf01f8-7d1c-462e-bdfa-49703228f796}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\PhysicalProperty">
+      <UniqueIdentifier>{556b7802-6d0b-45fe-8fa2-0d599171471e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header\PhysicalProperty">
+      <UniqueIdentifier>{72a53ef9-498d-486f-9839-ddf4f2153738}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header\CrossSection">
+      <UniqueIdentifier>{a13ef943-3fa7-4573-87d4-ee4863844db3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\CrossSection">
+      <UniqueIdentifier>{366d1306-0946-401f-a6eb-c086689abe98}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header\Transport">
+      <UniqueIdentifier>{5446f144-58dd-43e7-bf89-0d0a69303670}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Transport">
+      <UniqueIdentifier>{111dc5da-44a7-482f-be84-7c6c732a8b64}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header\HardCodeParam.h">
@@ -56,12 +74,6 @@
     </ClInclude>
     <ClInclude Include="header\Parser.h">
       <Filter>Header\IO</Filter>
-    </ClInclude>
-    <ClInclude Include="header\PhysicsProp.h">
-      <Filter>Header</Filter>
-    </ClInclude>
-    <ClInclude Include="header\XS.h">
-      <Filter>Header</Filter>
     </ClInclude>
     <ClInclude Include="header\GeoHandle.h">
       <Filter>Header\Geometry</Filter>
@@ -96,6 +108,18 @@
     <ClInclude Include="header\OpenMP.h">
       <Filter>Header\OMP</Filter>
     </ClInclude>
+    <ClInclude Include="header\XS.h">
+      <Filter>Header\CrossSection</Filter>
+    </ClInclude>
+    <ClInclude Include="header\PhysicalDomain.h">
+      <Filter>Header\PhysicalProperty</Filter>
+    </ClInclude>
+    <ClInclude Include="header\PhysicalComposition.h">
+      <Filter>Header\PhysicalProperty</Filter>
+    </ClInclude>
+    <ClInclude Include="header\ShortCharacteristics.h">
+      <Filter>Header\Transport</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Input.cpp">
@@ -109,9 +133,6 @@
     </ClCompile>
     <ClCompile Include="source\Parser.cpp">
       <Filter>Source\IO</Filter>
-    </ClCompile>
-    <ClCompile Include="source\PhysicsProp.cpp">
-      <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="source\IOUtil.cpp">
       <Filter>Source\IO</Filter>
@@ -127,6 +148,18 @@
     </ClCompile>
     <ClCompile Include="source\Main.cpp">
       <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\XS.cpp">
+      <Filter>Source\CrossSection</Filter>
+    </ClCompile>
+    <ClCompile Include="source\PhysicsDomain.cpp">
+      <Filter>Source\PhysicalProperty</Filter>
+    </ClCompile>
+    <ClCompile Include="source\PhysicalComposition.cpp">
+      <Filter>Source\PhysicalProperty</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ShortCharacteristics.cpp">
+      <Filter>Source\Transport</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
