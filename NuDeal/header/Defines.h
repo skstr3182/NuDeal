@@ -29,6 +29,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <execution>
+#include <cstdarg>
 
 /// C++17 Required
 

@@ -26,7 +26,6 @@ public :
 	static void CheckBalance(const string& contents,
 		const vector<string>& open, const vector<string>& close);
 
-
 };
 
 }

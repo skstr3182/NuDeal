@@ -422,24 +422,24 @@ void CompiledDomain::PrintCompileInfo(string filename) const {
 	}
 
 void FlatSrcDomain::Initialize(int ng, int scatorder, bool isEx) {
-	flux.Resize(ng, nblocks, scatorder + 1); srcS(ng, nblocks, scatorder + 1);
-	srcF.Resize(ng, nblocks); if (isEx) srcEx.Resize(ng, nblocks);
+	flux.Create(ng, nblocks, scatorder + 1); srcS(ng, nblocks, scatorder + 1);
+	srcF.Create(ng, nblocks); if (isEx) srcEx.Create(ng, nblocks);
 }
 
 void FlatXSDomain::InitializeMacro(int ng, int scatorder, bool isTHfeed) {
 	this->ng = ng; this->scatorder = scatorder;
 	isMicro = false; this->isTHfeed = isTHfeed;
-	if (isTHfeed) temperature.Resize(nblocks);
-	xst.Resize(ng, nblocks); xssm.Resize(ng, ng, nblocks, scatorder+1); xsnf.Resize(ng, nblocks);
-	if (isTHfeed) xskf.Resize(ng, nblocks);
+	if (isTHfeed) temperature.Create(nblocks);
+	xst.Create(ng, nblocks); xssm.Create(ng, ng, nblocks, scatorder+1); xsnf.Create(ng, nblocks);
+	if (isTHfeed) xskf.Create(ng, nblocks);
 }
 
 void FlatXSDomain::Initialize(int ng, int scatorder, int niso) {
 	this->ng = ng; this->scatorder = scatorder;
 	isMicro = true; isTHfeed = true;
-	idiso.Resize(niso, nblocks); pnum.Resize(niso, nblocks); temperature.Resize(nblocks);
-	xst.Resize(ng, nblocks); xssm.Resize(ng, ng, scatorder+1, nblocks); xsnf.Resize(ng, nblocks);
-	xskf.Resize(ng, nblocks);
+	idiso.Create(niso, nblocks); pnum.Create(niso, nblocks); temperature.Create(nblocks);
+	xst.Create(ng, nblocks); xssm.Create(ng, ng, scatorder+1, nblocks); xsnf.Create(ng, nblocks);
+	xskf.Create(ng, nblocks);
 }
 
 void FlatXSDomain::SetMacroXS(const vector<int> &imat, const XSLib &MacroXS) {
@@ -454,8 +454,8 @@ void FlatXSDomain::SetMacroXS(const vector<int> &imat, const XSLib &MacroXS) {
 		for (int sord = 0; sord < scatorder; sord++)
 			std::copy(XS_set[idmat].XSSM[sord].begin(), XS_set[idmat].XSSM[sord].end(), &xssm(0, 0, 0, i));
 		for (int ig = 0; ig < ng; ig++) {
-			xsnf(ig, i) = XS_set[idmat].XSval[FIS][ig] * XS_set[idmat].XSval[Nu][ig];
-			if (isTHfeed) xskf(ig, i) = XS_set[idmat].XSval[FIS][ig] * XS_set[idmat].XSval[Kappa][ig];
+			xsnf(ig, i) = XS_set[idmat].XSval[FIS](ig) * XS_set[idmat].XSval[Nu](ig);
+			if (isTHfeed) xskf(ig, i) = XS_set[idmat].XSval[FIS](ig) * XS_set[idmat].XSval[Kappa](ig);
 		}
 	}
 }

@@ -5,10 +5,13 @@
 #include "HardCodeParam.h"
 #include "XS.h"
 #include "Array.hpp"
+#include "MPI.hpp"
+#include "OMP.hpp"
 
 int main(int argc, char *argv[])
 {
-	MPI_Init(&argc, &argv);
+	MPI::Init(&argc, &argv);	
+	MPI::Configure_cuda_types();
 
 	//LinPack::Array_t<double> a;
 	//LinPack::Array_t<double> b;

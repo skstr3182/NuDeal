@@ -4,6 +4,7 @@
 #include "IOUtil.h"
 #include "Preprocessor.h"
 #include "Parser.h"
+#include "Card.h"
 
 namespace IO
 {
@@ -63,11 +64,12 @@ void InputManager_t::ParseGeometryBlock(HashTree_t& Tree)
 	using Except = Exception_t;
 	using Code = Except::Code;
 	using Cards = GeometryCards;
+	using Container = InputCard_t<Cards>;
 
 	for (auto& T : Tree.children) {
 		
 		string card = Util::Trim(T.name);
-		Cards ID = Util::GetCardID<Cards>(Blocks::GEOMETRY, card);
+		Cards ID = Container::GetID(card);
 
 		switch (ID)
 		{
@@ -240,7 +242,7 @@ void InputManager_t::ReadInput(const string& file)
 	
 	for (auto& T : HashTree.children) {
 		string block = Util::Trim(T.name);
-		Blocks ID = Util::GetBlockID(block);
+		auto ID = InputCard_t<Blocks>::GetID(block);
 		switch (ID)
 		{
 		case Blocks::GEOMETRY :

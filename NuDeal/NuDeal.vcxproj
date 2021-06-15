@@ -13,7 +13,9 @@
   <ItemGroup>
     <ClInclude Include="header\Array.h" />
     <ClInclude Include="header\Array.hpp" />
+    <ClInclude Include="header\Card.h" />
     <ClInclude Include="header\CUDAExcept.h" />
+    <ClInclude Include="header\CUDATypeTraits.h" />
     <ClInclude Include="header\Defines.h" />
     <ClInclude Include="header\IOExcept.h" />
     <ClInclude Include="header\GeoHandle.h" />
@@ -22,6 +24,8 @@
     <ClInclude Include="header\Input.h" />
     <ClInclude Include="header\IODeclare.h" />
     <ClInclude Include="header\IOUtil.h" />
+    <ClInclude Include="header\MPI.hpp" />
+    <ClInclude Include="header\OMP.hpp" />
     <ClInclude Include="header\Parser.h" />
     <ClInclude Include="header\PhysicalComposition.h" />
     <ClInclude Include="header\Preprocessor.h" />
@@ -31,7 +35,6 @@
     <ClInclude Include="header\XS.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\Array.cpp" />
     <ClCompile Include="source\Geometry.cpp" />
     <ClCompile Include="source\Parser.cpp" />
     <ClCompile Include="source\PhysicalComposition.cpp" />
@@ -49,6 +52,8 @@
     <ProjectGuid>{4C24DF09-B724-4756-A70D-2B3F797526E2}</ProjectGuid>
     <RootNamespace>NuDeal</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <CudaToolkitCustomDir>
+    </CudaToolkitCustomDir>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -92,6 +97,7 @@
       <OpenMPSupport>true</OpenMPSupport>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PrecompiledHeaderFile />
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -104,6 +110,9 @@
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
       <CodeGeneration>compute_60,sm_60</CodeGeneration>
       <FastMath>true</FastMath>
+      <AdditionalCompilerOptions>
+      </AdditionalCompilerOptions>
+      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17 " %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -118,6 +127,7 @@
       <OpenMPSupport>true</OpenMPSupport>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PrecompiledHeaderFile />
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -133,6 +143,9 @@
       <CodeGeneration>compute_60,sm_60</CodeGeneration>
       <GenerateLineInfo>true</GenerateLineInfo>
       <FastMath>true</FastMath>
+      <AdditionalCompilerOptions>
+      </AdditionalCompilerOptions>
+      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17 " %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

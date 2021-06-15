@@ -1,183 +1,494 @@
 #pragma once
 #include "Defines.h"
+#include "CUDAExcept.h"
+#include "CUDATypeTraits.h"
 
 namespace LinPack
 {
 
-template <typename T>
-class Array_t
+namespace _Detail // Namesapce Detail
 {
-template <typename U> friend class Array_t;
+
+template <typename T, unsigned N>
+class _Static_array
+{
+public:
+	T _Elems[N] = { 0, };
+
+	_Static_array() = default;
+
+	T& front() noexcept { return *_Elems; }
+	const T& front() const noexcept { return *_Elems; }
+	T& back() noexcept { return *(_Elems + N); }
+	const T& back() const noexcept { return *(_Elems + N); }
+	T *begin() noexcept { return _Elems; }
+	const T* begin() const noexcept { return _Elems; }
+	T *end() noexcept { return _Elems + N; }
+	const T* end() const noexcept { return _Elems + N; }
+	__inline__ __host__ __device__ T& operator[] (size_t idx) noexcept
+	{
+		return _Elems[idx];
+	}
+	__inline__ __host__ __device__ const T& operator[] (size_t idx) const noexcept
+	{
+		return _Elems[idx];
+	}
+};
+
+template <unsigned N, typename... Ts>
+using _call_if_t = typename std::enable_if_t<
+	std::conjunction_v<std::is_integral<Ts>...> && sizeof...(Ts) <= N && N>;
+
+template <typename T>
+using _not_portable_t = typename std::enable_if_t<!CUDATypeTraits::is_portable_v<T>>;
+
+template <typename T>
+using _portable_t = typename std::enable_if_t<CUDATypeTraits::is_portable_v<T>>;
+
+template <typename T>
+static constexpr auto _cuda_allocate = [](size_t sz) {
+	T *ptr; cudaCheckError( cudaMalloc(&ptr, sz * sizeof(T)) ); return ptr;
+};
+
+template <typename T>
+struct _cuda_deallocate 
+{ 
+	void operator() (T* ptr) 
+	{ 
+		cudaCheckError( cudaFree(ptr) );
+	} 
+};
+
+template <typename T, unsigned int N>
+class _ArrayBase_t
+{
 public:
 
-	using reference       = T&;
+	using value_type = T;
+	using pointer = T * ;
+	using const_pointer = const T*;
+	using reference = T & ;
 	using const_reference = const T&;
-	using size_type       = size_t;
-	using index_type			= long long;
-	using value_type      = T;
-	using pointer         = T*;
-	using const_pointer   = const T*;
-	using iterator        = pointer;
-	using const_iterator  = const_pointer;
+	using size_type = size_t;
+	using difference_type = std::ptrdiff_t;
+	using iterator = pointer;
+	using const_iterator = const_pointer;
+	using index_type = long long;
+	using array_type = T[];
 
-	enum class State
+protected:
+
+	using Stride_t = _Detail::_Static_array<size_t, N>;
+
+	// Helper Template
+	template <typename... Ts>
+	using call_if_t = _Detail::_call_if_t<N, Ts...>;
+
+
+protected:
+
+	// Member Variables
+	Stride_t stride = { 0, };
+	unsigned ndim = 1;
+	std::unique_ptr<array_type> unique;
+	pointer entry = NULL;
+
+protected:
+
+	void _move(_ArrayBase_t<T, N>&& rhs)
 	{
-		Alloc,
-		Alias,
-		Undefined = -1,
-	};
+		ndim = std::move(rhs.ndim);
+		stride = std::move(rhs.stride);
+		unique = std::move(rhs.unique);
+		entry = std::move(rhs.entry);
+	}
+
+	void _clear()
+	{
+		ndim = 1;
+		std::fill(stride.begin(), stride.end(), 0);
+		unique.reset();
+		entry = NULL;
+	}
+
+	void _create()
+	{
+		unique.reset(size() == 0 ? NULL : new T[size()]);
+		entry = unique.get();
+		std::fill(std::execution::par, begin(), end(), T{});
+	}
+
+public: // Constructor
+
+	_ArrayBase_t() = default;
+
+	_ArrayBase_t(const _ArrayBase_t<T, N>& rhs) :
+		ndim{ rhs.ndim },
+		stride{ rhs.stride },
+		unique{ rhs.empty() ? NULL : new T[size()] },
+		entry{ unique.get() }
+	{ 
+		if (empty()) return;
+		std::copy(std::execution::par, rhs.begin(), rhs.end(), begin()); 
+	}
+
+	_ArrayBase_t(_ArrayBase_t<T, N>&& rhs) noexcept :
+		ndim{ std::move(rhs.ndim) },
+		stride{ std::move(rhs.stride) },
+		unique{ std::move(rhs.unique) },
+		entry{ std::move(rhs.entry) }
+	{ 
+		rhs._clear(); 
+	}
+
+	// Explicit
+	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
+	explicit _ArrayBase_t(size_type first, Ts... pack) :
+		ndim{ sizeof...(Ts) + 1 },
+		stride{ first, }
+	{
+		int i = 1; (..., (stride[i++] = stride[i - 1] * pack));
+		_create();
+	}
+
+	// For Const Alias
+	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
+	explicit _ArrayBase_t(const_pointer ptr, size_type first, Ts... pack) :
+		_ArrayBase_t{ first, pack... }
+	{
+		std::copy(std::execution::par, ptr, ptr + size(), begin());
+	}
+
+public: // Assignment
+
+	_ArrayBase_t<T, N>& operator=(const _ArrayBase_t<T, N>& rhs)
+	{
+		_ArrayBase_t<T, N> tmp(rhs);
+		_move(std::move(tmp)); 
+		return *this;
+	}
+
+	_ArrayBase_t<T, N>& operator=(_ArrayBase_t<T, N>&& rhs)
+	{
+		_move(std::move(rhs)); 
+		rhs._clear(); 
+		return *this;
+	}
+
+public:
+
+	pointer data() noexcept { return entry; }
+	const_pointer data() const noexcept { return entry; }
+	iterator begin() noexcept { return entry; }
+	const_iterator begin() const noexcept { return entry; }
+	iterator end() noexcept { return begin() + size(); }
+	const_iterator end() const noexcept { return begin() + size(); }
+	reference front() noexcept { return entry[0]; }
+	const_reference front() const noexcept { return entry[0]; }
+	reference back() noexcept { return entry[size() - 1]; }
+	const_reference back() const noexcept { return entry[size() - 1]; }
+
+	constexpr bool empty() const noexcept { return !entry; }
+	constexpr __host__ __device__ size_type size() const noexcept { return stride[ndim - 1]; }
+
+	template <unsigned Dim>
+	__host__ __device__
+	constexpr size_type Rank() const noexcept
+	{
+		static_assert(Dim <= N && Dim, "Dimension Overflow");
+		if constexpr (Dim > 1)
+			return stride[Dim - 1] / stride[Dim - 2];
+		return stride[0];
+	}
+
+	template <unsigned Dim>
+	__host__ __device__
+	constexpr size_type Stride() const noexcept
+	{
+		static_assert(Dim <= N && Dim, "Dimension Overflow");
+		if constexpr (Dim > 1)
+			return stride[Dim - 2];
+		return 1;
+	}
+
+public: // Resize
+
+	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
+	void Create(size_type first, Ts... pack)
+	{
+		_move(_ArrayBase_t<T, N>(first, pack...));
+	}
+
+public: // Copy
+
+	void Copy(const_pointer begin, const_pointer end = NULL)
+	{
+		size_type sz = end ? end - begin : size();
+		std::copy(std::execution::par, begin, begin + sz, begin());
+	}
+
+public: // Fill
+
+	void Fill(const_reference val)
+	{
+		if (empty()) return;
+		std::fill(std::execution::par, begin(), end(), val);
+	}
+
+public: // Reshape
+
+	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
+	void Reshape(size_type first, Ts... pack)
+	{
+		if (empty()) return;
+#ifdef _DEBUG
+		auto _n = size();
+#endif
+		ndim = 1 + sizeof...(pack);
+		stride.front() = first;
+		int i = 1; (..., (stride[i++] = stride[i - 1] * pack));
+#ifdef _DEBUG
+		assert(_n == size());
+#endif
+	}
+
+public: // Indexing Operator
+
+	template <typename... Ts, typename = call_if_t<index_type, Ts...>>
+	inline reference operator() (index_type idx, Ts... _seq) noexcept
+	{
+		if constexpr (sizeof...(Ts) > 0) {
+			int i = 0; (..., (idx += _seq * stride[i++]));
+		}
+		return entry[idx];
+	}
+
+	template <typename... Ts, typename = call_if_t<index_type, Ts...>>
+	inline const_reference operator() (index_type idx, Ts... _seq) const noexcept
+	{
+		if constexpr (sizeof...(Ts) > 0) {
+			int i = 0; (..., (idx += _seq * stride[i++]));
+		}
+		return entry[idx];
+	}
+};
+
+} // Namespace Detail
+
+template <typename, unsigned = 4, typename = void> class Array_t;
+
+// Host Array
+template <typename T, unsigned N>
+class Array_t<T, N, _Detail::_not_portable_t<T>> : public _Detail::_ArrayBase_t<T, N>
+{
+private:
+		
+	using HostSide = _Detail::_ArrayBase_t<T, N>;
+
+public: // Constructor && Destructor
+
+	using HostSide::HostSide;
+
+public: // Assignment
+	
+	using HostSide::operator=;
+
+}; // Host Array
+
+// Device Array
+template <typename T> using is_portable_t = _Detail::_portable_t<T>;
+
+template <typename T, unsigned N>
+class Array_t<T, N, is_portable_t<T>> : public _Detail::_ArrayBase_t<T, N>
+{
+private:
+
+	using HostSide = _Detail::_ArrayBase_t<T, N>;
+
+public:
+	
+	using reference = HostSide::reference;
+	using const_reference = HostSide::const_reference;
+	using size_type = HostSide::size_type;
+	using index_type = HostSide::index_type;
+	using pointer = HostSide::pointer;
+	using const_pointer = HostSide::const_pointer;
+	using iterator = HostSide::iterator;
+	using const_iterator = HostSide::const_iterator;
+	using array_type = HostSide::array_type;
 
 private:
 
-	size_type n = 0;
-	size_type nx = 0, ny = 0, nz = 0, nw = 0;
-	size_type nxy = 0, nxyz = 0;
-	pointer Entry = static_cast<pointer>(NULL);
-	pointer d_Entry = static_cast<pointer>(NULL);
-	State state = State::Undefined;
-	State d_state = State::Undefined;
+	static constexpr auto cuda_allocate = _Detail::_cuda_allocate<T>;
+	using cuda_deallocate = _Detail::_cuda_deallocate<T>;
 
-	void SetDimension(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-	inline void SetHostState(State s) { state = s; }
-	inline void SetDeviceState(State s) { d_state = s; }
+private:
+
+	std::unique_ptr<array_type, cuda_deallocate> unique;
+	pointer entry = NULL;
+
+private:
+
+	void _move(Array_t<T, N>&& rhs)
+	{
+		unique = std::move(rhs.unique);
+		entry = std::move(rhs.entry);
+	}
+
+	void _clear()
+	{
+		unique.reset();
+		entry = NULL;
+	}
+
+	void _cudamalloc()
+	{
+		unique.reset(size() == 0 ? NULL : cuda_allocate(size()));
+		entry = unique.get();
+		cudaCheckError( cudaMemset(entry, 0x00, size() * sizeof(T)) );
+	}
 
 public: // Constructor & Destructor
 
 	Array_t() = default;
-	template <typename U> Array_t(const Array_t<U>& rhs) 
-	{ this->operator=(rhs); }
-	Array_t(const Array_t<T>& rhs) 
-	{ this->operator=(rhs); }
-	Array_t(Array_t<T>&& rhs) 
-	{ this->operator=(rhs); }
-	explicit Array_t
-	(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1) 
-	{ ResizeHost(nx, ny, nz, nw); }
-	explicit Array_t
-	(const_pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1)
-	{ ResizeHost(ptr, nx, ny, nz, nw); }
-	~Array_t() 
-	{ Clear(); }
 
-public: // Aliasing 
-
-	void Alias(const Array_t<T>& rhs);
-	void AliasHost(const Array_t<T>& rhs);
-	void AliasHost(pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-	void AliasDevice(const Array_t<T>& rhs);
-	void AliasDevice(pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-
-public: // Resizing
-
-	void ResizeHost(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-	void ResizeHost(const_pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-	void ResizeDevice(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-	void ResizeDevice(const_pointer ptr, size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1);
-	void ResizeDevice()
-	{ ResizeDevice(nx, ny, nz, nw); }
-	void Resize(size_type nx, size_type ny = 1, size_type nz = 1, size_type nw = 1) 
-	{ ResizeHost(nx, ny, nz, nw); ResizeDevice(nx, ny, nz, nw); }
-
-public: // Clearing
-
-	void ClearHost();
-	void ClearDevice();	
-	void Clear() { ClearHost(); ClearDevice(); }
-
-public: // Info.
-
-	inline bool IsHostAlloc() const noexcept { return state == State::Alloc; }
-	inline bool IsDeviceAlloc() const noexcept { return d_state == State::Alloc; }
-	inline bool IsHostAlias() const noexcept { return state == State::Alias; }
-	inline bool IsDeviceAlias() const noexcept { return d_state == State::Alias; }
-	
-	inline pointer GetHostPointer() noexcept { return Entry; }
-	inline const_pointer GetHostPointer() const noexcept { return Entry; }
-	__forceinline__ __host__ __device__ 
-	pointer GetDevicePointer() noexcept { return d_Entry; }
-	__forceinline__ __host__ __device__ 
-	const_pointer GetDevicePointer() const noexcept { return d_Entry; }
-
-public : // STL-Consistent Methods
-
-	inline iterator begin() noexcept { return Entry; }
-	inline const_iterator begin() const noexcept { return Entry; }
-	inline iterator end() noexcept { return Entry + n; }
-	inline const_iterator end() const noexcept { return Entry + n; }
-	inline reference front() noexcept { return Entry[0]; }
-	inline const_reference front() const noexcept { return Entry[0]; }
-	inline reference back() noexcept { return Entry[n - 1]; }
-	inline const_reference back() const noexcept { return Entry[n - 1]; }
-	inline size_type size() const noexcept { return n; }
-	inline pointer data() noexcept { return Entry; }
-	inline const_pointer data() const noexcept { return Entry; }
-
-public : // Arithmatic Operations
-
-	inline Array_t<T>& operator=(const_reference val);
-	inline Array_t<T>& operator=(const_pointer ptr);
-	template <typename U> inline Array_t<T>& operator=(const Array_t<U>& rhs);
-	inline Array_t<T>& operator=(const Array_t<T>& rhs);
-	inline Array_t<T>& operator=(Array_t<T>&& rhs);
-
-	inline Array_t<T>& operator+=(const_reference val);
-	template <typename U> inline Array_t<T>& operator+=(const Array_t<U>& rhs);
-	inline Array_t<T>& operator+=(const Array_t<T>& rhs);
-
-	inline Array_t<T>& operator-=(const_reference val);
-	template <typename U> inline Array_t<T>& operator-=(const Array_t<U>& rhs);
-	inline Array_t<T>& operator-=(const Array_t<T>& rhs);
-
-	inline Array_t<T>& operator*=(const_reference val);
-	template <typename U> inline Array_t<T>& operator*=(const Array_t<U>& rhs);
-	inline Array_t<T>& operator*=(const Array_t<T>& rhs);
-
-	inline Array_t<T>& operator/=(const_reference val);
-	template <typename U> inline Array_t<T>& operator/=(const Array_t<U>& rhs);
-	inline Array_t<T>& operator/=(const Array_t<T>& rhs);
-
-public : // Indexing Operations
-
-	__forceinline__ __host__ __device__ 
-	reference operator[] (index_type i) 
-	noexcept 
-	{ 
-#ifdef __CUDA_ARCH__
-		return d_Entry[i];
-#else
-		return Entry[i];
-#endif
+	Array_t(const Array_t<T, N>& rhs) : 
+		HostSide{ rhs },
+		unique{ rhs.device_empty() ? NULL : cuda_allocate(size()) },
+		entry{ unique.get() }
+	{
+		if (device_empty()) return;
+		cudaCheckError(
+			cudaMemcpy(device_data(), rhs.device_data(), size() * sizeof(T),
+				cudaMemcpyDeviceToDevice)
+		);
 	}
-	__forceinline__ __host__ __device__ const_reference 
-	operator[] (index_type i) 
-	const noexcept 
+
+	Array_t(Array_t<T, N>&& rhs) noexcept :
+		HostSide{ std::move(rhs) },
+		unique{ std::move(rhs.unique) },
+		entry{ std::move(rhs.entry) }
 	{ 
-#ifdef __CUDA_ARCH__
-		return d_Entry[i];
-#else
-		return Entry[i];
-#endif
+		rhs._clear(); 
 	}
-	__forceinline__ __host__ __device__ 
-	reference operator() (index_type ix, index_type iy = 0, index_type iz = 0, index_type iw = 0) 
-	noexcept 
+
+	// Explicit
+	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
+	explicit Array_t(size_type first, Ts... pack) :
+		HostSide{ first, pack... }
+	{}
+
+	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
+	explicit Array_t(const_pointer ptr, size_type first, Ts... pack) :
+		HostSide{ ptr, first, pack... }
+	{}
+
+public: // Assignment
+
+	Array_t<T, N>& operator=(const Array_t<T, N>& rhs)
 	{ 
-#ifdef __CUDA_ARCH__
-		return d_Entry[iw * nxyz + iz * nxy + iy * nx + ix];
-#else
-		return Entry[iw * nxyz + iz * nxy + iy * nx + ix]; 
-#endif
+		Array_t<T, N> tmp(rhs);
+		HostSide::_move(std::move(tmp));
+		_move(std::move(tmp)); 
+		return *this;
 	}
-	__forceinline__ __host__ __device__ 
-	const_reference operator() (index_type ix, index_type iy = 0, index_type iz = 0, index_type iw = 0) 
-	const noexcept
+
+	Array_t<T, N>& operator=(Array_t<T, N>&& rhs)
+	{ 
+		HostSide::_move(std::move(rhs));
+		_move(std::move(rhs)); 
+		rhs.HostSide::_clear();
+		rhs._clear(); 
+		return *this;
+	}
+
+public: // Status
+
+	__host__ __device__ constexpr bool device_empty() const noexcept 
+	{ 
+		return !entry; 
+	}
+	__host__ __device__ pointer device_data() noexcept 
+	{ 
+		return entry; 
+	}
+	__host__ __device__ const_pointer device_data() const noexcept 
+	{ 
+		return entry; 
+	}
+
+public: // Resize
+
+	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
+	void Create(size_type first, Ts... pack);
+
+	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
+	void CreateDevice(size_type first, Ts... pack);
+
+public: // Copy
+
+	void CopyH(const Array_t<T, N>& rhs);
+	void CopyD(const Array_t<T, N>& rhs);
+	void CopyHtoD();
+	void CopyDtoH();
+	void CopyHtoD(const_pointer begin, const_pointer end = NULL);
+	void CopyDtoH(const_pointer begin, const_pointer end = NULL);
+	void CopyHtoH(const_pointer begin, const_pointer end = NULL);
+	void CopyDtoD(const_pointer begin, const_pointer end = NULL);
+
+public: // Fill
+
+	void FillDevice(const_reference val);
+
+public: // Reshape
+
+	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
+	void Reshape(size_type first, Ts... pack);
+
+public: // Clear
+
+	void Destroy()
+	{
+		HostSide::unique.reset();
+		HostSide::entry = NULL;
+	}
+
+	void DestroyDevice()
+	{
+		unique.reset();
+		entry = NULL;
+	}
+
+public: // Indexing
+
+	template <typename... Ts, typename = call_if_t<index_type, Ts...>>
+	__inline__ __device__ __host__
+	reference operator()(index_type idx, Ts... _seq) noexcept
 	{
 #ifdef __CUDA_ARCH__
-		return d_Entry[iw * nxyz + iz * nxy + iy * nx + ix];
+		if constexpr (sizeof...(Ts) > 0) {
+			int i = 0; (..., (idx += stride[i++] * _seq));
+		}
+		return entry[idx];
 #else
-		return Entry[iw * nxyz + iz * nxy + iy * nx + ix];
+		return HostSide::operator()(idx, _seq...);
 #endif
 	}
-};
+
+	template <typename... Ts, typename = call_if_t<index_type, Ts...>>
+	__inline__ __device__ __host__
+	const_reference operator()(index_type idx, Ts... _seq) const noexcept
+	{
+#ifdef __CUDA_ARCH__
+		if constexpr (sizeof...(Ts) > 0) {
+			int i = 0; (..., (idx += stride[i++] * _seq));
+		}
+		return entry[idx];
+#else
+		return HostSide::operator()(idx, _seq...);
+#endif
+	}
+
+}; // Device Array
 
 }

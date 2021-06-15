@@ -11,7 +11,7 @@ string Util_t::Uppercase(const string& line)
 {
 	string l = line;
 	std::transform(l.begin(), l.end(), l.begin(), ::toupper);
-	return static_cast<string&&>(l);
+	return l;
 }
 
 int Util_t::Integer(string field)
@@ -63,7 +63,7 @@ string Util_t::Trim(const string& field, const string& delimiter)
 	pos = s.find_last_not_of(delimiter) + 1;
 	s.erase(pos);
 
-	return static_cast<string&&>(s);
+	return s;
 }
 
 int Util_t::LineCount(const string& line, size_type count)
@@ -81,7 +81,7 @@ string Util_t::EraseSpace(const string& line, const string& delimiter)
 	string s = line;
 	for (const auto& i : delimiter)
 		s.erase(std::remove(s.begin(), s.end(), i), s.end());
-	return static_cast<string&&>(s);
+	return s;
 }
 
 Util_t::size_type Util_t::FindEndPoint(const string& contents, size_type& pos)
@@ -108,7 +108,7 @@ vector<string> Util_t::SplitFields(const string& line, const string& delimiter)
 		splitted.push_back(line.substr(beg, pos - beg));
 	}
 
-	return static_cast<vector<string>&&>(splitted);
+	return splitted;
 }
 
 vector<string> Util_t::SplitFields(const string& line, char delimiter)
@@ -122,7 +122,7 @@ vector<string> Util_t::SplitFields(const string& line, char delimiter)
 		splitted.push_back(line.substr(beg, pos - beg));
 	}
 
-	return static_cast<vector<string>&&>(splitted);
+	return splitted;
 }
 
 double3 Util_t::GetCoordinate(const string& field)
