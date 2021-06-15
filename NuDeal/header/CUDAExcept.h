@@ -4,12 +4,21 @@
 #include "cusparse.h"
 #include "curand.h"
 
-// CUDA Error Checke Macros
+// CUDA Error Check Macros
 
 #define cudaCheckError(error) \
 if (error != cudaError::cudaSuccess) { \
 	std::cout << cudaGetErrorString(error) << std::endl; \
-	std::cout << "In file" << __FILE__ \
+	std::cout << "In file " << __FILE__ \
+		<< " line " << __LINE__ \
+		<< " func " << __func__ << std::endl; \
+	::exit(EXIT_FAILURE); \
+}
+
+#define cudaCheckErrorRAND(error) \
+if (error != curandStatus_t::CURAND_STATUS_SUCCESS) { \
+	std::cout << "cuRAND error code : " << error << std::endl; \
+	std::cout << "In file " << __FILE__ \
 		<< " line " << __LINE__ \
 		<< " func " << __func__ << std::endl; \
 	::exit(EXIT_FAILURE); \
