@@ -96,9 +96,6 @@
     <ClInclude Include="header\Array.h">
       <Filter>Header\LinPack</Filter>
     </ClInclude>
-    <ClInclude Include="header\Array.hpp">
-      <Filter>Header\LinPack</Filter>
-    </ClInclude>
     <ClInclude Include="header\XS.h">
       <Filter>Header\CrossSection</Filter>
     </ClInclude>
