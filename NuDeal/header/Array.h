@@ -102,7 +102,12 @@ struct _device_memory
 	}
 };
 
-template <typename T, typename _Memory>
+template <typename T> struct _memory_traits : false_type {};
+template <typename T> struct _memory_traits<_host_memory<T>> : true_type{};
+template <typename T> struct _memory_traits<_device_memory<T>> : true_type{};
+
+template <typename T, typename _Memory,
+  typename = typename std::enable_if_t<_memory_traits<_Memory>::value>>
 class _Vector_t
 {
 public:
