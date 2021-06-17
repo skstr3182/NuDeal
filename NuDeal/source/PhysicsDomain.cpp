@@ -14,7 +14,7 @@ void BaseDomain::Create(const GeometryHandler &rhs) {
 		lx0 = Width0.x; ly0 = Width0.y; lz0 = Width0.x;
 		nx = 3; ny = (mode != Dimension::OneD) ? 3 : 1; nz = (mode == Dimension::ThreeD) ? 3 : 1;
 		nnodeLv.resize(divlevel); upperdivmap.resize(divlevel); lowerdivmap.resize(divlevel - 1);
-		serialdivmap.resize(divlevel); nodeInfo.resize(nnode);
+		serialdivmap.resize(divlevel); nodeInfo.resize(nnode); innodeLv.resize(nnode);
 
 		const vector<int>& nnodeLvRhs = rhs.GetNnodeLv();
 		const vector<vector<int>>& upperdivmapRhs = rhs.GetUpperdivmap();
@@ -31,6 +31,7 @@ void BaseDomain::Create(const GeometryHandler &rhs) {
 				if (nodeInfoRhs[i][j].idvol < 0) continue;
 				serialdivmap[i][j] = inode;
 				nodeInfo[inode] = nodeInfoRhs[i][j];
+				innodeLv[inode] = i;
 				inode++;
 			}
 			if (i > 0) {
@@ -421,9 +422,15 @@ void CompiledDomain::PrintCompileInfo(string filename) const {
 		cout << "Compile Info Printed Out!" << endl;
 	}
 
+void RaySegmentDomain::Initialize(int ng, int nangle_oct) { 
+	bndflux.Create(ng, 2 * nangle_oct, 2 * (Nx*Ny + Ny*Nz + Nx*Nz)); 
+}
+
 void FlatSrcDomain::Initialize(int ng, int scatorder, bool isEx) {
-	flux.Create(ng, nblocks, scatorder + 1); srcS(ng, nblocks, scatorder + 1);
-	srcF.Create(ng, nblocks); if (isEx) srcEx.Create(ng, nblocks);
+	flux.Create(ng, nblocks, (scatorder + 1) * (scatorder + 1));
+	srcS(ng, nblocks);
+	srcF.Create(ng, nblocks);
+	if (isEx) srcEx.Create(ng, nblocks);
 }
 
 void FlatXSDomain::InitializeMacro(int ng, int scatorder, bool isTHfeed) {
