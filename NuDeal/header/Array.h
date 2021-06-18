@@ -102,7 +102,12 @@ struct _device_memory
 	}
 };
 
-template <typename T, typename _Memory>
+template <typename T> struct _memory_traits : false_type {};
+template <typename T> struct _memory_traits<_host_memory<T>> : true_type{};
+template <typename T> struct _memory_traits<_device_memory<T>> : true_type{};
+
+template <typename T, typename _Memory,
+  typename = typename std::enable_if_t<_memory_traits<_Memory>::value>>
 class _Vector_t
 {
 public:
@@ -276,10 +281,8 @@ public: // Constructor && Destructor
 	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
 	explicit Array_t(size_type first, Ts... pack) :
 		Host{ (first * ... * pack) },
-		stride{ first, }
-	{
-		int i = 1; (..., (stride[i++] = stride[i - 1] * pack));
-	}
+		stride{ first, first *= pack... }
+	{}
 
 	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
 	explicit Array_t(const_pointer ptr, size_type first, Ts... pack) :
@@ -325,9 +328,8 @@ public:
 	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
 	void Create(size_type first, Ts... pack)
 	{
-		Host::operator=(Host( (first * ... * pack) ));
-		stride.front() = first;
-		int i = 1; (..., (stride[i++] = stride[i - 1] * pack));
+		stride = { first, first *= pack... };
+		*(static_cast<Host*>(this)) = Host(stride[sizeof...(Ts)]);
 	}
 
 public:
@@ -431,10 +433,8 @@ public:
 	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
 	explicit Array_t(size_type first, Ts... pack) :
 		Host{ (first * ... * pack) },
-		stride{ first, }
-	{
-		int i = 1; (..., (stride[i++] = stride[i - 1] * pack));
-	}
+		stride{ first, first *= pack... }
+	{}
 
 	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
 	explicit Array_t(const_pointer ptr, size_type first, Ts... pack) :
@@ -485,17 +485,15 @@ public:
 	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
 	void Create(size_type first, Ts... pack)
 	{
-		Host::operator=(Host( (first * ... * pack) ));
-		stride.front() = first;
-		int i = 1; (..., (stride[i++] = stride[i - 1] * pack));
+		stride = { first, first *= pack... };
+		*(static_cast<Host*>(this)) = Host(stride[sizeof...(Ts)]);
 	}
 
 	template <typename... Ts, typename = call_if_t<size_type, Ts...>>
 	void CreateDevice(size_type first, Ts... pack)
 	{
-		Device::operator=(Device( (first * ... * pack) ));
-		stride.front() = first;
-		int i = 1; (..., (stride[i++] = stride[i - 1] * pack));
+		stride = { first, first *= pack... };
+		*(static_cast<Device*>(this)) = Device(stride[sizeof...(Ts)]);
 	}
 
 public:
