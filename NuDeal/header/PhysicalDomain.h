@@ -42,6 +42,7 @@ protected:
 	int nnode, divlevel;
 	vector<int> nnodeLv;
 	vector<vector<int>> upperdivmap, lowerdivmap, serialdivmap;
+	vector<int> innodeLv;
 
 	vector<NodeInfo_t> nodeInfo;
 public:
@@ -69,6 +70,8 @@ public:
 	const auto& GetSerialdivmap() const { return serialdivmap; }
 
 	const auto& GetBaseNodeInfo() const { return nodeInfo; }
+
+	const auto& GetInNodeLv() const { return innodeLv; }
 };
 
 class ConnectedDomain : public BaseDomain {
@@ -112,12 +115,10 @@ public:
 	void GetCompileSizes(int &Bx, int &By, int &Bz, int3 &block, int &nblocks) const 
 	{ Bx = this->Bx; By = this->By; Bz = this->Bz; block = this->block; nblocks = this->nblocks; }
 
+	int GetNblocks() const { return nblocks; }
 	const auto& GetCompileMap() const { return compilemap; }
-
-	const auto& GetCompileInfo() const { return compileInfo; }
-	
+	const auto& GetCompileInfo() const { return compileInfo; }	
 	const auto& GetDecompileId() const { return compileid; }
-
 	const auto& GetDecompileWeights() const { return compileW; }
 
 	void PrintCompileInfo(string filename = "Compile.out") const;
@@ -131,7 +132,11 @@ private:
 public:
 	RaySegmentDomain() {};
 
-	RaySegmentDomain(const GeometryHandler &rhs) : ConnectedDomain(rhs) {};
+	RaySegmentDomain(const GeometryHandler &rhs) : ConnectedDomain(rhs) {}
+
+	void Initialize(int ng, int nangle_oct);
+
+	auto& GetBndFlux() { return bndflux; }
 };
 
 class FlatSrcDomain : public CompiledDomain {
@@ -147,6 +152,11 @@ public:
 	FlatSrcDomain(int3 block, const BaseDomain &rhs) : CompiledDomain(block, rhs) {}
 
 	void Initialize(int ng, int scatorder = 0, bool isEx = false);
+
+	auto& GetScalarFlux() { return flux; }
+	const auto& GetFisSrc() const { return srcF; }
+	const auto& GetScatSrc() const { return srcS; }
+	const auto& GetExternalSrc() const { return srcEx; }
 };
 
 class FlatXSDomain : public CompiledDomain {
@@ -174,6 +184,9 @@ public:
 	void Initialize(int ng, int scatorder, int niso);
 
 	void SetMacroXS(const vector<int> &imat, const XSLib &MacroXS);
+
+	int GetScatOrder() const { return scatorder; }
+	const auto& GetTotalXS() const { return xst; }
 };
 
 inline void DebugPhysicalDomain() {
