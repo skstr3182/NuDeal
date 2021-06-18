@@ -43,7 +43,7 @@ public:
 
 	XSLib(bool isMicro, int ng, int nset, int scatorder = 0);
 
-	XSLib(ifstream libfile);
+	void ReadXSLib (ifstream &libfile);
 
 	const auto& GetXSSet() const { return XS_set; }
 
