@@ -9,7 +9,7 @@ class Master_t final
 {
 private:
 
-	Library::XSLibrary_t *XS;
+	Library::XSLibrary_t *XS = nullptr;
 
 public:
 

@@ -355,8 +355,7 @@ public:
 		size_type _n = (first * ... * pack);
 		if (!Host::empty()) assert(_n == Host::size());
 #endif
-		stride.front() = first;
-		int i = 1; (..., (stride[i++] = stride[i - 1] * pack));
+		stride = { first, first *= pack...};
 	}
 
 public:
@@ -561,8 +560,7 @@ public:
 		if (!Host::empty()) assert(_n == Host::size());
 		if (!Device::empty()) assert(_n == Device::size());
 #endif
-		stride.front() = first;
-		int i = 1; (..., (stride[i++] = stride[i - 1] * pack));
+		stride = { first, first *= pack... };
 	}
 
 public:
