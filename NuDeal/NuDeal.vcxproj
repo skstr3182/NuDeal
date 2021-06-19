@@ -33,6 +33,7 @@
     <ClInclude Include="header\ShortCharacteristics.h" />
     <ClInclude Include="header\UnitGeo.h" />
     <ClInclude Include="header\XS.h" />
+    <ClInclude Include="header\XSLibrary.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Geometry.cpp" />
@@ -48,6 +49,7 @@
     <ClCompile Include="source\Main.cpp" />
     <ClCompile Include="source\Input.cpp" />
     <ClCompile Include="source\XS.cpp" />
+    <ClCompile Include="source\XSLibrary.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4C24DF09-B724-4756-A70D-2B3F797526E2}</ProjectGuid>
