@@ -2,7 +2,8 @@
 #include "Defines.h"
 #include "Array.h"
 
-namespace XS{
+namespace XS
+{
 enum class XSType {
 	TOT,
 	ABS,
@@ -21,27 +22,23 @@ struct XSData {
 	array<bool,10> typeXS;
 	Array<double> XSval[10];
 	Array<double> XSSM[3];
-	//double *ScatKernel, *FisKernel;
 };
 
 class XSLib {
 private:
-	bool isMicro;
-	int niso, nset, ng;
-	int ntemp;
-	int scatorder;
+	bool isMicro = false;
+	int niso = 0, nset = 0, ng = 0;
+	int ntemp = 0;
+	int scatorder = 0;
 
 	vector<XSData> XS_set;
-	
-	void Init() { niso = nset = ng = 0; ntemp = 1; }
 
 	void Append(XSData datum) { XS_set.push_back(datum); }
 
 	void Resize() { XS_set.resize(nset); }
-public:
-	XSLib() { Init(); }
 
-	XSLib(bool isMicro, int ng, int nset, int scatorder = 0);
+public:
+	XSLib() noexcept = default;
 
 	void ReadXSLib (ifstream &libfile);
 
@@ -57,4 +54,5 @@ public:
 
 	void UploadXSData(array<bool,10> typeXS, vector<vector<vector<double>>> XS, vector<vector<double>> XSSM);
 };
+
 }

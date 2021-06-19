@@ -146,4 +146,21 @@ bool Util_t::IsClosed(const string& s)
 	return (lcount == rcount) && (lcount > 0);
 }
 
+string Util_t::GetLine(ifstream& fin)
+{
+	string line;
+
+	do {
+
+		std::getline(fin, line);
+		std::replace(line.begin(), line.end(), SC::Tab, SC::Blank);
+		std::replace(line.begin(), line.end(), SC::CR, SC::Blank);
+
+		line = Trim(line);
+
+	} while (line.empty());
+
+	return line;
+}
+
 }

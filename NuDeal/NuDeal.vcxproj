@@ -24,6 +24,7 @@
     <ClInclude Include="header\IODeclare.h" />
     <ClInclude Include="header\IOUtil.h" />
     <ClInclude Include="header\MPI.hpp" />
+    <ClInclude Include="header\NuDEAL.h" />
     <ClInclude Include="header\OMP.hpp" />
     <ClInclude Include="header\Parser.h" />
     <ClInclude Include="header\PhysicalComposition.h" />
@@ -35,6 +36,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Geometry.cpp" />
+    <ClCompile Include="source\NuDEAL.cpp" />
     <ClCompile Include="source\Parser.cpp" />
     <ClCompile Include="source\PhysicalComposition.cpp" />
     <ClCompile Include="source\Preprocessor.cpp" />

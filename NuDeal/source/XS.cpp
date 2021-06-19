@@ -1,17 +1,8 @@
 #include "XS.h"
 #include "Array.h"
 
-namespace XS {
-XSLib::XSLib(bool isMicro, int ng, int nset, int scatorder){
-	Init();
-
-	this->isMicro = isMicro; this->ng = ng;
-	if (isMicro) niso = nset;
-	else this->nset = nset;
-	this->scatorder = scatorder;
-
-	Resize();
-}
+namespace XS
+{
 
 void XSLib::UploadXSData(array<bool,10> typeXS, vector<vector<vector<double>>> XS, vector<vector<double>> XSSM) {
 	for (int i = 0; i < nset; i++) {
