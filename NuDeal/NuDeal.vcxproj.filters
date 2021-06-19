@@ -123,6 +123,9 @@
     <ClInclude Include="header\XSLibrary.h">
       <Filter>Header\Library</Filter>
     </ClInclude>
+    <ClInclude Include="header\Library.h">
+      <Filter>Header\Library</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Input.cpp">

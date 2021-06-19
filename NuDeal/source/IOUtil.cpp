@@ -146,7 +146,7 @@ bool Util_t::IsClosed(const string& s)
 	return (lcount == rcount) && (lcount > 0);
 }
 
-string Util_t::GetLine(ifstream& fin)
+string Util_t::GetLine(istream& fin)
 {
 	string line;
 
@@ -161,6 +161,22 @@ string Util_t::GetLine(ifstream& fin)
 	} while (line.empty());
 
 	return line;
+}
+
+int Util_t::FindKeyword(istream& fin, const string& keyword)
+{
+	int count = 0;
+	auto pos = fin.tellg();
+	fin.clear(); fin.seekg(ios::beg);
+	while (!fin.eof()) {
+		string field; fin >> field;
+		if (Uppercase(field) == keyword) {
+			if (!count) pos = fin.tellg();
+			++count;
+		}
+	}
+	fin.clear(); fin.seekg(pos);
+	return count;
 }
 
 }

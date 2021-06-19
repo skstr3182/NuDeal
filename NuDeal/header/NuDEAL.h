@@ -1,5 +1,6 @@
 #pragma once
 #include "Defines.h"
+#include "Library.h"
 
 namespace NuDEAL
 {
@@ -7,6 +8,8 @@ namespace NuDEAL
 class Master_t final
 {
 private:
+
+	Library::XSLibrary_t *XS;
 
 public:
 

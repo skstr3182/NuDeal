@@ -1,5 +1,6 @@
 #pragma once
 #include "Defines.h"
+#include "Library.h"
 #include "Array.h"
 
 namespace Library
@@ -8,57 +9,83 @@ namespace Library
 class XSLibrary_t
 {
 public:
+	
+	template <typename T> using Array_t = LinPack::Array_t<T>;
 
-	template <typename T>
-	using Array = LinPack::Array_t<T>;
-
-	enum class XSType
+	enum class Format
 	{
 		Micro,
-		Macro
+		Macro,
 	};
 
-	enum class MicroType
+	struct MacroXS_t
 	{
-		TOT,
-		ABS,
-		FIS,
-		SCAT,
-		NU,
-		CHI,
-		KAPPA,
-		CAP,
-		N2N,
-		N3N,
-		COUNT
+		enum class Type
+		{
+			TR,
+			ABS,
+			NUFIS,
+			KAPPAFIS,
+			CHI,
+			SCAT,
+			COUNT,
+		};
+
+		static constexpr int num_types = static_cast<int>(Type::COUNT);
+		Array_t<double> xs[num_types];
+		Array_t<double>& tr = xs[static_cast<int>(Type::TR)];
+		Array_t<double>& abs = xs[static_cast<int>(Type::ABS)];
+		Array_t<double>& nufis = xs[static_cast<int>(Type::NUFIS)];
+		Array_t<double>& kappafis = xs[static_cast<int>(Type::KAPPAFIS)];
+		Array_t<double>& chi = xs[static_cast<int>(Type::CHI)];
+		Array_t<double>& scat = xs[static_cast<int>(Type::SCAT)];
 	};
 
-	enum class MacroType
+	struct MicroXS_t
 	{
-		TOT,
-		ABS,
-		NUFIS,
-		KAPPAFIS,
-		CHI,
-		SCAT,
-		COUNT
+		enum class Type
+		{
+			TOT,
+			ABS,
+			FIS,
+			NU,
+			KAPPA,
+			CHI,
+			CAP,
+			N2N,
+			N3N,
+			SCAT,
+			COUNT
+		};
+
+		static constexpr int num_types = static_cast<int>(Type::COUNT);
+
+		Array_t<double> xs[num_types];
+		Array_t<double>& total = xs[static_cast<int>(Type::TOT)];
+		Array_t<double>& abs = xs[static_cast<int>(Type::ABS)];
+		Array_t<double>& fis = xs[static_cast<int>(Type::FIS)];
+		Array_t<double>& nu = xs[static_cast<int>(Type::NU)];
+		Array_t<double>& kappa = xs[static_cast<int>(Type::KAPPA)];
+		Array_t<double>& chi = xs[static_cast<int>(Type::CHI)];
+		Array_t<double>& cap = xs[static_cast<int>(Type::CAP)];
+		Array_t<double>& n2n = xs[static_cast<int>(Type::N2N)];
+		Array_t<double>& n3n = xs[static_cast<int>(Type::N3N)];
+		Array_t<double>& scat = xs[static_cast<int>(Type::SCAT)];
 	};
 
-	template <typename T>
-	struct Data_t
-	{
-		Array<double> xs[static_cast<int>(T::COUNT)];
-		Array<double> scat_matrix[3];
-	};
+
+	using MacroType = MacroXS_t::Type;
+	using MicroType = MicroXS_t::Type;
 
 private:
 
-	int type = static_cast<int>(XSType::Micro);
-	int num_isotopes = 0, num_groups = 0;
-	int num_temps = 0, scattering_order = 0;
+	Format format = Format::Micro;
+	int num_nuclides = 0, num_groups = 0;
+	int num_temps = 0, scat_order = 0;
 
-	std::vector<Data_t<MacroType>> macroData;
-	std::vector<Data_t<MicroType>> microData;
+	std::vector<string> material_labels;
+	std::vector<MacroXS_t> MacroXS;
+	std::vector<MicroXS_t> MicroXS;
 
 public:
 
@@ -69,8 +96,8 @@ public:
 
 public:
 
-	bool IsMacro() const { return !macroData.empty(); }
-	bool IsMicro() const { return !microData.empty(); }
+	bool IsMacro() const { return format == Format::Macro; }
+	bool IsMicro() const { return format == Format::Micro; }
 };
 
 }
