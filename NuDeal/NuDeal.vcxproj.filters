@@ -96,9 +96,6 @@
     <ClInclude Include="header\Array.h">
       <Filter>Header\LinPack</Filter>
     </ClInclude>
-    <ClInclude Include="header\XS.h">
-      <Filter>Header\Library</Filter>
-    </ClInclude>
     <ClInclude Include="header\PhysicalDomain.h">
       <Filter>Header\PhysicalProperty</Filter>
     </ClInclude>
@@ -154,9 +151,6 @@
     </ClCompile>
     <ClCompile Include="source\Main.cpp">
       <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="source\XS.cpp">
-      <Filter>Source\Library</Filter>
     </ClCompile>
     <ClCompile Include="source\PhysicsDomain.cpp">
       <Filter>Source\PhysicalProperty</Filter>

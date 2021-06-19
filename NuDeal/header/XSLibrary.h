@@ -96,6 +96,8 @@ public:
 
 public:
 
+	const auto& GetMicroXS() const { return MicroXS; }
+
 	bool IsMacro() const { return format == Format::Macro; }
 	bool IsMicro() const { return format == Format::Micro; }
 };
