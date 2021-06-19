@@ -461,8 +461,8 @@ void FlatXSDomain::SetMacroXS(const vector<int> &imag, const XSLibrary &XS)
 		const auto& fis = Micro[mat].fis, &nu = Micro[mat].nu, &kappa = Micro[mat].kappa;
 
 		std::copy(total.begin(), total.end(), &xst(0, i));
-		for (int s = 0; s < scatorder; ++s)
-			std::copy_n(&scat(0, 0, s), scat.Stride<3>(), &xssm(0, 0, s, i));
+		std::copy(scat.begin(), scat.end(), &xssm(0, 0, 0, i));
+		
 		for (int g = 0; g < ng; ++g) {
 			xsnf(g, i) = fis(g) * nu(g);
 			xskf(g, i) = fis(g) * kappa(g);
